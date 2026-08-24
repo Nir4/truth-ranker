@@ -1,0 +1,164 @@
+[
+  {
+    "asin": "B00F1D3S02",
+    "name": "Clear Face Breakout Free Liquid Lotion Sunscreen SPF 55",
+    "brand": "Neutrogena",
+    "category": "skincare",
+    "price": 11.97,
+    "ingredients": [
+      "Avobenzone 3%", "Homosalate 10%", "Octisalate 5%", "Octocrylene 7%",
+      "Water", "Styrene/Acrylates Copolymer", "Silica", "Glycerin",
+      "Dimethicone", "Caprylyl Methicone", "Butyloctyl Salicylate",
+      "Phenoxyethanol", "Xanthan Gum", "Ethylhexylglycerin", "Fragrance"
+    ],
+    "marketing_claims": [
+      "Oil-free and non-comedogenic, won't clog pores",
+      "Broad spectrum SPF 55 protection",
+      "Lightweight, absorbs quickly with a matte finish"
+    ],
+    "bestseller_rank": 3,
+    "star_rating": 4.5,
+    "review_count": 48213
+  },
+  {
+    "asin": "B002MSN3QQ",
+    "name": "Ultra Sheer Dry-Touch Sunscreen SPF 100",
+    "brand": "Neutrogena",
+    "category": "skincare",
+    "price": 10.49,
+    "ingredients": [
+      "Avobenzone 3%", "Homosalate 15%", "Octisalate 5%", "Octocrylene 10%",
+      "Oxybenzone 6%", "Water", "Styrene/Acrylates Copolymer", "Silica",
+      "Glycerin", "Dimethicone", "Phenoxyethanol", "Fragrance", "Xanthan Gum"
+    ],
+    "marketing_claims": [
+      "Highest SPF available for maximum protection",
+      "Dry-Touch technology for a non-greasy finish",
+      "Water resistant up to 80 minutes"
+    ],
+    "bestseller_rank": 1,
+    "star_rating": 4.6,
+    "review_count": 91455
+  },
+  {
+    "asin": "B01MZE0EJ4",
+    "name": "Mineral Sunscreen Lotion SPF 50 Sensitive Skin",
+    "brand": "Blue Lizard",
+    "category": "skincare",
+    "price": 17.99,
+    "ingredients": [
+      "Zinc Oxide 10%", "Titanium Dioxide 5%", "Water", "Glycerin",
+      "Caprylic/Capric Triglyceride", "Cetearyl Alcohol", "Silica",
+      "Sodium Chloride", "Tocopherol", "Xanthan Gum", "Phenoxyethanol"
+    ],
+    "marketing_claims": [
+      "100% mineral active ingredients, no chemical filters",
+      "Reef friendly - no oxybenzone or octinoxate",
+      "Fragrance free, formulated for sensitive skin"
+    ],
+    "bestseller_rank": 22,
+    "star_rating": 4.4,
+    "review_count": 12980
+  },
+  {
+    "asin": "B07L8MFMK4",
+    "name": "Unseen Sunscreen SPF 40",
+    "brand": "Supergoop",
+    "category": "skincare",
+    "price": 38.00,
+    "ingredients": [
+      "Avobenzone 3%", "Homosalate 8%", "Octisalate 5%", "Octocrylene 5%",
+      "Isododecane", "Dimethicone", "Butyloctyl Salicylate",
+      "Dimethicone/Bis-Isobutyl PPG-20 Crosspolymer", "Silica",
+      "Tocopherol", "Caprylyl Glycol", "Meadowfoam Seed Oil"
+    ],
+    "marketing_claims": [
+      "Completely invisible, weightless, scentless",
+      "Doubles as a makeup-gripping primer",
+      "Oil-free and reef friendly"
+    ],
+    "bestseller_rank": 7,
+    "star_rating": 4.3,
+    "review_count": 21044
+  },
+  {
+    "asin": "B08L5MPQ2X",
+    "name": "Water Gel Sunscreen SPF 50+ PA++++",
+    "brand": "Biore",
+    "category": "skincare",
+    "price": 14.50,
+    "ingredients": [
+      "Zinc Oxide 12%", "Water", "Alcohol", "Dimethicone", "Glycerin",
+      "Butylene Glycol", "Hyaluronic Acid", "Citrus Junos Fruit Extract",
+      "Royal Jelly Extract", "Xanthan Gum", "Phenoxyethanol", "Fragrance"
+    ],
+    "marketing_claims": [
+      "Weightless water-gel texture that never feels sticky",
+      "Infused with hyaluronic acid for plump, hydrated skin",
+      "PA++++ highest UVA protection rating"
+    ],
+    "bestseller_rank": 41,
+    "star_rating": 4.5,
+    "review_count": 8322
+  },
+  {
+    "asin": "B000052YM8",
+    "name": "Ultra Protect Sunscreen Lotion SPF 30",
+    "brand": "Banana Boat",
+    "category": "skincare",
+    "price": 8.99,
+    "ingredients": [
+      "Avobenzone 2%", "Homosalate 10%", "Octisalate 5%", "Octocrylene 6%",
+      "Oxybenzone 4%", "Water", "Glycerin", "Dimethicone", "Fragrance",
+      "Phenoxyethanol", "Methylisothiazolinone", "Xanthan Gum"
+    ],
+    "marketing_claims": [
+      "Powerful sun protection for the whole family",
+      "Water resistant for 80 minutes",
+      "Dermatologist tested"
+    ],
+    "bestseller_rank": 14,
+    "star_rating": 4.2,
+    "review_count": 33107
+  },
+  {
+    "asin": "B074PZ3XT5",
+    "name": "Anthelios Melt-In Milk Sunscreen SPF 100",
+    "brand": "La Roche-Posay",
+    "category": "skincare",
+    "price": 36.99,
+    "ingredients": [
+      "Avobenzone 3%", "Homosalate 10%", "Octisalate 5%", "Octocrylene 10%",
+      "Oxybenzone 6%", "Water", "Glycerin", "Silica", "Dimethicone",
+      "Tocopherol", "Phenoxyethanol", "Fragrance", "Xanthan Gum"
+    ],
+    "marketing_claims": [
+      "Velvety, non-greasy melt-in texture",
+      "Antioxidant complex helps defend against free radicals",
+      "Recommended by dermatologists worldwide"
+    ],
+    "bestseller_rank": 18,
+    "star_rating": 4.6,
+    "review_count": 15662
+  },
+  {
+    "asin": "B09KPQ1MZ7",
+    "name": "Sheer Mineral Sunscreen Stick SPF 50",
+    "brand": "Thinkbaby",
+    "category": "skincare",
+    "price": 12.99,
+    "ingredients": [
+      "Zinc Oxide 20%", "Beeswax", "Caprylic/Capric Triglyceride",
+      "Cocos Nucifera Oil", "Butyrospermum Parkii Butter",
+      "Tocopherol", "Helianthus Annuus Seed Oil"
+    ],
+    "marketing_claims": [
+      "20% non-nano zinc oxide, no chemical filters",
+      "Free from parabens, phthalates and PABA",
+      "Safe for babies and reef friendly"
+    ],
+    "bestseller_rank": 63,
+    "star_rating": 4.3,
+    "review_count": 5410
+  }
+]
