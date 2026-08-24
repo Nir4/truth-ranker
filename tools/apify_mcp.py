@@ -182,6 +182,23 @@ async def _run_actor(session, actor: str, actor_input: dict, limit: int) -> list
     return _parse_actor_result(items)
 
 
+def resolve_brand(product: dict) -> dict:
+    """Fill in a product's brand when the scrape did not provide one.
+
+    Kept separate from to_product() so normalisation stays a pure function and
+    the model call is explicit at the call site.
+    """
+    if product.get("brand"):
+        return product
+
+    from tools.brand_extract import extract_brand
+
+    parsed = extract_brand(product.get("name", ""))
+    product["brand"] = parsed["brand"]
+    product["product_line"] = parsed["product_line"]
+    return product
+
+
 def to_product(row: dict) -> dict:
     """Normalise one scraped row into our Product shape (see graph/state.py).
 
@@ -220,11 +237,12 @@ def to_product(row: dict) -> dict:
     return {
         "asin": row.get("asin") or row.get("ASIN", ""),
         "name": name,
-        # The bestsellers actor has no brand field, so fall back to the first
-        # word of the product name -- "Blue Lizard Sensitive..." -> "Blue".
-        # Imperfect, which is why fetch_product_details() overwrites it with the
-        # real brand before we run the safety lookup that depends on it.
-        "brand": row.get("brand") or row.get("manufacturer") or name.split()[0] if name else "",
+        # The bestsellers actor has no brand field. We do NOT guess with
+        # name.split()[0] -- that turns "Sun Bum" into "Sun" and "Hawaiian
+        # Tropic" into "Hawaiian", which then breaks both the ingredient
+        # lookup AND the recall check (both query by brand).
+        # Left empty here; resolve_brand() fills it with a model call.
+        "brand": row.get("brand") or row.get("manufacturer") or "",
         "category": "skincare",
         "image_url": image or "",
         # Full gallery, so the OCR fallback has label photos to read.

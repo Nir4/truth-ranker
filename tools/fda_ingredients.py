@@ -138,10 +138,19 @@ def _gather_candidates(brand: str, product_name: str, limit: int = 20) -> list[d
     precision here -- the matcher agent decides which one is right."""
     queries = []
     if product_name:
+        # The distinctive product words, e.g. "zero-cast moisturizing" --
+        # this catches filings whose brand field is formatted differently.
+        distinctive = [w for w in _keywords(product_name) if len(w) > 3][:3]
+        if distinctive:
+            queries.append("openfda.brand_name:(" + " AND ".join(distinctive) + ")")
         short = " ".join(product_name.split()[:5])
         queries.append(f'openfda.brand_name:"{brand} {short}"')
+
     queries.append(f'openfda.brand_name:"{brand}"')
     queries.append(f'openfda.manufacturer_name:"{brand}"')
+    # Last resort: the brand may only appear in the label text itself.
+    if brand:
+        queries.append(f'openfda.substance_name:"{brand}"')
 
     seen, candidates = set(), []
 
@@ -165,6 +174,8 @@ def _gather_candidates(brand: str, product_name: str, limit: int = 20) -> list[d
             seen.add(key)
             candidates.append(record)
 
+        # Keep querying until we have a decent pool -- recall matters more
+        # than precision here, since the agent does the actual selection.
         if len(candidates) >= limit:
             break
 
@@ -263,6 +274,11 @@ def get_ingredients(brand: str, product_name: str = "") -> dict:
         # The filing's own brand name, so a mismatched match is visible in
         # logs and in the UI rather than silently wrong.
         "matched_brand": label_brand,
+        # How sure the matcher was. A brand-level filing ("BANANA BOAT") is a
+        # weaker match than a product-level one ("Banana Boat Sport SPF 50"),
+        # and downstream should be able to see that.
+        "match_confidence": record.get("_match_confidence", 0.0),
+        "match_reason": record.get("_match_reason", ""),
         "spl_id": record.get("id", ""),
         "note": "",
     }

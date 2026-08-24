@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from tools.apify_mcp import fetch_bestsellers, to_product
+from tools.apify_mcp import fetch_bestsellers, to_product, resolve_brand
 from tools.fda_ingredients import get_ingredients
 from tools.ingredient import analyse_ingredients_raw
 
@@ -29,19 +29,9 @@ async def main() -> None:
     found, missing = [], []
 
     for p in products:
-        # to_product falls back to the first word of the name when the
-        # bestsellers row has no brand field. Try a couple of variants.
-        name_words = p["name"].split()
-        candidates = [p["brand"]]
-        if len(name_words) >= 2:
-            candidates.append(" ".join(name_words[:2]))
-        candidates.append(name_words[0] if name_words else "")
-
-        result = None
-        for brand in dict.fromkeys(c for c in candidates if c):
-            result = get_ingredients(brand, p["name"])
-            if result["found"]:
-                break
+        # Resolve the brand with the model first -- "Sun Bum" not "Sun".
+        resolve_brand(p)
+        result = get_ingredients(p["brand"], p["name"])
 
         if result and result["found"]:
             facts = analyse_ingredients_raw(result["ingredients"])

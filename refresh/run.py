@@ -55,7 +55,12 @@ async def load_live(limit: int) -> list[dict]:
     either. Ingredients come from the FDA drug label database instead --
     see tools/ingredient_source.py for the full fallback chain.
     """
-    from tools.apify_mcp import fetch_bestsellers, fetch_product_details, to_product
+    from tools.apify_mcp import (
+        fetch_bestsellers,
+        fetch_product_details,
+        to_product,
+        resolve_brand,
+    )
     from tools.ingredient_source import resolve_ingredients
 
     print(f"Scraping top {limit} sunscreen best-sellers via Apify...")
@@ -84,8 +89,11 @@ async def load_live(limit: int) -> list[dict]:
     seen = {p["asin"] for p in detailed}
     detailed += [p for p in products if p["asin"] not in seen]
 
-    print(f"\nResolving ingredients for {len(detailed)} products...")
+    print(f"\nResolving brands and ingredients for {len(detailed)} products...")
     for product in detailed:
+        # Brand first: BOTH the ingredient lookup and the recall check query
+        # by brand, so getting it wrong breaks the safety gate too.
+        resolve_brand(product)
         resolved = resolve_ingredients(product)
         product["ingredients"] = resolved["ingredients"]
         product["ingredient_source"] = resolved["source"]
@@ -115,6 +123,27 @@ def warm_corpus() -> None:
     print(f"Corpus ready: {total} chunks.\n")
 
 
+def _retry_on_rate_limit(fn, attempts: int = 4):
+    """Retry a call when OpenAI returns 429.
+
+    One product runs ~15 model calls, so a batch reaches the tokens-per-minute
+    cap easily. A 429 means "wait", not "this product is unrankable" -- losing
+    a product to a transient limit would silently shrink the catalogue.
+    """
+    import time
+
+    for attempt in range(attempts):
+        try:
+            return fn()
+        except Exception as exc:  # noqa: BLE001
+            if "429" not in str(exc) and "rate_limit" not in str(exc).lower():
+                raise
+            wait = 20 * (attempt + 1)
+            print(f"  rate limited, waiting {wait}s (attempt {attempt + 1}/{attempts})")
+            time.sleep(wait)
+    raise RuntimeError("Rate limit persisted after retries")
+
+
 def run_product(product: dict) -> dict:
     """Run one product through the graph.
 
@@ -122,9 +151,11 @@ def run_product(product: dict) -> dict:
     and open the exact trace behind a specific verdict, instead of scrolling
     through hundreds of runs all named "LangGraph".
     """
-    return graph.invoke(
-        {"product": product, "user_query": ""},
-        config=trace_metadata(product),
+    return _retry_on_rate_limit(
+        lambda: graph.invoke(
+            {"product": product, "user_query": ""},
+            config=trace_metadata(product),
+        )
     )
 
 

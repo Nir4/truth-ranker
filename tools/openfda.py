@@ -25,14 +25,29 @@ CLASSIFICATION_MEANING = {
 }
 
 
+def _sanitise(brand: str) -> str:
+    """Strip characters that break openFDA's Lucene query syntax.
+
+    "Supergoop!" returns HTTP 400 because `!` is a reserved operator. A crash
+    here means NO RECALL CHECK RAN, so this must never be left to chance.
+    """
+    for char in '!:()[]{}^"~*?\\/&|+-':
+        brand = brand.replace(char, " ")
+    return " ".join(brand.split())
+
+
 def check_recalls_raw(brand: str, limit: int = 5) -> list[dict]:
     """Look up FDA recalls for a brand. Returns a list of recall dicts (possibly empty).
 
     Plain function so the safety node can call it directly without going
     through an LLM.
     """
+    cleaned = _sanitise(brand)
+    if not cleaned:
+        return []
+
     # Quote the brand so multi-word names are treated as one phrase.
-    params = {"search": f'recalling_firm:"{brand}"', "limit": limit}
+    params = {"search": f'recalling_firm:"{cleaned}"', "limit": limit}
 
     try:
         response = requests.get(ENFORCEMENT_URL, params=params, timeout=15)

@@ -61,16 +61,60 @@ def resolve_ingredients(product: dict, allow_ocr: bool = True) -> dict:
     # 2. FDA drug label -- the authoritative source for US sunscreens.
     if brand:
         from tools.fda_ingredients import get_ingredients
+        from tools.match_verifier import verify_match
 
         fda = get_ingredients(brand, name)
         if fda["found"]:
-            return {
-                "ingredients": fda["ingredients"],
-                "active_ingredients": fda["active_ingredients"],
-                "source": fda["source"],
-                "confidence": "fda",
-                "note": "",
-            }
+            # SECOND AGENT: the matcher compared names; this one checks whether
+            # the CHEMISTRY is consistent with what the product claims to be.
+            # A "100% Mineral" product whose actives are avobenzone and
+            # homosalate is a wrong match no name comparison would catch.
+            verdict = verify_match(
+                product_name=name,
+                matched_label=fda.get("matched_brand", ""),
+                active_ingredients=fda["active_ingredients"],
+                all_ingredients=fda["ingredients"],
+            )
+
+            if verdict.consistent:
+                return {
+                    "ingredients": fda["ingredients"],
+                    "active_ingredients": fda["active_ingredients"],
+                    "source": fda["source"],
+                    "confidence": "fda",
+                    "note": "",
+                }
+
+            # Contradiction found -- reject rather than publish a false list.
+            print(
+                f"    [verify] REJECTED FDA match for {name[:40]!r}: {verdict.conflict[:110]}"
+            )
+
+    # 2b. Open Beauty Facts -- crowdsourced, and covers what openFDA cannot:
+    # non-drug cosmetics and non-US products.
+    if brand:
+        from tools.openbeautyfacts import get_ingredients as obf_ingredients
+        from tools.match_verifier import verify_match
+
+        obf = obf_ingredients(brand, name)
+        if obf["found"]:
+            verdict = verify_match(
+                product_name=name,
+                matched_label=obf.get("matched_brand", ""),
+                active_ingredients=[],
+                all_ingredients=obf["ingredients"],
+            )
+            if verdict.consistent:
+                return {
+                    "ingredients": obf["ingredients"],
+                    "active_ingredients": [],
+                    "source": obf["source"],
+                    "confidence": "openbeautyfacts",
+                    "note": "",
+                }
+            print(
+                f"    [verify] REJECTED OBF match for {name[:40]!r}: {verdict.conflict[:110]}"
+            )
 
     # 3. Curated file, keyed by ASIN.
     curated = _load_curated()
