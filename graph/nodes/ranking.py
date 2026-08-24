@@ -72,8 +72,21 @@ def _score_sentiment(reddit: dict) -> tuple[float, str]:
     if reddit["comment_count"] == 0:
         return 50.0, "No Reddit discussion found -- sentiment treated as neutral."
 
+    # Weight comments by how much lived detail they carry, so specific
+    # experience outvotes generic enthusiasm. Reddit is the one source brands
+    # can astroturf, and rewarding specificity is a more robust defence than
+    # trying to guess who was paid.
+    from tools.shill_detect import weight_comments, weighted_summary
+
+    weighted = weight_comments(reddit["comments"], "")
+    quality = weighted_summary(weighted)
+    weighted.sort(key=lambda c: c.get("weight", 1.0) * (1 + c.get("score", 0) / 50), reverse=True)
+
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    sample = "\n\n".join(f"[+{c['score']}] {c['text'][:300]}" for c in reddit["comments"][:12])
+    sample = "\n\n".join(
+        f"[+{c['score']}, weight {c.get('weight', 1.0):.1f}] {c['text'][:300]}"
+        for c in weighted[:12]
+    )
 
     response = model.invoke(
         [
@@ -83,10 +96,10 @@ def _score_sentiment(reddit: dict) -> tuple[float, str]:
                     "Rate overall sentiment toward this product in these skincare-community "
                     "comments, 0-100 (0 = universally panned, 50 = mixed, 100 = universally "
                     "praised). Weight higher-upvoted comments more. Reply with ONLY the number.\n\n"
-                    "Be skeptical of comments that read like marketing: vague enthusiasm with "
-                    "no specifics, brand-name repetition, or phrasing no ordinary user would "
-                    "write. Weight specific lived detail (how it wears under makeup, whether "
-                    "it stings, pilling) far above generic praise."
+                    "Each comment carries a `weight` reflecting how much concrete lived "
+                    "detail it contains. Weight the high-weight comments heavily and the "
+                    "low-weight ones barely at all -- a 0.2-weight comment is generic "
+                    "enthusiasm and should move the score very little."
                 ),
             },
             {"role": "user", "content": sample},
@@ -99,6 +112,10 @@ def _score_sentiment(reddit: dict) -> tuple[float, str]:
         return 50.0, "Could not parse sentiment; treated as neutral."
 
     note = f"{reddit['comment_count']} comments across {reddit['subreddit_spread']} subreddits."
+    if quality["flagged"]:
+        # Surfaced rather than silently applied -- a reader deserves to know
+        # WHY a sentiment signal was discounted.
+        note += f" {quality['flagged']} read as promotional and were down-weighted."
     # Thin evidence should not produce a confident score -- pull it toward
     # neutral when only a handful of people have weighed in.
     if reddit["comment_count"] < 5:
@@ -147,6 +164,20 @@ def ranking_node(state: TruthState) -> dict:
     sentiment_score, sentiment_note = _score_sentiment(reddit)
     subscores["sentiment"] = sentiment_score
 
+    # Extract WHAT people say, not just how positive it is. A score of 25 tells
+    # a reader nothing; "sticky finish, 4 mentions" tells them whether the
+    # complaint even applies to them.
+    themes = {"themes": [], "overall": ""}
+    if reddit["available"] and reddit["comment_count"]:
+        from tools.sentiment_themes import extract_themes
+
+        themes = extract_themes(reddit["comments"], product["name"])
+        if themes["themes"]:
+            labels = ", ".join(
+                f"{t['theme']} ({t['mentions']}x)" for t in themes["themes"][:3]
+            )
+            print(f"  [themes] {labels}")
+
     score = sum(subscores[k] * WEIGHTS[k] for k in WEIGHTS)
 
     # --- the hype gap ---
@@ -171,6 +202,8 @@ def ranking_node(state: TruthState) -> dict:
         "subscores": {k: round(v, 1) for k, v in subscores.items()},
         "hype_gap": round(hype_gap, 1),
         "verdict": verdict,
+        "themes": themes["themes"],
+        "community_summary": themes["overall"],
     }
 
 

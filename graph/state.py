@@ -70,6 +70,10 @@ class TruthState(TypedDict, total=False):
     subscores: dict  # {"efficacy": 80, "ingredients": 70, ...}
     hype_gap: float  # high = popular but not actually good
     verdict: str  # the 3-sentence answer
+    # Recurring community themes -- what people repeatedly say ("sticky",
+    # "white cast"), with a count of how many separate commenters said it.
+    themes: list[dict]
+    community_summary: str
 
     # --- confidence node writes this ---
     confidence: Literal["strong", "mixed", "insufficient"]

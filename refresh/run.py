@@ -11,6 +11,7 @@ Usage:
 
 import argparse
 import asyncio
+import time
 import json
 from pathlib import Path
 
@@ -90,7 +91,9 @@ async def load_live(limit: int) -> list[dict]:
     detailed += [p for p in products if p["asin"] not in seen]
 
     print(f"\nResolving brands and ingredients for {len(detailed)} products...")
-    for product in detailed:
+    for i, product in enumerate(detailed):
+        if i:
+            time.sleep(3)  # brand + match + verify is 3 model calls per product
         # Brand first: BOTH the ingredient lookup and the recall check query
         # by brand, so getting it wrong breaks the safety gate too.
         resolve_brand(product)
@@ -121,6 +124,15 @@ def warm_corpus() -> None:
         except Exception as exc:  # noqa: BLE001
             print(f"  ! failed: {topic[:60]} ({exc})")
     print(f"Corpus ready: {total} chunks.\n")
+
+
+# Seconds to pause between products. One product costs ~15 model calls, and the
+# default gpt-4o-mini limit is 200k tokens/minute -- without spacing, a batch
+# burns through it and every later call starts failing. The failures are the
+# dangerous kind: a rate-limited ingredient lookup returns "unknown" and the
+# product still scores, so the run reports success while silently producing
+# much worse data.
+PACE_SECONDS = 20
 
 
 def _retry_on_rate_limit(fn, attempts: int = 4):
@@ -186,6 +198,8 @@ def main() -> None:
     succeeded = failed = 0
 
     for i, product in enumerate(products, 1):
+        if i > 1:
+            time.sleep(PACE_SECONDS)  # stay under the tokens-per-minute cap
         print(f"[{i}/{len(products)}] {product['brand']} {product['name'][:50]}")
         try:
             state = run_product(product)

@@ -111,6 +111,24 @@
   details[open] summary::after { content:" ⌄"; }
   .detail { margin-top:14px; font-size:14px; color:var(--muted); line-height:1.6; white-space:pre-wrap; }
 
+  /* ---- community themes ---- */
+  .themes { margin-top:18px; }
+  .themes h3 {
+    font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--muted); margin:0 0 10px;
+  }
+  .theme { display:flex; gap:11px; align-items:baseline; padding:7px 0; font-size:14px; }
+  .dot { flex:none; width:7px; height:7px; border-radius:50%; margin-top:6px; }
+  .dot.positive { background:var(--good); }
+  .dot.negative { background:var(--bad); }
+  .dot.mixed    { background:var(--warn); }
+  .theme .label { font-weight:600; }
+  .theme .n {
+    font-size:11px; color:var(--muted); border:1px solid var(--hair);
+    border-radius:980px; padding:1px 7px; margin-left:2px;
+  }
+  .theme .q { color:var(--muted); font-style:italic; display:block; margin-top:3px; font-size:13px; }
+
   /* ---- citations ---- */
   .sources { margin-top:18px; }
   .sources h3 {
@@ -221,6 +239,24 @@ function verdictHtml(text) {
 // Readers deserve to know whether a claim rests on a trial or a commentary.
 const DESIGN = {5:'meta-analysis', 4:'trial', 3:'clinical study', 2:'review', 1:'article', 0:'article'};
 
+// What people repeatedly say about the product. Only themes several
+// different commenters raised independently -- one person's experience is
+// an anecdote, four people's is a property of the product.
+function themes(p) {
+  const list = p.themes || [];
+  if (!list.length) return '';
+  return `<div class="themes">
+    <h3>What people keep saying</h3>
+    ${list.map(t => `<div class="theme">
+      <span class="dot ${esc(t.sentiment)}"></span>
+      <span>
+        <span class="label">${esc(t.theme)}</span><span class="n">${t.mentions} mentions</span>
+        <span class="q">${esc(t.summary)}${t.quote ? ` &ldquo;${esc(t.quote)}&rdquo;` : ''}</span>
+      </span>
+    </div>`).join('')}
+  </div>`;
+}
+
 // Top 3 cited papers, strongest design first.
 function sources(p) {
   const list = (p.sources || []).slice(0, 3);
@@ -269,6 +305,7 @@ function row(p) {
       <p class="verdict">${verdictHtml(p.verdict)}</p>
       <div class="tags">${tags}</div>
       ${callout}
+      ${themes(p)}
       ${sources(p)}
       <details>
         <summary>Full research findings and ingredients</summary>

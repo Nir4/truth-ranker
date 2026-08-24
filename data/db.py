@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS rankings (
     expert_findings   TEXT,
     evidence          TEXT,           -- JSON
     sources           TEXT,           -- JSON: cited papers, strongest first
+    themes            TEXT,           -- JSON: recurring community themes
+    community_summary TEXT,
     ingredients       TEXT,           -- JSON
     updated_at        TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -65,9 +67,9 @@ def save_result(product: dict, state: dict) -> None:
             INSERT OR REPLACE INTO rankings (
                 asin, name, brand, category, price, image_url, score, subscores, hype_gap,
                 bestseller_rank, star_rating, review_count, verdict, confidence,
-                is_safe, safety_notes, expert_findings, evidence, sources, ingredients,
-                updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
+                is_safe, safety_notes, expert_findings, evidence, sources, themes,
+                community_summary, ingredients, updated_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
             """,
             (
                 product["asin"],
@@ -89,6 +91,8 @@ def save_result(product: dict, state: dict) -> None:
                 state.get("expert_findings", ""),
                 json.dumps(state.get("evidence", [])),
                 json.dumps(state.get("sources", [])),
+                json.dumps(state.get("themes", [])),
+                state.get("community_summary", ""),
                 json.dumps(product.get("ingredients", [])),
             ),
         )
@@ -97,7 +101,7 @@ def save_result(product: dict, state: dict) -> None:
 def _row_to_dict(row: sqlite3.Row) -> dict:
     """Turn a row into a dict, decoding the JSON columns."""
     d = dict(row)
-    for field in ("subscores", "evidence", "sources", "ingredients"):
+    for field in ("subscores", "evidence", "sources", "themes", "ingredients"):
         try:
             d[field] = json.loads(d[field]) if d[field] else ([] if field != "subscores" else {})
         except (json.JSONDecodeError, TypeError):

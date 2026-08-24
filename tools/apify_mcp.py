@@ -167,13 +167,88 @@ def _parse_actor_result(result) -> list[dict]:
     return [r for r in rows if isinstance(r, dict) and "error" not in r]
 
 
-async def _run_actor(session, actor: str, actor_input: dict, limit: int) -> list[dict]:
-    """Call an actor, then fetch the dataset it produced. Returns the rows."""
-    run = await session.call_tool("call-actor", {"actor": actor, "input": actor_input})
+def _run_status(result) -> str:
+    """Pull the run status out of a call-actor / get-actor-run result."""
+    import json
+
+    for text in _text_blocks(result):
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if payload.get("status"):
+            return payload["status"]
+    return ""
+
+
+async def _run_actor(
+    session, actor: str, actor_input: dict, limit: int, max_wait: int = 300
+) -> list[dict]:
+    """Call an actor, WAIT for it to finish, then fetch its dataset.
+
+    The waiting is the important part. `call-actor` caps waitSecs at 45, and
+    slower actors (Reddit especially) come back with status READY -- meaning
+    the run has not even started. Reading the dataset at that point returns
+    zero rows, which looks exactly like "no results found" and is not.
+    That bug made Reddit sentiment silently neutral for every product.
+    """
+    import asyncio as _asyncio
+    import json
+
+    run = await session.call_tool(
+        "call-actor", {"actor": actor, "input": actor_input, "waitSecs": 45}
+    )
+
+    # Surface input-validation errors loudly. These arrive as plain text rather
+    # than an exception, so without this they look identical to "no results" --
+    # a single wrong enum value ("Relevance" instead of "relevance") silently
+    # returned zero rows and made Reddit sentiment neutral for every product.
+    for text in _text_blocks(run):
+        if "validation failed" in text.lower() or "Validation errors" in text:
+            print(f"  [apify] INPUT REJECTED by {actor}: {text[:180]}")
+            return []
+
+    run_id = None
+    for text in _text_blocks(run):
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        run_id = payload.get("runId")
+        if run_id:
+            break
+
+    status = _run_status(run)
+    waited = 0
+    TERMINAL = ("SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT")
+
+    # Poll until the run reaches a terminal state. Actors routinely need more
+    # time than call-actor's 45s cap, and reading the dataset early returns
+    # zero rows -- indistinguishable from "no results" unless you check status.
+    while run_id and status not in TERMINAL and waited < max_wait:
+        await _asyncio.sleep(10)
+        waited += 10
+        try:
+            # waitSecs=0 returns the CURRENT status immediately. Asking the
+            # server to block instead (waitSecs=30) can hang well past its
+            # nominal wait, stalling the whole refresh job.
+            progress = await _asyncio.wait_for(
+                session.call_tool("get-actor-run", {"runId": run_id, "waitSecs": 0}),
+                timeout=45,
+            )
+        except Exception:  # noqa: BLE001 - a failed poll is not fatal; try again
+            continue
+        new_status = _run_status(progress)
+        if new_status:
+            status = new_status
+        run = progress  # keep the newest payload for its dataset id
+
+    if status not in ("SUCCEEDED", ""):
+        print(f"  [apify] {actor} finished with status {status or 'unknown'}")
 
     dataset_id = _dataset_id(run)
     if not dataset_id:
-        print(f"  [apify] {actor} produced no dataset")
+        print(f"  [apify] {actor} produced no dataset (status {status or 'unknown'})")
         return []
 
     items = await session.call_tool(

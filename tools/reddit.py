@@ -91,33 +91,45 @@ def _gather_via_apify(product_name: str, brand: str, limit: int) -> dict:
 
     Returns the SAME dict shape as the PRAW path, so nothing downstream changes.
     """
-    from tools.apify_mcp import build_client, _parse_actor_result
+    from tools.apify_mcp import build_client, _run_actor
 
     query = f"{brand} {product_name}"
 
     async def _run():
         client = build_client()
         async with client.session("apify") as session:
-            return await session.call_tool(
-                "call-actor",
+            return await _run_actor(
+                session,
+                REDDIT_ACTOR,
                 {
-                    "actor": REDDIT_ACTOR,
-                    "input": {
-                        "searches": [query],
-                        "searchPosts": True,
-                        "searchComments": True,
-                        "searchCommunities": False,
-                        "searchUsers": False,
-                        "maxItems": limit,
-                        "maxComments": 20,
-                        "sort": "Relevance",
-                        "includeNSFW": False,
-                    },
+                    # `startUrls` MUST be explicitly empty. The actor ships a
+                    # prefill (a pasta recipe URL); leaving the key out means
+                    # the prefill wins, `searches` is ignored, and you get
+                    # nothing back. That is exactly what was happening.
+                    "startUrls": [],
+                    "ignoreStartUrls": True,
+                    "searches": [query],
+                    "searchPosts": True,
+                    "searchComments": True,
+                    "searchCommunities": False,
+                    "searchUsers": False,
+                    # Off by default -- without it there are no upVotes, and
+                    # our score filter would discard every comment.
+                    "includeMediaLinks": True,
+                    "skipComments": False,
+                    "maxItems": limit,
+                    "maxComments": 25,
+                    # LOWERCASE. The actor's enum is
+                    # relevance|hot|top|new|rising|comments -- the docs page
+                    # shows capitalised display labels, which fail validation.
+                    "sort": "relevance",
+                    "includeNSFW": False,
                 },
+                limit,
             )
 
     try:
-        rows = _parse_actor_result(asyncio.run(_run()))
+        rows = asyncio.run(_run())
     except Exception as exc:  # noqa: BLE001 - a scrape failure must not kill the run
         return {
             "available": False,
