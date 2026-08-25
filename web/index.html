@@ -58,19 +58,30 @@
 
   /* ---- product row ---- */
   .item {
-    display:grid; grid-template-columns: 190px 1fr auto; gap: 32px;
-    align-items:start; padding: 40px 0; border-top: 1px solid var(--hair);
+    display:grid; grid-template-columns: 260px 1fr auto; gap: 36px;
+    align-items:start; padding: 44px 0; border-top: 1px solid var(--hair);
   }
   .item:first-of-type { border-top: 0; }
 
   .shot {
-    width:190px; height:190px; border-radius:18px; background:#fff;
-    border:1px solid var(--hair); object-fit:contain; padding:14px;
+    width:260px; height:260px; border-radius:20px; background:#fff;
+    border:1px solid var(--hair); object-fit:contain; padding:18px;
   }
   /* Typographic fallback when a listing has no photo. */
   .shot.blank {
     display:flex; align-items:center; justify-content:center; background:var(--surface);
-    font-size:44px; font-weight:600; color:var(--muted); letter-spacing:-0.02em;
+    font-size:60px; font-weight:600; color:var(--muted); letter-spacing:-0.02em;
+  }
+
+  /* ---- verdict bullets ---- */
+  .points { margin:0; padding:0; list-style:none; }
+  .points li {
+    position:relative; padding-left:17px; margin-bottom:7px; font-size:15px; line-height:1.5;
+  }
+  .points li:last-child { margin-bottom:0; }
+  .points li::before {
+    content:''; position:absolute; left:0; top:9px;
+    width:5px; height:5px; border-radius:50%; background:var(--muted);
   }
 
   .name { font-size:19px; font-weight:600; letter-spacing:-0.02em; margin:0 0 3px; }
@@ -161,17 +172,18 @@
     color:var(--muted); font-size:12px; line-height:1.7;
   }
 
-  @media (max-width: 860px) {
-    .item { grid-template-columns:130px 1fr; gap:22px; }
-    .shot { width:130px; height:130px; }
-    .shot.blank { font-size:32px; }
+  @media (max-width: 900px) {
+    .item { grid-template-columns:170px 1fr; gap:24px; }
+    .shot { width:170px; height:170px; }
+    .shot.blank { font-size:40px; }
     .score { grid-column:2; text-align:left; margin-top:10px; }
   }
   @media (max-width: 640px) {
     h1 { font-size:36px; } header { padding-top:56px; } header p { font-size:17px; }
-    .item { grid-template-columns:96px 1fr; gap:16px; }
-    .shot { width:96px; height:96px; }
-    .shot.blank { font-size:26px; }
+    .item { grid-template-columns:1fr; gap:18px; }
+    .shot { width:100%; height:220px; }
+    .shot.blank { font-size:44px; }
+    .score { grid-column:1; }
     .num { font-size:30px; }
   }
 </style>
@@ -229,10 +241,18 @@ function shot(p) {
 // Verdicts sometimes cite inline as [PMID 12345](url). Escape first (so the
 // text can never inject HTML), then turn those markdown links into real ones.
 function verdictHtml(text) {
-  return esc(text ?? '')
+  const linked = esc(text ?? '')
     .replace(/\[([^\]]+)\]\((https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/\d+\/?)\)/g,
-             '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/\n+/g, '<br>');
+             '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+  // Verdicts come back as "- bullet" lines. Render them as a real list.
+  const lines = linked.split('\n').map(l => l.trim()).filter(Boolean);
+  const bullets = lines.filter(l => l.startsWith('-') || l.startsWith('•'));
+  if (bullets.length >= 2) {
+    return '<ul class="points">' +
+      bullets.map(b => `<li>${b.replace(/^[-•]\s*/, '')}</li>`).join('') + '</ul>';
+  }
+  return lines.join('<br>');
 }
 
 // Study design, from the PublicationType ranking in tools/pubmed.py.
@@ -281,15 +301,15 @@ function row(p) {
             <div class="track"><div class="fill" style="width:${v}%"></div></div></div>`;
   }).join('');
 
+  // Terse on purpose. The numbers are right there; a sentence explaining
+  // them is noise.
   let callout = '';
   if (p.hype_gap > 25) {
-    callout = `<div class="callout"><b>Popularity is running ahead of the evidence.</b>
-      Amazon best-seller #${p.bestseller_rank}, but it scores ${Math.round(p.score)} out of 100
-      on what the research actually supports.</div>`;
+    callout = `<div class="callout"><b>Hyped.</b>
+      #${p.bestseller_rank} on Amazon, ${Math.round(p.score)}/100 on evidence.</div>`;
   } else if (p.hype_gap < -20) {
     callout = `<div class="callout gem"><b>Underrated.</b>
-      Scores ${Math.round(p.score)} out of 100 on evidence while sitting at
-      #${p.bestseller_rank} in sales.</div>`;
+      ${Math.round(p.score)}/100 on evidence, only #${p.bestseller_rank} in sales.</div>`;
   }
 
   const tags = [

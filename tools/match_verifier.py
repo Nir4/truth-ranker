@@ -64,9 +64,15 @@ is consistent=true.
 
 HARD CONTRADICTIONS -- set consistent=false:
 
-- Name says "100% Mineral", "Mineral Only", or "Zinc Only", but the actives \
-include organic/chemical filters (avobenzone, homosalate, octisalate, \
-octocrylene, oxybenzone, octinoxate).
+- Name says "100% Mineral", "Mineral Only", or "Zinc Only", but the ACTIVE \
+ingredients include an organic UV filter. The ONLY organic UV filters are: \
+avobenzone, homosalate, octisalate, octocrylene, oxybenzone, octinoxate, \
+ensulizole, meradimate, padimate O, sulisobenzone, trolamine salicylate.
+
+  Nothing else counts. Butyloctyl salicylate, ethylhexyl methoxycrylene and \
+similar names are SOLVENTS and EMOLLIENTS, not UV filters -- they appear in \
+100% mineral sunscreens routinely and are NOT a contradiction. Judge only the \
+ACTIVE ingredients list, never the inactives, when checking a mineral claim.
 - Name says "Fragrance Free" but the inactives list fragrance or parfum.
 - Name says "Oxybenzone Free" or "Reef Safe" but oxybenzone or octinoxate is \
 present.
@@ -141,7 +147,11 @@ def verify_match(
     if not verdict.consistent:
         quote = (verdict.claim_quote or "").strip().lower()
         haystack = product_name.lower()
-        # Allow loose matching on the significant words of the quote.
+
+        # NO QUOTE = NO REJECTION. An empty claim_quote previously skipped this
+        # check entirely, which let through exactly the fabrications it exists
+        # to stop (it rejected "Banana Boat Sport SPF 50 Spray" for claiming
+        # "Fragrance Free" -- words nowhere in that name).
         words = [w for w in quote.replace("%", " ").split() if len(w) > 2]
         grounded = bool(quote) and (
             quote in haystack or (words and all(w in haystack for w in words))
@@ -152,5 +162,23 @@ def verify_match(
                 f"{verdict.claim_quote!r} which is not in the product name"
             )
             return MatchVerdict(consistent=True, confidence=0.5, conflict="")
+
+        # Second backstop for the most common false rejection: a "mineral"
+        # claim rejected over an ingredient that is not actually a UV filter.
+        # We check the closed FDA filter list ourselves rather than trusting
+        # the model to remember which molecules filter UV.
+        if "mineral" in quote or "zinc" in quote:
+            from tools.ingredient import CHEMICAL_FILTERS, _normalise
+
+            actives = {_normalise(i) for i in active_ingredients}
+            real_organic = {
+                f for f in CHEMICAL_FILTERS if any(f in a for a in actives)
+            }
+            if not real_organic:
+                print(
+                    "    [verify] overriding 'not mineral' rejection: no organic "
+                    "UV filter is actually present in the actives"
+                )
+                return MatchVerdict(consistent=True, confidence=0.8, conflict="")
 
     return verdict

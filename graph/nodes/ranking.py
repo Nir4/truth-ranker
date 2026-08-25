@@ -135,8 +135,12 @@ def _score_efficacy(findings: str) -> float:
                 "content": (
                     "Based ONLY on this research analysis, rate how well-supported this "
                     "sunscreen's protective efficacy is, 0-100. Consider broad-spectrum "
-                    "coverage, filter photostability, and evidence quality. If the analysis "
-                    "says evidence is insufficient, return 50. Reply with ONLY the number."
+                    "coverage, filter photostability, and evidence quality.\n\n"
+                    "CRITICAL: absence of research is NOT evidence against a product. "
+                    "If something has not been studied, return 50 (neutral) -- never a low "
+                    "score. Only go below 50 when research actively shows a problem, such "
+                    "as a filter that degrades in sunlight or fails to cover UVA. "
+                    "Reply with ONLY the number."
                 ),
             },
             {"role": "user", "content": findings[:4000]},
@@ -215,14 +219,13 @@ def _write_verdict(state, score, subscores, hype_gap, sentiment_note) -> str:
     hype_instruction = ""
     if hype_gap > 30:
         hype_instruction = (
-            f"\n\nIMPORTANT: this product is a best-seller (rank #{product.get('bestseller_rank')}) "
-            f"but scores only {score:.0f}/100 on evidence. Lead with that gap -- this is a "
-            "hyped product and saying so is the point of this service."
+            f"\n\nThis is a best-seller (#{product.get('bestseller_rank')}) scoring only "
+            f"{score:.0f}/100 on evidence. Reflect that gap in bullet 1, briefly."
         )
     elif hype_gap < -30:
         hype_instruction = (
-            f"\n\nNOTE: this scores well ({score:.0f}/100) despite low sales rank "
-            f"(#{product.get('bestseller_rank')}). Call it out as an underrated pick."
+            f"\n\nScores {score:.0f}/100 despite ranking #{product.get('bestseller_rank')}. "
+            "Note it is underrated, briefly."
         )
 
     response = model.invoke(
@@ -230,12 +233,21 @@ def _write_verdict(state, score, subscores, hype_gap, sentiment_note) -> str:
             {
                 "role": "system",
                 "content": (
-                    "Write exactly 3 sentences assessing this sunscreen for a general reader.\n\n"
-                    "- Sentence 1: the bottom line -- is it worth buying?\n"
-                    "- Sentence 2: the single most important supporting fact, with its citation.\n"
-                    "- Sentence 3: the main caveat, or what the evidence does not settle.\n\n"
-                    "Use only facts from the analysis provided. Never claim an ingredient is "
-                    "'safe'. Never give medical advice. Plain language, no marketing tone."
+                    "Write exactly 3 SHORT bullets about this sunscreen. One line each, "
+                    "max 15 words per bullet. Write for a shopper, not a journal.\n\n"
+                    "- Bullet 1: does it work? (efficacy, with a PMID if we have one)\n"
+                    "- Bullet 2: ingredients -- the one thing worth knowing\n"
+                    "- Bullet 3: what users actually report, or what is not known\n\n"
+                    "Format each as a plain line starting with '- '.\n\n"
+                    "BE BLUNT. Cut every hedging clause.\n"
+                    "  BAD:  'However, there is limited evidence regarding the safety and "
+                    "potential effects of cosmetic-grade mineral oil used in this product, "
+                    "which remains an area of uncertainty.'\n"
+                    "  GOOD: 'Mineral oil: not well studied.'\n\n"
+                    "If nothing has been researched, write 'Not studied' -- never imply a "
+                    "product is bad because evidence is missing.\n\n"
+                    "Use only facts from the analysis. Never call an ingredient 'safe'. "
+                    "Never give medical advice."
                 ),
             },
             {
@@ -253,4 +265,6 @@ def _write_verdict(state, score, subscores, hype_gap, sentiment_note) -> str:
         ]
     )
 
-    return response.content.strip() + "\n\nResearch synthesis, not medical advice."
+    # The disclaimer lives in the page footer, not on every card -- repeating it
+    # per product doubled the length of a 3-bullet verdict.
+    return response.content.strip()

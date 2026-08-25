@@ -107,7 +107,20 @@ async def load_live(limit: int) -> list[dict]:
                 f"({resolved['confidence']})"
             )
         else:
-            print(f"  {product['brand'][:18]:18s} NO INGREDIENTS -- scored as unknown")
+            # Retry once after a pause. The last run lost ingredients for 3 of
+            # 4 products purely to rate limiting, and a rate-limited lookup is
+            # indistinguishable from "genuinely not found" unless we retry.
+            time.sleep(25)
+            resolved = resolve_ingredients(product)
+            product["ingredients"] = resolved["ingredients"]
+            product["ingredient_source"] = resolved["source"]
+            if resolved["ingredients"]:
+                print(
+                    f"  {product['brand'][:18]:18s} {len(resolved['ingredients']):3d} ingredients "
+                    f"({resolved['confidence']}, on retry)"
+                )
+            else:
+                print(f"  {product['brand'][:18]:18s} NO INGREDIENTS -- scored as unknown")
 
     return detailed
 

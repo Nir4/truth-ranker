@@ -82,6 +82,12 @@ WHAT IS NOT A THEME -- vague, unfalsifiable, or not about the product:
 Vague praise is what marketing already claims. Only report something specific \
 enough that a reader could check it themselves.
 
+IGNORE SKIN-TYPE MISMATCHES. If a product is sold for dry skin and someone with \
+oily skin says it felt greasy, that is the buyer picking the wrong product -- \
+not the product failing. Do not report it as a theme. The same goes for "too \
+rich for me", "too light for me", or "not for my skin type". We judge whether \
+the product does what IT claims, not whether it suits everyone.
+
 Include POSITIVE themes as readily as negative ones. We are not looking for \
 complaints; we are looking for what is consistently true.
 

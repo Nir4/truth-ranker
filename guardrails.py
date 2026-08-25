@@ -137,8 +137,10 @@ def check_verdict(verdict: str, evidence: list[dict]) -> tuple[bool, list[str]]:
                 "State what was looked for and not found instead."
             )
 
-    if REQUIRED_DISCLAIMER not in lowered:
-        problems.append("Missing the 'research synthesis, not medical advice' line.")
+    # NOTE: the "not medical advice" disclaimer is rendered once in the page
+    # footer rather than repeated on every card, so it is not checked here.
+    # If verdicts are ever surfaced outside the site (API, export, extension),
+    # that consumer must carry the disclaimer itself.
 
     # A verdict making a factual claim with zero evidence behind it is exactly
     # the ungrounded output the whole project exists to avoid.
