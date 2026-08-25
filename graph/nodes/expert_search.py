@@ -24,38 +24,91 @@ from tools.expert_evidence import EDITORIAL_SOURCES, extract_mentions, aggregate
 CACHE_DAYS = 30
 
 
-def _search_editorial(product_name: str, brand: str, limit: int = 4) -> list[str]:
-    """Find candidate article URLs via DuckDuckGo's HTML endpoint.
+# Sites that will never carry a quotable dermatologist -- retailers selling the
+# product, and the brand's own pages. A brand quoting a dermatologist about its
+# own product is marketing, not independent expert opinion.
+_EXCLUDE = (
+    "amazon.", "walmart.", "target.", "ulta.", "sephora.", "cvs.", "walgreens.",
+    "ebay.", "pinterest.", "reddit.", "youtube.", "tiktok.", "instagram.",
+    "facebook.", "/shop", "/cart", "/product/",
+)
 
-    Deliberately not a paid search API: this is a handful of queries per
-    product, and adding another billed dependency for it is not worth it.
+
+def _search_editorial(product_name: str, brand: str, limit: int = 8) -> list[str]:
+    """Find articles that might quote a named dermatologist about this product.
+
+    Was restricted to eight publications with `site:`, which made any
+    dermatologist quoted anywhere else invisible. Now searches broadly and lets
+    the EXTRACTOR decide what counts -- it already requires a named person, a
+    stated credential and a stated reason, so a loose search costs nothing in
+    rigour and finds considerably more.
+
+    Retailer and brand-owned pages are excluded: a brand quoting a
+    dermatologist about its own product is marketing, not independent opinion.
     """
-    sites = " OR ".join(f"site:{s}" for s in EDITORIAL_SOURCES[:5])
-    query = f"{brand} {product_name} dermatologist ({sites})"
+    # Several phrasings, because articles word this differently and one query
+    # only finds pages phrased like that query.
+    queries = [
+        f"{brand} {product_name} dermatologist recommends",
+        f"{brand} {product_name} \"board-certified dermatologist\"",
+        f"{brand} {product_name} dermatologist review",
+    ]
 
-    try:
-        response = requests.post(
-            "https://html.duckduckgo.com/html/",
-            data={"q": query},
-            headers={"User-Agent": "Mozilla/5.0 (research; skin-sayer/0.1)"},
-            timeout=20,
-        )
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        print(f"    [expert] search failed: {str(exc)[:70]}")
-        return []
+    # Two buckets. Known publications go first because they reliably name and
+    # credential their experts; the open web fills remaining slots.
+    #
+    # Widening ALONE made results worse, not better: affiliate farms
+    # ("toptrustedproducts.com", "luxurybeautyadviser.com") outranked Vogue and
+    # Allure, crowding the quality sources out of the top results entirely --
+    # 6 experts found became 1.
+    known: list[str] = []
+    other: list[str] = []
+    brand_key = re.sub(r"[^a-z]", "", brand.lower())
 
-    # Pull result links out of the HTML.
-    urls = re.findall(r'href="(https?://[^"]+)"', response.text)
-    keep = []
-    for u in urls:
-        u = u.replace("&amp;", "&")
-        if any(src in u for src in EDITORIAL_SOURCES) and u not in keep:
-            keep.append(u)
-        if len(keep) >= limit:
+    # Query the trusted publications explicitly first.
+    sites = " OR ".join(f"site:{s}" for s in EDITORIAL_SOURCES)
+    queries = [f"{brand} {product_name} dermatologist ({sites})"] + queries
+
+    for query in queries:
+        try:
+            response = requests.post(
+                "https://html.duckduckgo.com/html/",
+                data={"q": query},
+                headers={"User-Agent": "Mozilla/5.0 (research; skin-sayer/0.1)"},
+                timeout=20,
+            )
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            print(f"    [expert] search failed: {str(exc)[:60]}")
+            continue
+
+        for url in re.findall(r'href="(https?://[^"]+)"', response.text):
+            url = url.replace("&amp;", "&")
+            lowered = url.lower()
+
+            if any(bad in lowered for bad in _EXCLUDE):
+                continue
+
+            # A brand's own site is not an independent source. Check the DOMAIN
+            # only -- "eltamd" appearing in an article path is fine, but
+            # eltamd.com quoting a dermatologist about EltaMD is marketing.
+            domain = re.sub(r"^https?://(?:www\.)?([^/]+).*", r"\1", lowered)
+            if brand_key and len(brand_key) > 4 and brand_key in re.sub(r"[^a-z]", "", domain):
+                continue
+
+            if url in known or url in other:
+                continue
+
+            if any(src in lowered for src in EDITORIAL_SOURCES):
+                known.append(url)
+            else:
+                other.append(url)
+
+        if len(known) >= limit:
             break
 
-    return keep
+    # Known publications first, open web filling what is left.
+    return (known + other)[:limit]
 
 
 def _fetch_article(url: str) -> str:
