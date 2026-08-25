@@ -192,7 +192,13 @@ def ranking_node(state: TruthState) -> dict:
         # bottle and are what a shopper actually reads, so they get checked
         # ahead of the feature bullets.
         headline_claims = [product["name"]] + marketing
-        claims_result = check_claims(headline_claims, ingredients, product["name"])
+        # Claims are checked against USERS now, not research -- nobody ran a
+        # trial on whether a sunscreen feels greasy, but twelve people said it does.
+        claims_result = check_claims(
+            headline_claims,
+            comments=reddit.get("comments", []),
+            product_name=product["name"],
+        )
         if claims_result["accuracy"] is not None:
             print(f"  [claims] accuracy {claims_result['accuracy']:.0f}% -- {claims_result['note']}")
 

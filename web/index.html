@@ -153,6 +153,10 @@
   .claim .ev { color:var(--muted); display:block; margin-top:2px; font-size:12.5px; line-height:1.45; }
   .cv { flex:none; font-size:9.5px; font-weight:600; padding:2px 7px; border-radius:980px;
         height:fit-content; margin-top:2px; border:1px solid var(--hair); white-space:nowrap; }
+  .cv.confirmed        { color:var(--good); border-color:currentColor; }
+  .cv.disputed         { color:var(--bad);  border-color:currentColor; }
+  .cv.mixed            { color:var(--warn); border-color:currentColor; }
+  .cv.not-mentioned    { color:var(--muted); }
   .cv.supported        { color:var(--good); border-color:currentColor; }
   .cv.partly-supported { color:var(--warn); border-color:currentColor; }
   .cv.unsupported      { color:var(--bad);  border-color:currentColor; }
@@ -616,7 +620,7 @@ function collapsibles(p) {
     ['Dermatologists', (p.experts || {}).unique_experts || 0, experts(p)],
     ['What people say', (p.themes || []).length, themes(p)],
     ['By skin type', (p.skin_types || []).length, skinTypes(p)],
-    ['Brand claims vs research', (p.claims || []).length, claims(p)],
+    ['Brand claims vs users', (p.claims || []).length, claims(p)],
   ].filter(([, n, html]) => n > 0 && html);
 
   if (!sections.length) return '';
