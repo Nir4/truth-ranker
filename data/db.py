@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS rankings (
     sources           TEXT,           -- JSON: cited papers, strongest first
     themes            TEXT,           -- JSON: recurring community themes
     experts           TEXT,           -- JSON: named dermatologist mentions
+    claims            TEXT,           -- JSON: brand claims vs research
+    claim_accuracy    REAL,
     researched_themes TEXT,           -- JSON: community claims vs research
     ingredient_functions TEXT,        -- JSON: what each ingredient does
     function_summary  TEXT,           -- JSON: counts by function
@@ -72,10 +74,10 @@ def save_result(product: dict, state: dict) -> None:
                 asin, name, brand, category, price, image_url, score, subscores, hype_gap,
                 bestseller_rank, star_rating, review_count, verdict, confidence,
                 is_safe, safety_notes, expert_findings, evidence, sources, themes,
-                experts, researched_themes,
+                experts, claims, claim_accuracy, researched_themes,
                 ingredient_functions, function_summary,
                 community_summary, ingredients, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
             """,
             (
                 product["asin"],
@@ -99,6 +101,8 @@ def save_result(product: dict, state: dict) -> None:
                 json.dumps(state.get("sources", [])),
                 json.dumps(state.get("themes", [])),
                 json.dumps(state.get("experts", {})),
+                json.dumps(state.get("claims", [])),
+                state.get("claim_accuracy"),
                 json.dumps(state.get("researched_themes", [])),
                 json.dumps(state.get("ingredient_functions", [])),
                 json.dumps(state.get("function_summary", {})),
@@ -111,7 +115,7 @@ def save_result(product: dict, state: dict) -> None:
 def _row_to_dict(row: sqlite3.Row) -> dict:
     """Turn a row into a dict, decoding the JSON columns."""
     d = dict(row)
-    for field in ("subscores", "evidence", "sources", "themes", "experts", "researched_themes",
+    for field in ("subscores", "evidence", "sources", "themes", "experts", "claims", "researched_themes",
                   "ingredient_functions", "function_summary", "ingredients"):
         try:
             empty = {} if field in ("subscores", "function_summary", "experts") else []

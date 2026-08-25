@@ -30,8 +30,19 @@ def startup() -> None:
 
 @app.get("/")
 def index() -> FileResponse:
-    """Serve the single-page frontend."""
-    return FileResponse(WEB_DIR / "index.html")
+    """Serve the single-page frontend.
+
+    Explicit no-cache headers: the page is a single HTML file that changes
+    often during development, and a browser holding a stale copy looks exactly
+    like a feature that was never built.
+    """
+    return FileResponse(
+        WEB_DIR / "index.html",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+        },
+    )
 
 
 @app.get("/api/rankings")
@@ -68,6 +79,20 @@ def recalls(days: int = 1825, limit: int = 10) -> dict:
 
     items = recent_recalls(days=days, limit=limit)
     return {"count": len(items), "recalls": items}
+
+
+@app.get("/api/news")
+def news(limit: int = 6) -> dict:
+    """Skincare news. UNVERIFIED -- kept separate from FDA recalls on purpose.
+
+    A headline is not an enforcement record. Merging these two would let an
+    influencer's claim borrow the authority of an FDA filing, which is exactly
+    the confusion this product exists to undo.
+    """
+    from tools.news_feed import skincare_news
+
+    items = skincare_news(limit=limit)
+    return {"count": len(items), "news": items, "verified": False}
 
 
 @app.get("/api/product/{asin}")

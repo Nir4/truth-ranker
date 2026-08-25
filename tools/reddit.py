@@ -32,11 +32,13 @@ REDDIT_ACTOR = "trudax/reddit-scraper-lite"
 # The five subreddits we trust for US skincare discussion.
 # Chosen for moderation quality and research literacy, not raw size.
 SUBREDDITS = [
-    "SkincareAddiction",   # the big one; heavily moderated, cites sources
-    "30PlusSkinCare",      # older skin, sunscreen-focused, less trend-driven
-    "AsianBeauty",         # deep sunscreen expertise; best filters are often K/J
-    "tretinoin",           # photosensitive users who care intensely about SPF
-    "SkincareAddictionUK", # EU/UK filter availability, useful contrast to US
+    "SkincareAddiction",      # the big one; heavily moderated, cites sources
+    "AsianBeauty",            # deep sunscreen expertise; best filters are often K/J
+    "IndianSkincareAddicts",  # very active on sunscreen; deeper skin tones, so
+                              # white cast and finish get reported honestly
+    "30PlusSkinCare",         # older skin, sunscreen-focused, less trend-driven
+    "tretinoin",              # photosensitive users who care intensely about SPF
+    "SkincareAddictionUK",    # EU/UK filter availability, useful contrast to US
 ]
 
 # A comment needs some substance before it counts as a data point.

@@ -85,6 +85,19 @@
   .bar .fill { height:100%; border-radius:3px; }
   .bar .v { text-align:right; font-weight:600; font-size:12px; }
 
+  /* ---- brand claims vs research ---- */
+  .claims { margin-top:15px; }
+  .claim { display:flex; gap:9px; padding:6px 0; border-top:1px solid var(--hair); font-size:13px; }
+  .claim:first-of-type { border-top:0; }
+  .claim .txt { font-weight:500; }
+  .claim .ev { color:var(--muted); display:block; margin-top:2px; font-size:12.5px; line-height:1.45; }
+  .cv { flex:none; font-size:9.5px; font-weight:600; padding:2px 7px; border-radius:980px;
+        height:fit-content; margin-top:2px; border:1px solid var(--hair); white-space:nowrap; }
+  .cv.supported        { color:var(--good); border-color:currentColor; }
+  .cv.partly-supported { color:var(--warn); border-color:currentColor; }
+  .cv.unsupported      { color:var(--bad);  border-color:currentColor; }
+  .cv.untestable       { color:var(--muted); }
+
   /* ---- expert panel ---- */
   .experts { margin-top:15px; }
   .expert { display:flex; gap:9px; padding:7px 0; border-top:1px solid var(--hair); font-size:13px; }
@@ -273,8 +286,12 @@
 
     <aside class="news">
       <h2>Recalled products</h2>
-      <p class="sub">Official FDA enforcement records. Not headlines &mdash; every entry has a recall number.</p>
+      <p class="sub">Official FDA enforcement records &mdash; every entry has a recall number.</p>
       <div id="recalls"><div style="color:var(--muted);font-size:12.5px">Loading&hellip;</div></div>
+
+      <h2 style="margin-top:24px">In the news</h2>
+      <p class="sub">Press coverage, <b>not verified</b>. Headlines are not enforcement records.</p>
+      <div id="newsitems"><div style="color:var(--muted);font-size:12.5px">Loading&hellip;</div></div>
     </aside>
   </div>
 
@@ -370,6 +387,7 @@ function bars(p) {
     ['Research support',  s.efficacy],
     ['Dermatologists',    s.expert],
     ['Ingredients',       s.ingredients],
+    ['Claim accuracy',    p.claim_accuracy],
   ].filter(([, v]) => typeof v === 'number');
 
   return `<div class="bars">${rows.map(([k, v]) => `
@@ -377,6 +395,23 @@ function bars(p) {
       <span class="k">${k}</span>
       <span class="track"><span class="fill" style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>
       <span class="v">${Math.round(v)}</span>
+    </div>`).join('')}</div>`;
+}
+
+// What the brand claims vs what research supports. Untestable claims are
+// labelled as such rather than marked false -- "glowing skin" is not a lie,
+// it is a sentence chosen so no study can check it.
+function claims(p) {
+  const list = p.claims || [];
+  if (!list.length) return '';
+  const acc = p.claim_accuracy;
+  return `<div class="claims"><h3 style="font-size:11px;font-weight:600;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted);margin:0 0 9px">
+      Brand claims vs research${acc != null ? ` · ${Math.round(acc)}% accurate` : ''}</h3>
+    ${list.slice(0, 4).map(c => `<div class="claim">
+      <span class="cv ${esc(c.verdict)}">${esc(c.verdict).replace('-', ' ')}</span>
+      <span><span class="txt">${esc(c.claim)}</span>
+      <span class="ev">${esc(c.evidence)}</span></span>
     </div>`).join('')}</div>`;
 }
 
@@ -433,7 +468,7 @@ function row(p) {
         <span class="tag ${esc(p.confidence)}">${esc(p.confidence)} evidence</span>
         ${p.is_safe ? '' : '<span class="tag hype">FDA recall on record</span>'}
       </div>
-      ${callout}${dupe}${experts(p)}${themes(p)}${sources(p)}
+      ${callout}${dupe}${claims(p)}${experts(p)}${themes(p)}${sources(p)}
       <details>
         <summary>Ingredients and full findings</summary>
         ${functions(p)}
@@ -449,8 +484,16 @@ function row(p) {
 
 function render(products) {
   if (!products.length) {
-    list.innerHTML = `<div class="empty">Nothing here yet.<br>
-      Run the pipeline:<br><br><code>uv run python -m refresh.run --limit 40</code></div>`;
+    // Distinguish "no results for your filters" from "the DB is empty" --
+    // they look identical otherwise and send you to the wrong fix.
+    const filtered = ALL.length > 0;
+    list.innerHTML = filtered
+      ? `<div class="empty">No products match these filters.<br>
+         Try clearing a filter or widening the price range.</div>`
+      : `<div class="empty">No products scored yet.<br>
+         If the pipeline is running, they appear here as each one finishes —
+         just refresh.<br><br>
+         <code>uv run python -m refresh.run --seed</code></div>`;
     count.textContent = '';
     return;
   }
@@ -535,9 +578,41 @@ async function load() {
         </div>`).join('')
       : '<div style="color:var(--muted);font-size:12.5px">No recent recalls on record.</div>';
   } catch (e) { /* the news panel is optional; rankings still render */ }
+
+  try {
+    const n = await (await fetch('/api/news?limit=5')).json();
+    const box = document.getElementById('newsitems');
+    box.innerHTML = (n.news || []).length
+      ? n.news.map(x => `<div class="recall">
+          <a href="${esc(x.url)}" target="_blank" rel="noopener"
+             style="color:var(--text);text-decoration:none;font-weight:600">${esc(x.title)}</a>
+          <span class="why">${esc(x.snippet)}</span>
+          <span class="cls">unverified</span>
+          <span style="color:var(--muted);font-size:11px"> · ${esc(x.source)}</span>
+        </div>`).join('')
+      : '<div style="color:var(--muted);font-size:12.5px">No recent coverage found.</div>';
+  } catch (e) { /* optional */ }
 }
 
 load();
+
+// While a refresh job is running, products land one at a time. Poll gently so
+// the page fills in instead of showing a stale empty state -- and stop once
+// the count settles, since this is a read-only endpoint but still a request.
+let lastCount = 0, settled = 0;
+setInterval(async () => {
+  try {
+    const d = await (await fetch('/api/rankings?limit=200')).json();
+    const n = (d.products || []).length;
+    if (n !== lastCount) {
+      lastCount = n; settled = 0;
+      ALL = d.products || [];
+      apply();
+    } else if (++settled > 4) {
+      return;  // nothing new for ~2 minutes; stop polling
+    }
+  } catch (e) { /* transient; try again next tick */ }
+}, 30000);
 </script>
 </body>
 </html>

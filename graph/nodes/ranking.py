@@ -178,6 +178,17 @@ def ranking_node(state: TruthState) -> dict:
     facts = analyse_ingredients_raw(ingredients)
     reddit = gather_sentiment_raw(product["name"], product["brand"])
 
+    # Check the BRAND'S OWN CLAIMS against research. The sharpest version of
+    # the thesis: what the label says vs what the evidence supports.
+    claims_result = {"claims": [], "accuracy": None, "note": ""}
+    marketing = product.get("marketing_claims") or []
+    if marketing:
+        from graph.nodes.claim_check import check_claims
+
+        claims_result = check_claims(marketing, ingredients, product["name"])
+        if claims_result["accuracy"] is not None:
+            print(f"  [claims] accuracy {claims_result['accuracy']:.0f}% -- {claims_result['note']}")
+
     # TIER 2: named dermatologists. Fills the gap between "zinc oxide blocks
     # UV" (research) and "it pills under makeup" (Reddit) -- would a trained
     # clinician actually hand this to a patient, and for whom?
@@ -262,6 +273,8 @@ def ranking_node(state: TruthState) -> dict:
         "verdict": verdict,
         "themes": themes["themes"],
         "experts": experts,
+        "claims": claims_result["claims"],
+        "claim_accuracy": claims_result["accuracy"],
         "expert_note": expert_note,
         # Community claims checked against research -- "users say plumping;
         # here is what the evidence says about the ingredient responsible".

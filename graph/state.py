@@ -74,6 +74,8 @@ class TruthState(TypedDict, total=False):
     # "white cast"), with a count of how many separate commenters said it.
     themes: list[dict]
     experts: dict
+    claims: list[dict]
+    claim_accuracy: float | None
     expert_note: str
     researched_themes: list[dict]
     ingredient_functions: list[dict]
