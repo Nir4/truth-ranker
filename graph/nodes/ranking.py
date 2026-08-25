@@ -26,10 +26,22 @@ from guardrails import check_verdict
 
 # Weights for the truth score. Safety is not here because it is a VETO, not a
 # weighted term -- an unsafe product does not get to average its way back up.
+# The headline comparison is BEST-SELLER RANK vs. WHAT USERS ACTUALLY SAY.
+# That is the product: people buy what an influencer marketed, it becomes a
+# best-seller, and the question is whether it deserved to be one.
+#
+# Reddit dominates because it is the least sponsored signal we have. Research
+# still matters, but most sunscreens share the same 4-5 FDA filters, so
+# efficacy barely separates them.
+#
+# Ingredients are computed but NOT scored. Every US sunscreen filter is legal,
+# so "contains an approved filter" is not a differentiator. They earn their
+# keep two other ways: powering dupe detection (same formula, lower price) and
+# flagging the genuinely notable cases -- homosalate is capped at 7.34% in EU
+# face products and allowed at 15% here, which is worth telling someone.
 WEIGHTS = {
-    "efficacy": 0.35,      # what the research supports
-    "ingredients": 0.30,   # objective INCI quality
-    "sentiment": 0.35,     # informed real-world experience (Reddit)
+    "sentiment": 0.65,   # what real users report -- the least sponsored signal
+    "efficacy": 0.35,    # what published research supports
 }
 
 
@@ -163,8 +175,9 @@ def ranking_node(state: TruthState) -> dict:
 
     subscores = {
         "efficacy": _score_efficacy(findings),
-        "ingredients": _score_ingredients(facts, known=bool(ingredients)),
     }
+    # Computed and shown, but NOT part of the score -- see WEIGHTS above.
+    ingredient_quality = _score_ingredients(facts, known=bool(ingredients))
     sentiment_score, sentiment_note = _score_sentiment(reddit)
     subscores["sentiment"] = sentiment_score
 
@@ -203,7 +216,11 @@ def ranking_node(state: TruthState) -> dict:
 
     return {
         "score": round(score, 1),
-        "subscores": {k: round(v, 1) for k, v in subscores.items()},
+        "subscores": {
+            **{k: round(v, 1) for k, v in subscores.items()},
+            # Displayed for transparency; carries no weight in `score`.
+            "ingredients": round(ingredient_quality, 1),
+        },
         "hype_gap": round(hype_gap, 1),
         "verdict": verdict,
         "themes": themes["themes"],

@@ -55,6 +55,21 @@ def underrated(max_gap: float = -20.0, limit: int = 20) -> dict:
     return {"count": len(products), "products": products}
 
 
+@app.get("/api/recalls")
+def recalls(days: int = 1825, limit: int = 10) -> dict:
+    """Recent sunscreen recalls, for the news panel.
+
+    NOTE: this is the ONE endpoint that reaches outside the DB. It is a single
+    cached openFDA read rather than a scrape or an LLM call, and recall
+    freshness is the one thing worth a live request -- a week-old "no recalls"
+    answer for a product recalled yesterday is the worst failure we could ship.
+    """
+    from tools.recall_feed import recent_recalls
+
+    items = recent_recalls(days=days, limit=limit)
+    return {"count": len(items), "recalls": items}
+
+
 @app.get("/api/product/{asin}")
 def product(asin: str) -> dict:
     """Full detail for one product, including findings and evidence."""
