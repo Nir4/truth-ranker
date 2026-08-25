@@ -410,6 +410,13 @@ def gather(product_name: str, brand: str, limit: int = 120) -> dict:
 
             note_mentions(others)
 
+    # Tag each comment with its author's stated skin type, so "broke out my
+    # already bad acne" is a negative FOR ACNE-PRONE SKIN rather than a plain
+    # negative that drags down the score for everyone.
+    from tools.skin_context import annotate
+
+    annotate(comments)
+
     comments.sort(key=lambda c: c["score"], reverse=True)
 
     return {

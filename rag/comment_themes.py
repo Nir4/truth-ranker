@@ -140,7 +140,18 @@ def themes_from_pool(
     # community actually agreed with before it runs out of context.
     approved.sort(key=lambda c: c.get("score", 0), reverse=True)
 
+    # Per-skin-type sentiment, computed from what commenters said about
+    # themselves. A product can be genuinely good and still wrong for one skin
+    # type; a single averaged number hides exactly that.
+    from tools.skin_context import annotate, by_skin_type, coverage
+
+    annotate(approved)
+
     result = extract_themes(approved, f"{brand} {product_name}")
+    result["skin_coverage"] = coverage(approved)
+    result["by_skin_type"] = {
+        skin: len(group) for skin, group in by_skin_type(approved).items()
+    }
     result["comment_count"] = len(approved)
     result["pool_size"] = len(pooled)
     result["from_pool"] = len(approved) - len(direct)

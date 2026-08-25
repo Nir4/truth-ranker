@@ -101,9 +101,17 @@ def _score_sentiment(reddit: dict) -> tuple[float, str]:
 
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     sample = "\n\n".join(
-        f"[+{c['score']}, weight {c.get('weight', 1.0):.1f}] {c['text'][:300]}"
+        f"[+{c['score']}, weight {c.get('weight', 1.0):.1f}"
+        + (f", {c['skin_type']} skin" if c.get("skin_type") else "")
+        + f"] {c['text'][:300]}"
         for c in weighted[:12]
     )
+
+    # Show the model each commenter's stated skin type, so it can tell a
+    # general complaint from one specific to a skin type.
+    from tools.skin_context import annotate
+
+    annotate(weighted)
 
     response = model.invoke(
         [
@@ -116,7 +124,13 @@ def _score_sentiment(reddit: dict) -> tuple[float, str]:
                     "Each comment carries a `weight` reflecting how much concrete lived "
                     "detail it contains. Weight the high-weight comments heavily and the "
                     "low-weight ones barely at all -- a 0.2-weight comment is generic "
-                    "enthusiasm and should move the score very little."
+                    "enthusiasm and should move the score very little.\n\n"
+                    "Some comments show the commenter's own stated skin type. A negative "
+                    "that is SPECIFIC to one skin type ('broke out my acne-prone skin', "
+                    "'too rich for my oily skin') should move the overall score less than "
+                    "a general one ('it pills', 'it stings'), because it describes a "
+                    "mismatch rather than a fault. Do not erase it -- just weigh it as "
+                    "what it is."
                 ),
             },
             {"role": "user", "content": sample},
