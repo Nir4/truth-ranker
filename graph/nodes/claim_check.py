@@ -24,9 +24,13 @@ So each source does the job it is actually good at:
 
 WHEN NOBODY MENTIONED IT
 ------------------------
-Silence is not disagreement. A claim nobody discussed is UNVERIFIED, never
-contradicted -- the same principle as absence of research not meaning a product
-is bad. Brands make many claims nobody bothers to remark on.
+The claim is DROPPED, not shown as unverified.
+
+Silence is still not disagreement -- it never counts against the brand. But
+"nobody mentioned the water resistance" tells a reader nothing, and a card
+listing six claims where four say "not discussed" buries the two that matter.
+Brands make many claims nobody bothers to remark on; those simply do not
+appear.
 """
 
 from pydantic import BaseModel, Field
@@ -186,19 +190,22 @@ def check_claims(
             }
         )
 
-    # Score only claims users actually addressed. A claim nobody discussed is
-    # unverified, not failed -- counting silence against a brand would be the
-    # mirror of counting absent research against a product.
+    # Keep ONLY claims users actually addressed. A claim nobody discussed
+    # tells a reader nothing -- "nobody mentioned the water resistance" is not
+    # a finding, it is noise. Silence still does not count AGAINST the brand;
+    # it simply is not shown.
     addressed = [v for v in verdicts if v["verdict"] != "not-mentioned"]
+    verdicts = addressed
     if addressed:
         points = {"confirmed": 1.0, "mixed": 0.5, "disputed": 0.0}
         accuracy = 100 * sum(points.get(v["verdict"], 0) for v in addressed) / len(addressed)
     else:
         accuracy = None
 
-    silent = len(verdicts) - len(addressed)
-    note = f"{len(addressed)} claim(s) users addressed"
-    if silent:
-        note += f", {silent} nobody mentioned"
+    note = (
+        f"{len(addressed)} claim(s) users addressed"
+        if addressed
+        else "No brand claims that users discussed."
+    )
 
     return {"claims": verdicts, "accuracy": accuracy, "note": note}
