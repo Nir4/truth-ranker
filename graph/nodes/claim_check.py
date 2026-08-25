@@ -99,9 +99,51 @@ Absence of retrieved evidence is a limit of our corpus, not proof against a \
 claim. If you have no relevant evidence, say so in what_evidence_shows and use \
 "untestable" only if the claim is genuinely vague.
 
-Judge ONLY claims about what the product DOES. Skip pack size, price, scent \
-preference, and "dermatologist tested" (which is a testing assertion, not an \
-efficacy claim)."""
+WHICH CLAIMS TO CHECK AT ALL -- most marketing copy should be SKIPPED.
+
+Only check claims making a BIOLOGICAL or EFFICACY assertion that published \
+research could actually settle:
+
+  CHECK THESE:
+    "broad-spectrum UVA/UVB protection"     -- does this filter system do that?
+    "reduces the appearance of dark spots"  -- does the active do that?
+    "hyaluronic acid for plump skin"        -- what does HA actually do?
+    "prevents premature ageing"             -- big biological claim
+    "reef safe"                             -- testable against the literature
+    "non-comedogenic"                       -- a testable biological claim
+
+  SKIP THESE ENTIRELY -- do not return them at all:
+
+    REGULATED, LAB-TESTED SPECIFICATIONS. "Water resistant 80 minutes",
+    "SPF 50", "PA++++" are FDA/ISO-defined and verified by standardised
+    testing before a product can be sold. Absence of an academic paper on a
+    specific bottle says nothing. Flagging these as unverified is simply wrong.
+
+    SENSORY AND TEXTURE DESCRIPTIONS. "Non-greasy", "lightweight",
+    "absorbs quickly", "invisible finish", "dry-touch". These describe how a
+    product FEELS. Research does not study them and users report them
+    directly -- our community themes already cover this far better than a
+    literature search could.
+
+    FORMULATION FACTS readable from the ingredient list. "Oil-free",
+    "fragrance-free", "vegan", "reef-friendly formula". These are checked
+    against the INCI list, not against research.
+
+    MARKETING AND BRANDING. "Dermatologist recommended", "dermatologist
+    tested", "#1 brand", "clinically proven" with no stated endpoint,
+    "trusted by millions", proprietary technology names (Helioplex,
+    Cell-Ox Shield). These are assertions about popularity or process, not
+    about biology. We track real dermatologist opinion separately, from
+    named experts.
+
+    PACK SIZE, PRICE, SCENT PREFERENCE.
+
+If a claim is not a biological or efficacy assertion, LEAVE IT OUT of your \
+response. Returning "we could not verify that it is non-greasy" is noise that \
+makes the whole analysis look unserious.
+
+It is entirely normal for a product to have ONE checkable claim out of six \
+bullets. Return only that one."""
 
 
 def check_claims(claims: list[str], ingredients: list[str], product_name: str) -> dict:
@@ -135,6 +177,24 @@ def check_claims(claims: list[str], ingredients: list[str], product_name: str) -
         print(f"    [claims] failed: {str(exc)[:80]}")
         return {"claims": [], "accuracy": None, "note": "Claim analysis unavailable."}
 
+    # Drop non-biological claims in CODE. The prompt asks the model to omit
+    # them, but it returns them marked "untestable" anyway -- and a card
+    # reading "we could not verify that it is non-greasy" makes the whole
+    # analysis look unserious. These categories are not claims research can
+    # settle, so they should never reach the page.
+    import re as _re
+
+    SKIP = _re.compile(
+        r"water[- ]resist|sweat[- ]resist|\b\d+\s*minutes?\b"        # lab-tested specs
+        r"|non[- ]greasy|greaseless|lightweight|absorbs quickly"      # texture
+        r"|invisible|dry[- ]touch|no white cast|sheer finish|matte"
+        r"|dermatologist (recommended|tested|approved)"               # branding
+        r"|#\s*1 brand|trusted by|clinically proven\b(?!.{0,40}\bfor\b)"
+        r"|oil[- ]free|fragrance[- ]free|paraben[- ]free|vegan|cruelty[- ]free"  # INCI facts
+        r"|travel size|fl\.? oz|value pack|pack of",
+        _re.I,
+    )
+
     verdicts = [
         {
             "claim": c.claim,
@@ -144,6 +204,7 @@ def check_claims(claims: list[str], ingredients: list[str], product_name: str) -
             "citation": c.citation,
         }
         for c in result.claims
+        if not SKIP.search(c.claim)
     ]
 
     # Score only the CHECKABLE claims. Untestable ones are excluded from the

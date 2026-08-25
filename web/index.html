@@ -502,11 +502,10 @@ function functions(p) {
 function label(kind, v, p) {
   if (typeof v !== 'number') return ['—', 'var(--muted)'];
   if (kind === 'reddit') {
-    const n = (p.themes || []).reduce((a, t) => a + (t.mentions || 0), 0);
-    if (!n) return ['No discussion found', 'var(--muted)'];
-    return v >= 65 ? [`Positive · ${n} mentions`, 'var(--good)']
-         : v >= 45 ? [`Mixed · ${n} mentions`, 'var(--warn)']
-                   : [`Negative · ${n} mentions`, 'var(--bad)'];
+    if (!(p.themes || []).length) return ['No discussion found', 'var(--muted)'];
+    return v >= 65 ? ['Positive', 'var(--good)']
+         : v >= 45 ? ['Mixed', 'var(--warn)']
+                   : ['Negative', 'var(--bad)'];
   }
   if (kind === 'research') {
     // These describe the INGREDIENT evidence, not a study of this bottle.
@@ -548,7 +547,6 @@ function bars(p) {
     ['Reddit', ...label('reddit', s.sentiment, p)],
     ['Ingredient research', ...label('research', s.efficacy, p)],
     ['Dermatologists', ...label('derm', s.expert, p)],
-    ['Claims', ...label('claims', null, p)],
     ['Ingredients', ...label('ingredients', s.ingredients, p)],
   ];
 
@@ -676,8 +674,13 @@ function row(p) {
       ${verdictHtml(p.verdict)}
       <div class="tags">
         <span class="tag ${esc(p.confidence)}">${esc(p.confidence)} evidence</span>
-        ${p.sentiment_source === 'amazon-reviews'
-          ? '<span class="tag" title="Too little community discussion, so sentiment comes from Amazon reviews and is weighted lower">sentiment from Amazon reviews</span>'
+        ${(p.experts || {}).unique_experts
+          ? `<span class="tag" style="color:var(--good);border-color:currentColor"
+              title="Named board-certified dermatologists recommended this, with stated reasons">
+              Dermatologist recommended</span>`
+          : ''}
+        ${p.sentiment_source && p.sentiment_source.includes('amazon')
+          ? '<span class="tag" title="Reddit discussion was thin, so Amazon reviews supply volume. Weighted lower.">includes Amazon reviews</span>'
           : ''}
         ${p.is_safe ? '' : '<span class="tag hype">FDA recall on record</span>'}
       </div>
@@ -694,7 +697,7 @@ function row(p) {
         p.hype_gap > 25 ? 'Overhyped'
         : p.score >= 65 ? 'Worth it'
         : 'Mixed'}</div>
-      <div class="outof">${p.bestseller_rank >= 999 ? '' : 'vs #' + p.bestseller_rank}</div>
+      <div class="outof">${p.bestseller_rank >= 999 ? 'not on Amazon' : '#' + p.bestseller_rank + ' bestseller'}</div>
     </div>
   </article>`;
 }
