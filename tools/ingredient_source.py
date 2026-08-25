@@ -48,15 +48,26 @@ def resolve_ingredients(product: dict, allow_ocr: bool = True) -> dict:
     brand = product.get("brand", "")
     name = product.get("name", "")
 
+    # Formulations basically never change, and resolving one costs three model
+    # calls (brand -> match -> verify) plus API requests. Cache aggressively.
+    from data.cache import get as cache_get, put as cache_put
+
+    cache_key = product.get("asin") or f"{brand} {name}"
+    cached = cache_get("ingredients", cache_key)
+    if cached is not None:
+        return cached
+
     # 1. The scraped listing occasionally carries ingredients already.
     if product.get("ingredients"):
-        return {
+        result = {
             "ingredients": product["ingredients"],
             "active_ingredients": [],
             "source": "listing",
             "confidence": "curated",
             "note": "",
         }
+        cache_put("ingredients", cache_key, result)
+        return result
 
     # 2. FDA drug label -- the authoritative source for US sunscreens.
     if brand:
@@ -77,13 +88,15 @@ def resolve_ingredients(product: dict, allow_ocr: bool = True) -> dict:
             )
 
             if verdict.consistent:
-                return {
+                result = {
                     "ingredients": fda["ingredients"],
                     "active_ingredients": fda["active_ingredients"],
                     "source": fda["source"],
                     "confidence": "fda",
                     "note": "",
                 }
+                cache_put("ingredients", cache_key, result)
+                return result
 
             # Contradiction found -- reject rather than publish a false list.
             print(
@@ -105,13 +118,15 @@ def resolve_ingredients(product: dict, allow_ocr: bool = True) -> dict:
                 all_ingredients=obf["ingredients"],
             )
             if verdict.consistent:
-                return {
+                result = {
                     "ingredients": obf["ingredients"],
                     "active_ingredients": [],
                     "source": obf["source"],
                     "confidence": "openbeautyfacts",
                     "note": "",
                 }
+                cache_put("ingredients", cache_key, result)
+                return result
             print(
                 f"    [verify] REJECTED OBF match for {name[:40]!r}: {verdict.conflict[:110]}"
             )

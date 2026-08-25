@@ -189,12 +189,26 @@ def gather_sentiment_raw(product_name: str, brand: str, limit: int = 40) -> dict
     sentiment is positive; the ranking node does that with an LLM, so the
     judgement is visible and auditable in one place.
     """
+    # Comments accumulate over weeks, not hours. Re-scraping the same product
+    # every run is what drained our Apify balance, so check the cache first.
+    from data.cache import get as cache_get, put as cache_put
+
+    cache_key = f"{brand} {product_name}".strip()
+    cached = cache_get("reddit", cache_key)
+    if cached is not None:
+        return cached
+
     reddit = _get_client()
 
     if reddit is None:
         # No official credentials. Try Apify before giving up.
         if os.getenv("APIFY_TOKEN"):
-            return _gather_via_apify(product_name, brand, limit)
+            result = _gather_via_apify(product_name, brand, limit)
+            # Only cache real results -- caching a failure would lock in an
+            # empty sentiment signal for two weeks.
+            if result.get("available") and result.get("comment_count"):
+                cache_put("reddit", cache_key, result)
+            return result
         return {
             "available": False,
             "reason": (
@@ -241,7 +255,7 @@ def gather_sentiment_raw(product_name: str, brand: str, limit: int = 40) -> dict
     # Highest-scored first: community agreement is our proxy for "informed".
     comments.sort(key=lambda c: c["score"], reverse=True)
 
-    return {
+    result = {
         "available": True,
         "comments": comments,
         "comment_count": len(comments),
@@ -252,6 +266,10 @@ def gather_sentiment_raw(product_name: str, brand: str, limit: int = 40) -> dict
         "subreddit_spread": len({c["subreddit"] for c in comments}),
         "source": "praw",
     }
+
+    if result["comment_count"]:
+        cache_put("reddit", cache_key, result)
+    return result
 
 
 @tool

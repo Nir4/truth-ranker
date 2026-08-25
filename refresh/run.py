@@ -13,7 +13,16 @@ import argparse
 import asyncio
 import time
 import json
+import sys
 from pathlib import Path
+
+# This job takes 20+ minutes and people redirect it to a log file. Python
+# buffers stdout when it is not a terminal, so without this the log stays
+# EMPTY for the whole run and there is no way to tell progress from a hang.
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except AttributeError:  # pragma: no cover - very old Python
+    pass
 
 from dotenv import load_dotenv
 

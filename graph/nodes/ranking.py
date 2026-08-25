@@ -23,6 +23,7 @@ from graph.state import TruthState
 from tools.ingredient import analyse_ingredients_raw
 from tools.reddit import gather_sentiment_raw
 from guardrails import check_verdict
+from tools.ingredient_functions import label_ingredients, function_summary
 
 # Weights for the truth score. Safety is not here because it is a VETO, not a
 # weighted term -- an unsafe product does not get to average its way back up.
@@ -39,9 +40,13 @@ from guardrails import check_verdict
 # keep two other ways: powering dupe detection (same formula, lower price) and
 # flagging the genuinely notable cases -- homosalate is capped at 7.34% in EU
 # face products and allowed at 15% here, which is worth telling someone.
+# Four evidence tiers, weighted by how hard each is to fake.
+# Reddit dominates because it is the least sponsored signal; expert mentions
+# come from named clinicians with stated reasons; research is the backstop.
 WEIGHTS = {
-    "sentiment": 0.65,   # what real users report -- the least sponsored signal
-    "efficacy": 0.35,    # what published research supports
+    "sentiment": 0.50,   # what real users report
+    "efficacy": 0.30,    # what published research supports
+    "expert": 0.20,      # named board-certified dermatologists
 }
 
 
@@ -173,8 +178,18 @@ def ranking_node(state: TruthState) -> dict:
     facts = analyse_ingredients_raw(ingredients)
     reddit = gather_sentiment_raw(product["name"], product["brand"])
 
+    # TIER 2: named dermatologists. Fills the gap between "zinc oxide blocks
+    # UV" (research) and "it pills under makeup" (Reddit) -- would a trained
+    # clinician actually hand this to a patient, and for whom?
+    from graph.nodes.expert_search import find_expert_mentions
+    from tools.expert_evidence import expert_score
+
+    experts = find_expert_mentions(product["name"], product["brand"])
+    expert_pts, expert_note = expert_score(experts)
+
     subscores = {
         "efficacy": _score_efficacy(findings),
+        "expert": expert_pts,
     }
     # Computed and shown, but NOT part of the score -- see WEIGHTS above.
     ingredient_quality = _score_ingredients(facts, known=bool(ingredients))
@@ -185,6 +200,7 @@ def ranking_node(state: TruthState) -> dict:
     # a reader nothing; "sticky finish, 4 mentions" tells them whether the
     # complaint even applies to them.
     themes = {"themes": [], "overall": ""}
+    researched: list[dict] = []
     if reddit["available"] and reddit["comment_count"]:
         from tools.sentiment_themes import extract_themes
 
@@ -195,6 +211,17 @@ def ranking_node(state: TruthState) -> dict:
             )
             print(f"  [themes] {labels}")
 
+            # THE COMMUNITY DECIDES WHAT TO RESEARCH.
+            # If everyone says "plumping", go find out what actually plumps and
+            # whether the research supports it. This is what makes the verdict
+            # about the claims people actually make, rather than whatever the
+            # literature happened to cover.
+            from graph.nodes.theme_research import research_themes
+
+            researched = research_themes(
+                themes["themes"], ingredients, product["name"]
+            )
+
     score = sum(subscores[k] * WEIGHTS[k] for k in WEIGHTS)
 
     # --- the hype gap ---
@@ -203,7 +230,9 @@ def ranking_node(state: TruthState) -> dict:
     popularity = max(0.0, 100.0 - (rank - 1) * 2) if rank <= 50 else 0.0
     hype_gap = popularity - score  # positive = more popular than it deserves
 
-    verdict = _write_verdict(state, score, subscores, hype_gap, sentiment_note)
+    verdict = _write_verdict(
+        state, score, subscores, hype_gap, sentiment_note, researched, expert_note
+    )
 
     # OUTPUT GUARDRAIL: check the verdict before it is stored.
     # We log rather than silently rewrite -- a rewritten verdict hides the fact
@@ -224,14 +253,46 @@ def ranking_node(state: TruthState) -> dict:
         "hype_gap": round(hype_gap, 1),
         "verdict": verdict,
         "themes": themes["themes"],
+        "experts": experts,
+        "expert_note": expert_note,
+        # Community claims checked against research -- "users say plumping;
+        # here is what the evidence says about the ingredient responsible".
+        "researched_themes": researched,
+        # What each ingredient DOES (humectant, emollient, UV filter...).
+        # Function is a checkable fact about formulation; unlike a "safety
+        # score" it carries no verdict, so it is ours to state.
+        "ingredient_functions": label_ingredients(ingredients),
+        "function_summary": function_summary(ingredients),
         "community_summary": themes["overall"],
     }
 
 
-def _write_verdict(state, score, subscores, hype_gap, sentiment_note) -> str:
+def _write_verdict(
+    state, score, subscores, hype_gap, sentiment_note, researched=None, expert_note=""
+) -> str:
     """Write the 3-sentence verdict, grounded in what we actually found."""
     product = state["product"]
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+
+    # Build the community-claims block: what users raised, and what research
+    # says about the ingredient responsible. This is the material for the most
+    # useful bullets, because it answers the questions people actually asked.
+    community_block = ""
+    if researched:
+        lines = []
+        for r in researched:
+            cite = f" (PMID {r['citation']})" if r.get("citation") else ""
+            lines.append(
+                f"- Users say \"{r['theme']}\" ({r['mentions']} people). "
+                f"Ingredient: {r['ingredient'] or 'unclear'}. "
+                f"Research [{r['verdict']}]: {r['research']}{cite}"
+            )
+        community_block = (
+            "WHAT USERS RAISED, CHECKED AGAINST RESEARCH "
+            "(prefer these for your bullets -- they are what people actually asked):\n"
+            + "\n".join(lines)
+            + "\n\n"
+        )
 
     hype_instruction = ""
     if hype_gap > 30:
@@ -253,8 +314,12 @@ def _write_verdict(state, score, subscores, hype_gap, sentiment_note) -> str:
                     "Write exactly 3 SHORT bullets about this sunscreen. One line each, "
                     "max 15 words per bullet. Write for a shopper, not a journal.\n\n"
                     "- Bullet 1: does it work? (efficacy, with a PMID if we have one)\n"
-                    "- Bullet 2: ingredients -- the one thing worth knowing\n"
-                    "- Bullet 3: what users actually report, or what is not known\n\n"
+                    "- Bullet 2 and 3: take the claims USERS actually raised and say "
+                    "what the research shows about the ingredient responsible. "
+                    "e.g. users say it is plumping -> 'Hyaluronic acid binds water in "
+                    "the surface layer; the plumping is temporary hydration (PMID x).'\n\n"
+                    "Prefer the community claims over generic ingredient facts -- they "
+                    "are what people actually want to know.\n\n"
                     "Format each as a plain line starting with '- '.\n\n"
                     "BE BLUNT. Cut every hedging clause.\n"
                     "  BAD:  'However, there is limited evidence regarding the safety and "
@@ -271,10 +336,17 @@ def _write_verdict(state, score, subscores, hype_gap, sentiment_note) -> str:
                 "role": "user",
                 "content": (
                     f"PRODUCT: {product['brand']} {product['name']}\n"
-                    f"TRUTH SCORE: {score:.0f}/100 (efficacy {subscores['efficacy']:.0f}, "
-                    f"ingredients {subscores['ingredients']:.0f}, sentiment {subscores['sentiment']:.0f})\n"
-                    f"AMAZON RANK: #{product.get('bestseller_rank')} | {sentiment_note}\n\n"
-                    f"RESEARCH:\n{state.get('expert_findings', '')[:3000]}\n\n"
+                    f"TRUTH SCORE: {score:.0f}/100 "
+                    f"(efficacy {subscores.get('efficacy', 50):.0f}, "
+                    f"what users say {subscores.get('sentiment', 50):.0f})\n"
+                    f"AMAZON RANK: #{product.get('bestseller_rank')} | {sentiment_note}\n"
+                    f"EXPERTS: {expert_note}\n\n"
+                    # What the community raised, checked against research. These
+                    # are the claims people actually care about, so bullets built
+                    # from them beat bullets built from whatever PubMed happened
+                    # to cover.
+                    f"{community_block}"
+                    f"RESEARCH:\n{state.get('expert_findings', '')[:2500]}\n\n"
                     f"SAFETY: {state.get('safety_notes', 'no data')}"
                     f"{hype_instruction}"
                 ),

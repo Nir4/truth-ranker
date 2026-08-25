@@ -37,6 +37,10 @@ CREATE TABLE IF NOT EXISTS rankings (
     evidence          TEXT,           -- JSON
     sources           TEXT,           -- JSON: cited papers, strongest first
     themes            TEXT,           -- JSON: recurring community themes
+    experts           TEXT,           -- JSON: named dermatologist mentions
+    researched_themes TEXT,           -- JSON: community claims vs research
+    ingredient_functions TEXT,        -- JSON: what each ingredient does
+    function_summary  TEXT,           -- JSON: counts by function
     community_summary TEXT,
     ingredients       TEXT,           -- JSON
     updated_at        TEXT DEFAULT CURRENT_TIMESTAMP
@@ -68,8 +72,10 @@ def save_result(product: dict, state: dict) -> None:
                 asin, name, brand, category, price, image_url, score, subscores, hype_gap,
                 bestseller_rank, star_rating, review_count, verdict, confidence,
                 is_safe, safety_notes, expert_findings, evidence, sources, themes,
+                experts, researched_themes,
+                ingredient_functions, function_summary,
                 community_summary, ingredients, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
             """,
             (
                 product["asin"],
@@ -92,6 +98,10 @@ def save_result(product: dict, state: dict) -> None:
                 json.dumps(state.get("evidence", [])),
                 json.dumps(state.get("sources", [])),
                 json.dumps(state.get("themes", [])),
+                json.dumps(state.get("experts", {})),
+                json.dumps(state.get("researched_themes", [])),
+                json.dumps(state.get("ingredient_functions", [])),
+                json.dumps(state.get("function_summary", {})),
                 state.get("community_summary", ""),
                 json.dumps(product.get("ingredients", [])),
             ),
@@ -101,11 +111,13 @@ def save_result(product: dict, state: dict) -> None:
 def _row_to_dict(row: sqlite3.Row) -> dict:
     """Turn a row into a dict, decoding the JSON columns."""
     d = dict(row)
-    for field in ("subscores", "evidence", "sources", "themes", "ingredients"):
+    for field in ("subscores", "evidence", "sources", "themes", "experts", "researched_themes",
+                  "ingredient_functions", "function_summary", "ingredients"):
         try:
-            d[field] = json.loads(d[field]) if d[field] else ([] if field != "subscores" else {})
+            empty = {} if field in ("subscores", "function_summary", "experts") else []
+            d[field] = json.loads(d[field]) if d[field] else empty
         except (json.JSONDecodeError, TypeError):
-            d[field] = [] if field != "subscores" else {}
+            d[field] = {} if field in ("subscores", "function_summary", "experts") else []
     d["is_safe"] = bool(d["is_safe"])
     return d
 

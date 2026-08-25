@@ -3,188 +3,220 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Truth Ranker</title>
+<title>Skin Sayer</title>
 <style>
-  /* Apple-ish: system font, generous whitespace, very few colours,
-     one accent, hairline rules instead of boxes, restrained motion. */
   :root {
-    --bg:      #fbfbfd;
-    --surface: #ffffff;
-    --text:    #1d1d1f;
-    --muted:   #6e6e73;
-    --hair:    #d2d2d7;
-    --accent:  #0071e3;
-    --good:    #1d8a4e;
-    --warn:    #b25000;
-    --bad:     #c8102e;
+    --bg:#fbfbfd; --surface:#fff; --text:#1d1d1f; --muted:#6e6e73;
+    --hair:#d2d2d7; --accent:#0071e3; --good:#1d8a4e; --warn:#b25000; --bad:#c8102e;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg:#000; --surface:#1c1c1e; --text:#f5f5f7; --muted:#98989d;
-      --hair:#38383a; --accent:#2997ff; --good:#30d158; --warn:#ff9f0a; --bad:#ff453a;
-    }
+    :root { --bg:#000; --surface:#1c1c1e; --text:#f5f5f7; --muted:#98989d;
+            --hair:#38383a; --accent:#2997ff; --good:#30d158; --warn:#ff9f0a; --bad:#ff453a; }
   }
-  * { box-sizing: border-box; }
-  html { -webkit-font-smoothing: antialiased; }
+  * { box-sizing:border-box; }
+  html { -webkit-font-smoothing:antialiased; }
   body {
     margin:0; background:var(--bg); color:var(--text);
-    font: 17px/1.47 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-    letter-spacing: -0.01em;
+    font:17px/1.47 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    letter-spacing:-0.01em;
   }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 22px; }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 24px; }
 
   /* ---- hero ---- */
-  header { text-align:center; padding: 88px 0 20px; }
-  h1 {
-    margin:0 0 14px; font-size: 56px; line-height:1.05;
-    font-weight: 600; letter-spacing:-0.025em;
-  }
-  header p { margin:0 auto; max-width: 620px; font-size: 21px; color:var(--muted); line-height:1.38; }
+  header { text-align:center; padding:74px 0 8px; }
+  h1 { margin:0 0 12px; font-size:52px; line-height:1.05; font-weight:600; letter-spacing:-0.025em; }
+  .tagline { margin:0 auto; max-width:660px; font-size:20px; color:var(--muted); line-height:1.4; }
 
-  /* ---- segmented control ---- */
-  nav { display:flex; justify-content:center; margin: 44px 0 10px; }
-  .seg {
-    display:inline-flex; background: color-mix(in srgb, var(--muted) 12%, transparent);
-    border-radius: 980px; padding: 3px;
+  /* ---- search ---- */
+  .searchbar { display:flex; justify-content:center; margin:32px 0 18px; }
+  .searchbar input {
+    width:100%; max-width:520px; padding:13px 20px; font-size:16px; font-family:inherit;
+    border:1px solid var(--hair); border-radius:980px; background:var(--surface);
+    color:var(--text); outline:none; transition:border-color .2s;
   }
-  .seg button {
-    border:0; background:transparent; color:var(--text); cursor:pointer;
-    font-size:14px; font-weight:500; padding: 8px 20px; border-radius: 980px;
-    transition: background .25s ease;
-  }
-  .seg button.on { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .searchbar input:focus { border-color:var(--accent); }
 
-  .count { text-align:center; color:var(--muted); font-size:13px; margin: 18px 0 30px; }
+  /* ---- filter bubbles ---- */
+  .bubbles { display:flex; justify-content:center; gap:9px; flex-wrap:wrap; margin-bottom:34px; }
+  .bubble {
+    border:1px solid var(--hair); background:var(--surface); color:var(--text);
+    padding:8px 18px; border-radius:980px; font-size:14px; font-weight:500;
+    cursor:pointer; font-family:inherit; transition:all .18s;
+  }
+  .bubble:hover { border-color:var(--accent); }
+  .bubble.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  /* ---- two-column layout: rankings | news ---- */
+  .cols { display:grid; grid-template-columns:1fr 310px; gap:44px; align-items:start; }
 
   /* ---- product row ---- */
   .item {
-    display:grid; grid-template-columns: 260px 1fr auto; gap: 36px;
-    align-items:start; padding: 44px 0; border-top: 1px solid var(--hair);
+    display:grid; grid-template-columns:150px 1fr auto; gap:24px;
+    align-items:start; padding:30px 0; border-top:1px solid var(--hair);
   }
-  .item:first-of-type { border-top: 0; }
-
+  .item:first-of-type { border-top:0; padding-top:6px; }
   .shot {
-    width:260px; height:260px; border-radius:20px; background:#fff;
-    border:1px solid var(--hair); object-fit:contain; padding:18px;
+    width:150px; height:150px; border-radius:16px; background:#fff;
+    border:1px solid var(--hair); object-fit:contain; padding:12px;
   }
-  /* Typographic fallback when a listing has no photo. */
   .shot.blank {
     display:flex; align-items:center; justify-content:center; background:var(--surface);
-    font-size:60px; font-weight:600; color:var(--muted); letter-spacing:-0.02em;
+    font-size:36px; font-weight:600; color:var(--muted);
   }
+  .name { font-size:18px; font-weight:600; letter-spacing:-0.02em; margin:0 0 3px; }
+  .meta { color:var(--muted); font-size:13px; margin:0 0 12px; }
 
-  /* ---- verdict bullets ---- */
-  .points { margin:0; padding:0; list-style:none; }
-  .points li {
-    position:relative; padding-left:17px; margin-bottom:7px; font-size:15px; line-height:1.5;
+  /* the headline comparison: bestseller rank vs what people say */
+  .versus {
+    display:flex; gap:20px; align-items:center; padding:9px 13px; margin-bottom:12px;
+    background:color-mix(in srgb, var(--muted) 7%, transparent); border-radius:10px;
+    font-size:13px;
   }
+  .versus b { font-size:16px; display:block; letter-spacing:-0.02em; }
+  .versus .lbl { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  .versus .arrow { color:var(--muted); font-size:17px; }
+
+  /* ---- score breakdown bars ---- */
+  .bars { margin:12px 0; }
+  .bar { display:grid; grid-template-columns:112px 1fr 34px; gap:10px;
+         align-items:center; font-size:12px; margin-bottom:5px; }
+  .bar .k { color:var(--muted); }
+  .bar .track { height:6px; background:var(--hair); border-radius:3px; overflow:hidden; }
+  .bar .fill { height:100%; border-radius:3px; }
+  .bar .v { text-align:right; font-weight:600; font-size:12px; }
+
+  /* ---- expert panel ---- */
+  .experts { margin-top:15px; }
+  .expert { display:flex; gap:9px; padding:7px 0; border-top:1px solid var(--hair); font-size:13px; }
+  .expert:first-of-type { border-top:0; }
+  .expert .who { font-weight:600; }
+  .expert .cred { color:var(--muted); font-size:11.5px; }
+  .expert .why { color:var(--muted); display:block; margin-top:2px; font-size:12.5px; line-height:1.45; }
+  .rec { flex:none; font-size:9.5px; font-weight:600; padding:2px 7px; border-radius:980px;
+         height:fit-content; margin-top:2px; border:1px solid var(--hair); }
+  .rec.positive  { color:var(--good); border-color:currentColor; }
+  .rec.qualified { color:var(--warn); border-color:currentColor; }
+  .rec.negative  { color:var(--bad);  border-color:currentColor; }
+
+  /* ---- verdict banner ---- */
+  .banner { display:inline-block; padding:5px 13px; border-radius:980px;
+            font-size:12.5px; font-weight:600; margin-bottom:10px; }
+  .banner.worth { background:color-mix(in srgb,var(--good) 15%,transparent); color:var(--good); }
+  .banner.over  { background:color-mix(in srgb,var(--bad) 13%,transparent); color:var(--bad); }
+  .banner.mixed { background:color-mix(in srgb,var(--warn) 15%,transparent); color:var(--warn); }
+
+  /* ---- filter panel ---- */
+  .filters {
+    display:none; gap:20px; flex-wrap:wrap; justify-content:center;
+    padding:16px 20px; margin:0 auto 26px; max-width:760px;
+    border:1px solid var(--hair); border-radius:14px; background:var(--surface);
+  }
+  .filters.open { display:flex; }
+  .fgroup { font-size:13px; }
+  .fgroup h4 { margin:0 0 7px; font-size:11px; font-weight:600; color:var(--muted);
+               text-transform:uppercase; letter-spacing:.05em; }
+  .fgroup label { display:block; margin-bottom:4px; cursor:pointer; }
+  .fgroup input { margin-right:6px; }
+  .fgroup input[type=range] { width:140px; vertical-align:middle; }
+
+  .points { margin:0; padding:0; list-style:none; }
+  .points li { position:relative; padding-left:16px; margin-bottom:6px; font-size:14.5px; line-height:1.48; }
   .points li:last-child { margin-bottom:0; }
   .points li::before {
-    content:''; position:absolute; left:0; top:9px;
-    width:5px; height:5px; border-radius:50%; background:var(--muted);
+    content:''; position:absolute; left:0; top:8px; width:5px; height:5px;
+    border-radius:50%; background:var(--muted);
   }
 
-  .name { font-size:19px; font-weight:600; letter-spacing:-0.02em; margin:0 0 3px; }
-  .meta { color:var(--muted); font-size:14px; margin:0 0 14px; }
-  .verdict { margin:0; font-size:15px; line-height:1.5; }
+  .score { text-align:right; min-width:78px; }
+  .num { font-size:34px; font-weight:600; letter-spacing:-0.03em; line-height:1; }
+  .outof { font-size:11px; color:var(--muted); margin-top:3px; }
 
-  /* ---- score ---- */
-  .score { text-align:right; min-width:92px; }
-  .num { font-size:40px; font-weight:600; letter-spacing:-0.03em; line-height:1; }
-  .outof { font-size:12px; color:var(--muted); margin-top:3px; }
-
-  /* ---- tags ---- */
-  .tags { display:flex; gap:7px; flex-wrap:wrap; margin:12px 0 0; }
-  .tag {
-    font-size:11px; font-weight:500; letter-spacing:.01em;
-    padding:3px 9px; border-radius:980px; border:1px solid var(--hair); color:var(--muted);
-  }
+  .tags { display:flex; gap:6px; flex-wrap:wrap; margin:11px 0 0; }
+  .tag { font-size:11px; padding:3px 9px; border-radius:980px; border:1px solid var(--hair); color:var(--muted); }
   .tag.strong { color:var(--good); border-color:currentColor; }
   .tag.mixed  { color:var(--warn); border-color:currentColor; }
   .tag.hype   { color:var(--bad);  border-color:currentColor; }
 
-  /* ---- callout ---- */
   .callout {
-    margin-top:16px; padding:14px 16px; border-radius:12px; font-size:14px; line-height:1.45;
-    background: color-mix(in srgb, var(--bad) 8%, transparent);
-    color: var(--bad);
+    margin-top:12px; padding:11px 14px; border-radius:10px; font-size:13.5px;
+    background:color-mix(in srgb, var(--bad) 8%, transparent); color:var(--bad);
   }
-  .callout.gem { background: color-mix(in srgb, var(--good) 9%, transparent); color: var(--good); }
-  .callout b { font-weight:600; }
+  .callout.gem { background:color-mix(in srgb, var(--good) 9%, transparent); color:var(--good); }
 
-  /* ---- disclosure ---- */
-  details { margin-top:16px; }
-  summary {
-    cursor:pointer; color:var(--accent); font-size:14px; list-style:none;
+  /* ---- dupes ---- */
+  .dupe {
+    margin-top:12px; padding:11px 14px; border-radius:10px; font-size:13.5px;
+    background:color-mix(in srgb, var(--accent) 8%, transparent); color:var(--accent);
   }
-  summary::-webkit-details-marker { display:none; }
-  summary::after { content:" ›"; }
-  details[open] summary::after { content:" ⌄"; }
-  .detail { margin-top:14px; font-size:14px; color:var(--muted); line-height:1.6; white-space:pre-wrap; }
 
   /* ---- community themes ---- */
-  .themes { margin-top:18px; }
-  .themes h3 {
-    font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--muted); margin:0 0 10px;
+  .themes { margin-top:15px; }
+  .themes h3, .sources h3 {
+    font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--muted); margin:0 0 9px;
   }
-  .theme { display:flex; gap:11px; align-items:baseline; padding:7px 0; font-size:14px; }
-  .dot { flex:none; width:7px; height:7px; border-radius:50%; margin-top:6px; }
-  .dot.positive { background:var(--good); }
-  .dot.negative { background:var(--bad); }
-  .dot.mixed    { background:var(--warn); }
+  .theme { display:flex; gap:10px; align-items:baseline; padding:5px 0; font-size:13.5px; }
+  .dot { flex:none; width:6px; height:6px; border-radius:50%; margin-top:6px; }
+  .dot.positive { background:var(--good); } .dot.negative { background:var(--bad); }
+  .dot.mixed { background:var(--warn); }
   .theme .label { font-weight:600; }
-  .theme .n {
-    font-size:11px; color:var(--muted); border:1px solid var(--hair);
-    border-radius:980px; padding:1px 7px; margin-left:2px;
-  }
-  .theme .q { color:var(--muted); font-style:italic; display:block; margin-top:3px; font-size:13px; }
+  .theme .n { font-size:10px; color:var(--muted); border:1px solid var(--hair);
+              border-radius:980px; padding:1px 6px; margin-left:3px; }
+  .theme .q { color:var(--muted); font-style:italic; display:block; margin-top:2px; font-size:12.5px; }
 
-  /* ---- citations ---- */
-  .sources { margin-top:18px; }
-  .sources h3 {
-    font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--muted); margin:0 0 10px;
-  }
-  .src { display:flex; gap:10px; padding:8px 0; border-top:1px solid var(--hair); font-size:13px; line-height:1.45; }
+  /* ---- sources ---- */
+  .sources { margin-top:15px; }
+  .src { display:flex; gap:9px; padding:6px 0; border-top:1px solid var(--hair); font-size:12.5px; }
   .src:first-of-type { border-top:0; }
   .src a { color:var(--text); text-decoration:none; font-weight:500; }
   .src a:hover { color:var(--accent); text-decoration:underline; }
-  .src .j { color:var(--muted); display:block; margin-top:2px; font-size:12px; }
-  /* Study-design badge: a trial should look different from a commentary. */
-  .lvl {
-    flex:none; font-size:10px; font-weight:600; letter-spacing:.02em;
-    padding:2px 7px; border-radius:980px; height:fit-content; margin-top:1px;
-    border:1px solid var(--hair); color:var(--muted); white-space:nowrap;
-  }
+  .src .j { color:var(--muted); display:block; margin-top:2px; font-size:11.5px; }
+  .lvl { flex:none; font-size:9.5px; font-weight:600; padding:2px 6px; border-radius:980px;
+         height:fit-content; margin-top:1px; border:1px solid var(--hair); color:var(--muted); white-space:nowrap; }
   .lvl.s5, .lvl.s4 { color:var(--good); border-color:currentColor; }
-  .bars { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin:18px 0; }
-  .bl { font-size:12px; color:var(--muted); display:flex; justify-content:space-between; margin-bottom:6px; }
-  .track { height:3px; background:var(--hair); border-radius:2px; overflow:hidden; }
-  .fill { height:100%; background:var(--text); border-radius:2px; }
 
-  .empty { text-align:center; color:var(--muted); padding:100px 20px; font-size:15px; line-height:1.9; }
-  code { font: 13px/1.6 "SF Mono", ui-monospace, Menlo, monospace;
+  details { margin-top:13px; }
+  summary { cursor:pointer; color:var(--accent); font-size:13px; list-style:none; }
+  summary::-webkit-details-marker { display:none; }
+  summary::after { content:" ›"; }
+  details[open] summary::after { content:" ⌄"; }
+  .detail { margin-top:11px; font-size:13px; color:var(--muted); line-height:1.55; white-space:pre-wrap; }
+  .fn { display:flex; justify-content:space-between; gap:12px; padding:4px 0;
+        border-top:1px solid var(--hair); font-size:12.5px; }
+  .fn .f { color:var(--muted); flex:none; }
+
+  /* ---- news sidebar ---- */
+  .news {
+    position:sticky; top:22px; border:1px solid var(--hair); border-radius:14px;
+    padding:18px; background:var(--surface);
+  }
+  .news h2 { margin:0 0 4px; font-size:15px; font-weight:600; letter-spacing:-0.01em; }
+  .news .sub { margin:0 0 14px; font-size:12px; color:var(--muted); line-height:1.4; }
+  .recall { padding:11px 0; border-top:1px solid var(--hair); font-size:12.5px; line-height:1.45; }
+  .recall .firm { font-weight:600; display:block; }
+  .recall .why { color:var(--muted); display:block; margin-top:2px; }
+  .recall .cls {
+    display:inline-block; font-size:9.5px; font-weight:600; padding:1px 6px; margin-top:5px;
+    border-radius:980px; border:1px solid var(--hair); color:var(--muted);
+  }
+  .recall .cls.c1 { color:var(--bad); border-color:currentColor; }
+
+  .count { text-align:center; color:var(--muted); font-size:13px; margin:0 0 22px; }
+  .empty { text-align:center; color:var(--muted); padding:80px 20px; font-size:15px; line-height:1.9; }
+  code { font:12.5px/1.6 "SF Mono", ui-monospace, Menlo, monospace;
          background:color-mix(in srgb,var(--muted) 14%,transparent); padding:3px 7px; border-radius:5px; }
+  footer { border-top:1px solid var(--hair); margin-top:56px; padding:22px 0 60px;
+           color:var(--muted); font-size:12px; line-height:1.7; }
 
-  footer {
-    border-top:1px solid var(--hair); margin-top:70px; padding:26px 0 70px;
-    color:var(--muted); font-size:12px; line-height:1.7;
+  @media (max-width:980px) {
+    .cols { grid-template-columns:1fr; gap:30px; }
+    .news { position:static; }
   }
-
-  @media (max-width: 900px) {
-    .item { grid-template-columns:170px 1fr; gap:24px; }
-    .shot { width:170px; height:170px; }
-    .shot.blank { font-size:40px; }
-    .score { grid-column:2; text-align:left; margin-top:10px; }
-  }
-  @media (max-width: 640px) {
-    h1 { font-size:36px; } header { padding-top:56px; } header p { font-size:17px; }
-    .item { grid-template-columns:1fr; gap:18px; }
-    .shot { width:100%; height:220px; }
-    .shot.blank { font-size:44px; }
-    .score { grid-column:1; }
-    .num { font-size:30px; }
+  @media (max-width:640px) {
+    h1 { font-size:34px; } header { padding-top:48px; } .tagline { font-size:16px; }
+    .item { grid-template-columns:1fr; gap:14px; }
+    .shot { width:100%; height:200px; }
+    .score { text-align:left; }
   }
 </style>
 </head>
@@ -192,62 +224,95 @@
 
 <div class="wrap">
   <header>
-    <h1>Truth Ranker</h1>
-    <p>Sunscreens ranked by what the published evidence supports — not by how well they sell.</p>
+    <h1>Skin Sayer</h1>
+    <p class="tagline">
+      Influencers market a product, it becomes a best-seller.<br>
+      We check whether it deserved to be one.
+    </p>
   </header>
 
-  <nav>
-    <div class="seg">
-      <button class="on" data-view="rankings">Ranked</button>
-      <button data-view="hyped">Overhyped</button>
-      <button data-view="underrated">Underrated</button>
+  <div class="searchbar">
+    <input id="q" type="search" placeholder="Search a product or brand — try &ldquo;Anua&rdquo;" autocomplete="off">
+  </div>
+
+  <div class="bubbles" id="bubbles">
+    <button class="bubble on" data-view="rankings">All</button>
+    <button class="bubble" data-view="hyped">Overhyped</button>
+    <button class="bubble" data-view="underrated">Underrated</button>
+    <button class="bubble" data-view="dupes">Dupes</button>
+    <button class="bubble" data-view="expert">Derm-recommended</button>
+    <button class="bubble" id="filterToggle">Filters</button>
+  </div>
+
+  <div class="filters" id="filters">
+    <div class="fgroup">
+      <h4>Finish</h4>
+      <label><input type="checkbox" class="f" data-avoid="greasy"> Not greasy</label>
+      <label><input type="checkbox" class="f" data-avoid="white cast"> No white cast</label>
+      <label><input type="checkbox" class="f" data-avoid="pill"> Doesn't pill</label>
     </div>
-  </nav>
+    <div class="fgroup">
+      <h4>Skin</h4>
+      <label><input type="checkbox" class="f" data-avoid="breakout"> Doesn't break me out</label>
+      <label><input type="checkbox" class="f" data-avoid="sting"> Doesn't sting eyes</label>
+      <label><input type="checkbox" class="f" data-filter="mineral"> Mineral only</label>
+    </div>
+    <div class="fgroup">
+      <h4>Budget</h4>
+      <label>Max $<span id="priceLabel">50</span><br>
+        <input type="range" id="price" min="5" max="50" value="50" step="1"></label>
+      <h4 style="margin-top:12px">Evidence</h4>
+      <label><input type="checkbox" class="f" data-filter="derm"> Derm-recommended only</label>
+    </div>
+  </div>
 
   <p class="count" id="count"></p>
-  <main id="list"><div class="empty">Loading…</div></main>
+
+  <div class="cols">
+    <main id="list"><div class="empty">Loading&hellip;</div></main>
+
+    <aside class="news">
+      <h2>Recalled products</h2>
+      <p class="sub">Official FDA enforcement records. Not headlines &mdash; every entry has a recall number.</p>
+      <div id="recalls"><div style="color:var(--muted);font-size:12.5px">Loading&hellip;</div></div>
+    </aside>
+  </div>
 
   <footer>
     Research synthesis, not medical advice. Safety claims are attributed to the FDA, never asserted by us.
-    Every verdict carries its sources and a confidence level.
+    No brand can buy a spot or a rating.
   </footer>
 </div>
 
 <script>
-const list  = document.getElementById('list');
+const list = document.getElementById('list');
 const count = document.getElementById('count');
+let ALL = [];            // every product, cached so filtering is instant
+let VIEW = 'rankings';
 
-const scoreColour = s => s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)';
 const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const colour = s => s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)';
+const DESIGN = {5:'meta-analysis', 4:'trial', 3:'clinical study', 2:'review', 1:'article', 0:'article'};
 
-// Amazon encodes the requested size in the filename (._SY300_SX300_ etc).
-// Swapping that segment asks their CDN for a larger render, which is much
-// sharper than letting the browser upscale a 300px thumbnail.
-function bigImage(url) {
-  return url.replace(/\._[A-Z0-9_,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
-}
+// Amazon encodes size in the filename; ask for a larger render than the thumbnail.
+const bigImage = u => u.replace(/\._[A-Z0-9_,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
 
-// No photo on the listing -> show the brand's initials rather than a broken image.
 function shot(p) {
+  const initials = esc((p.brand || '?').slice(0, 2).toUpperCase());
   if (p.image_url) {
-    const initials = esc((p.brand || '?').slice(0, 2).toUpperCase());
-    return `<img class="shot" src="${esc(bigImage(p.image_url))}" alt="${esc(p.name)}" loading="lazy"
-             onerror="this.onerror=null;this.src='${esc(p.image_url)}'">`;
+    return `<img class="shot" src="${esc(bigImage(p.image_url))}" alt="${esc(p.name)}"
+             loading="lazy" onerror="this.onerror=null;this.src='${esc(p.image_url)}'">`;
   }
-  return `<div class="shot blank">${esc((p.brand || '?').slice(0, 2).toUpperCase())}</div>`;
+  return `<div class="shot blank">${initials}</div>`;
 }
 
-// Verdicts sometimes cite inline as [PMID 12345](url). Escape first (so the
-// text can never inject HTML), then turn those markdown links into real ones.
 function verdictHtml(text) {
-  const linked = esc(text ?? '')
-    .replace(/\[([^\]]+)\]\((https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/\d+\/?)\)/g,
-             '<a href="$2" target="_blank" rel="noopener">$1</a>');
-
-  // Verdicts come back as "- bullet" lines. Render them as a real list.
+  const linked = esc(text ?? '').replace(
+    /\[([^\]]+)\]\((https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/\d+\/?)\)/g,
+    '<a href="$2" target="_blank" rel="noopener">$1</a>');
   const lines = linked.split('\n').map(l => l.trim()).filter(Boolean);
-  const bullets = lines.filter(l => l.startsWith('-') || l.startsWith('•'));
+  const bullets = lines.filter(l => /^[-•]/.test(l));
   if (bullets.length >= 2) {
     return '<ul class="points">' +
       bullets.map(b => `<li>${b.replace(/^[-•]\s*/, '')}</li>`).join('') + '</ul>';
@@ -255,116 +320,224 @@ function verdictHtml(text) {
   return lines.join('<br>');
 }
 
-// Study design, from the PublicationType ranking in tools/pubmed.py.
-// Readers deserve to know whether a claim rests on a trial or a commentary.
-const DESIGN = {5:'meta-analysis', 4:'trial', 3:'clinical study', 2:'review', 1:'article', 0:'article'};
-
-// What people repeatedly say about the product. Only themes several
-// different commenters raised independently -- one person's experience is
-// an anecdote, four people's is a property of the product.
-function themes(p) {
-  const list = p.themes || [];
-  if (!list.length) return '';
-  return `<div class="themes">
-    <h3>What people keep saying</h3>
-    ${list.map(t => `<div class="theme">
-      <span class="dot ${esc(t.sentiment)}"></span>
-      <span>
-        <span class="label">${esc(t.theme)}</span><span class="n">${t.mentions} mentions</span>
-        <span class="q">${esc(t.summary)}${t.quote ? ` &ldquo;${esc(t.quote)}&rdquo;` : ''}</span>
-      </span>
-    </div>`).join('')}
+// The headline of the whole product: what Amazon says vs what people say.
+function versus(p) {
+  const sent = Math.round(p.subscores?.sentiment ?? 50);
+  return `<div class="versus">
+    <div><span class="lbl">Best-seller</span><b>#${p.bestseller_rank ?? '—'}</b></div>
+    <span class="arrow">vs</span>
+    <div><span class="lbl">What people say</span><b style="color:${colour(sent)}">${sent}/100</b></div>
   </div>`;
 }
 
-// Top 3 cited papers, strongest design first.
+function themes(p) {
+  const l = p.themes || [];
+  if (!l.length) return '';
+  return `<div class="themes"><h3>What people keep saying</h3>
+    ${l.map(t => `<div class="theme">
+      <span class="dot ${esc(t.sentiment)}"></span>
+      <span><span class="label">${esc(t.theme)}</span><span class="n">${t.mentions}×</span>
+      <span class="q">${esc(t.summary)}${t.quote ? ` &ldquo;${esc(t.quote)}&rdquo;` : ''}</span></span>
+    </div>`).join('')}</div>`;
+}
+
 function sources(p) {
-  const list = (p.sources || []).slice(0, 3);
-  if (!list.length) return '';
-  return `<div class="sources">
-    <h3>Top sources</h3>
-    ${list.map(s => `<div class="src">
+  const l = (p.sources || []).slice(0, 3);
+  if (!l.length) return '';
+  return `<div class="sources"><h3>Top sources</h3>
+    ${l.map(s => `<div class="src">
       <span class="lvl s${s.strength}">${DESIGN[s.strength] || 'article'}</span>
-      <span>
-        <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>
-        <span class="j">${esc(s.journal)}${s.year ? ' · ' + esc(s.year) : ''} · PMID ${esc(s.pmid)}</span>
-      </span>
-    </div>`).join('')}
-  </div>`;
+      <span><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+      <span class="j">${esc(s.journal)}${s.year ? ' · ' + esc(s.year) : ''} · PMID ${esc(s.pmid)}</span></span>
+    </div>`).join('')}</div>`;
+}
+
+function functions(p) {
+  const fns = (p.ingredient_functions || []).filter(f => f.function);
+  if (!fns.length) return '';
+  return fns.slice(0, 14).map(f =>
+    `<div class="fn"><span>${esc(f.name)}</span><span class="f">${esc(f.function)}</span></div>`
+  ).join('');
+}
+
+// Score breakdown, mirroring the mockup: each signal as its own bar so a
+// reader can see WHICH evidence agrees and which disagrees.
+function bars(p) {
+  const s = p.subscores || {};
+  const rows = [
+    ['Amazon popularity', Math.max(0, 100 - ((p.bestseller_rank ?? 100) - 1) * 2)],
+    ['Reddit users',      s.sentiment],
+    ['Research support',  s.efficacy],
+    ['Dermatologists',    s.expert],
+    ['Ingredients',       s.ingredients],
+  ].filter(([, v]) => typeof v === 'number');
+
+  return `<div class="bars">${rows.map(([k, v]) => `
+    <div class="bar">
+      <span class="k">${k}</span>
+      <span class="track"><span class="fill" style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>
+      <span class="v">${Math.round(v)}</span>
+    </div>`).join('')}</div>`;
+}
+
+// Named dermatologists with stated reasons. Unique experts, not article count.
+function experts(p) {
+  const e = p.experts || {};
+  if (!e.unique_experts) return '';
+  return `<div class="experts"><h3 style="font-size:11px;font-weight:600;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted);margin:0 0 9px">
+      ${e.unique_experts} dermatologist${e.unique_experts > 1 ? 's' : ''}
+      ${e.publications.length ? '· ' + e.publications.map(esc).join(', ') : ''}</h3>
+    ${(e.mentions || []).slice(0, 3).map(m => `<div class="expert">
+      <span class="rec ${esc(m.recommendation)}">${esc(m.recommendation)}</span>
+      <span><span class="who">${esc(m.expert)}</span>
+        <span class="cred">${esc(m.credential)}</span>
+        <span class="why">${esc(m.reason)}${m.for_whom ? ` — for ${esc(m.for_whom)}` : ''}</span></span>
+    </div>`).join('')}</div>`;
+}
+
+// One-line verdict, mirroring the mockup's "Worth the hype / Overhyped".
+function banner(p) {
+  if (p.hype_gap > 25) return '<div class="banner over">⚠ Overhyped</div>';
+  if (p.score >= 65)   return '<div class="banner worth">✓ Worth the hype</div>';
+  return '<div class="banner mixed">Mixed evidence</div>';
 }
 
 function row(p) {
-  const subs = p.subscores || {};
-  const bars = ['efficacy','ingredients','sentiment'].map(k => {
-    const v = Math.round(subs[k] ?? 0);
-    return `<div><div class="bl"><span>${k}</span><span>${v}</span></div>
-            <div class="track"><div class="fill" style="width:${v}%"></div></div></div>`;
-  }).join('');
-
-  // Terse on purpose. The numbers are right there; a sentence explaining
-  // them is noise.
   let callout = '';
   if (p.hype_gap > 25) {
-    callout = `<div class="callout"><b>Hyped.</b>
-      #${p.bestseller_rank} on Amazon, ${Math.round(p.score)}/100 on evidence.</div>`;
+    callout = `<div class="callout"><b>Hyped.</b> #${p.bestseller_rank} on Amazon,
+      ${Math.round(p.score)}/100 on evidence.</div>`;
   } else if (p.hype_gap < -20) {
-    callout = `<div class="callout gem"><b>Underrated.</b>
-      ${Math.round(p.score)}/100 on evidence, only #${p.bestseller_rank} in sales.</div>`;
+    callout = `<div class="callout gem"><b>Underrated.</b> ${Math.round(p.score)}/100 on evidence,
+      only #${p.bestseller_rank} in sales.</div>`;
   }
 
-  const tags = [
-    `<span class="tag ${p.confidence}">${p.confidence} evidence</span>`,
-    p.is_safe ? '' : '<span class="tag hype">FDA recall on record</span>',
-  ].join('');
+  const d = (p.dupes || [])[0];
+  const dupe = d ? `<div class="dupe"><b>Dupe:</b> ${esc(d.brand)} ${esc(d.name).slice(0,44)} —
+    same actives, $${d.price.toFixed(2)} (save $${d.saving.toFixed(2)})</div>` : '';
+
+  const summary = p.function_summary?.counts || {};
+  const shape = Object.entries(summary).slice(0, 3).map(([k, v]) => `${v} ${k.toLowerCase()}`).join(', ');
 
   return `<article class="item">
     ${shot(p)}
     <div>
       <h2 class="name">${esc(p.name)}</h2>
-      <p class="meta">${esc(p.brand)} · $${(p.price ?? 0).toFixed(2)} · Amazon #${p.bestseller_rank ?? '—'}</p>
-      <p class="verdict">${verdictHtml(p.verdict)}</p>
-      <div class="tags">${tags}</div>
-      ${callout}
-      ${themes(p)}
-      ${sources(p)}
+      <p class="meta">${esc(p.brand)} · $${(p.price ?? 0).toFixed(2)}${shape ? ' · ' + esc(shape) : ''}</p>
+      ${banner(p)}
+      ${versus(p)}
+      ${bars(p)}
+      ${verdictHtml(p.verdict)}
+      <div class="tags">
+        <span class="tag ${esc(p.confidence)}">${esc(p.confidence)} evidence</span>
+        ${p.is_safe ? '' : '<span class="tag hype">FDA recall on record</span>'}
+      </div>
+      ${callout}${dupe}${experts(p)}${themes(p)}${sources(p)}
       <details>
-        <summary>Full research findings and ingredients</summary>
-        <div class="bars">${bars}</div>
+        <summary>Ingredients and full findings</summary>
+        ${functions(p)}
         <div class="detail">${esc(p.expert_findings) || 'No findings recorded.'}</div>
-        <div class="detail"><b>Ingredients.</b> ${esc((p.ingredients||[]).join(', ')) || 'Not available.'}</div>
       </details>
     </div>
     <div class="score">
-      <div class="num" style="color:${scoreColour(p.score)}">${Math.round(p.score)}</div>
+      <div class="num" style="color:${colour(p.score)}">${Math.round(p.score)}</div>
       <div class="outof">out of 100</div>
     </div>
   </article>`;
 }
 
-async function load(view) {
-  list.innerHTML = '<div class="empty">Loading…</div>';
-  count.textContent = '';
+function render(products) {
+  if (!products.length) {
+    list.innerHTML = `<div class="empty">Nothing here yet.<br>
+      Run the pipeline:<br><br><code>uv run python -m refresh.run --limit 40</code></div>`;
+    count.textContent = '';
+    return;
+  }
+  count.textContent = `${products.length} product${products.length === 1 ? '' : 's'}`;
+  list.innerHTML = products.map(row).join('');
+}
+
+// Filtering happens client-side over the cached list, so bubbles feel instant
+// and the API stays a plain read.
+function apply() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  let out = ALL;
+
+  if (VIEW === 'hyped')       out = out.filter(p => p.hype_gap > 25).sort((a,b) => b.hype_gap - a.hype_gap);
+  else if (VIEW === 'underrated') out = out.filter(p => p.hype_gap < -20);
+  else if (VIEW === 'dupes')  out = out.filter(p => (p.dupes || []).length);
+  else if (VIEW === 'expert') out = out.filter(p => (p.experts?.unique_experts || 0) > 0)
+                                       .sort((a,b) => (b.experts?.unique_experts||0) - (a.experts?.unique_experts||0));
+
+  // Preference filters work off REAL community themes, not marketing claims.
+  // "No white cast" drops products where users repeatedly reported one --
+  // which is more honest than trusting a label that says "invisible".
+  document.querySelectorAll('.f[data-avoid]:checked').forEach(cb => {
+    const bad = cb.dataset.avoid;
+    out = out.filter(p => !(p.themes || []).some(t =>
+      t.sentiment === 'negative' && (t.theme + ' ' + t.summary).toLowerCase().includes(bad)));
+  });
+
+  if (document.querySelector('.f[data-filter="mineral"]:checked'))
+    out = out.filter(p => (p.ingredient_functions || []).some(f =>
+      /zinc oxide|titanium dioxide/i.test(f.name)) &&
+      !(p.ingredient_functions || []).some(f => /avobenzone|homosalate|octocrylene|oxybenzone/i.test(f.name)));
+
+  if (document.querySelector('.f[data-filter="derm"]:checked'))
+    out = out.filter(p => (p.experts?.unique_experts || 0) > 0);
+
+  const maxPrice = +document.getElementById('price').value;
+  if (maxPrice < 50) out = out.filter(p => (p.price || 0) <= maxPrice);
+
+  if (q) out = out.filter(p =>
+    (p.name || '').toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q));
+
+  render(out);
+}
+
+document.querySelectorAll('.bubble').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.bubble').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  VIEW = b.dataset.view;
+  apply();
+});
+document.getElementById('q').addEventListener('input', apply);
+document.getElementById('filterToggle').onclick = e => {
+  e.stopPropagation();
+  document.getElementById('filters').classList.toggle('open');
+  document.getElementById('filterToggle').classList.toggle('on');
+};
+document.querySelectorAll('.f').forEach(cb => cb.onchange = apply);
+document.getElementById('price').addEventListener('input', e => {
+  document.getElementById('priceLabel').textContent = e.target.value;
+  apply();
+});
+
+async function load() {
   try {
-    const data = await (await fetch('/api/' + view)).json();
-    if (!data.products?.length) {
-      list.innerHTML = `<div class="empty">Nothing here yet.<br>
-        Run the pipeline first:<br><br><code>uv run python -m refresh.run --seed --limit 3</code></div>`;
-      return;
-    }
-    count.textContent = `${data.count} product${data.count === 1 ? '' : 's'}`;
-    list.innerHTML = data.products.map(row).join('');
+    const d = await (await fetch('/api/rankings?limit=200')).json();
+    ALL = d.products || [];
+    apply();
   } catch (e) {
     list.innerHTML = `<div class="empty">Could not load. ${esc(e.message)}</div>`;
   }
+
+  try {
+    const r = await (await fetch('/api/recalls?limit=8')).json();
+    const box = document.getElementById('recalls');
+    box.innerHTML = (r.recalls || []).length
+      ? r.recalls.map(x => `<div class="recall">
+          <span class="firm">${esc(x.firm)}</span>
+          <span class="why">${esc(x.reason).slice(0, 110)}</span>
+          <span class="cls ${x.classification === 'Class I' ? 'c1' : ''}">${esc(x.classification)}</span>
+          <span style="color:var(--muted);font-size:11px"> · ${esc(x.date)}</span>
+        </div>`).join('')
+      : '<div style="color:var(--muted);font-size:12.5px">No recent recalls on record.</div>';
+  } catch (e) { /* the news panel is optional; rankings still render */ }
 }
 
-document.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.seg button').forEach(x => x.classList.remove('on'));
-  b.classList.add('on');
-  load(b.dataset.view);
-});
-
-load('rankings');
+load();
 </script>
 </body>
 </html>

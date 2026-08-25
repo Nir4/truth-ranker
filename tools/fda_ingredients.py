@@ -84,7 +84,17 @@ def _split_ingredients(blocks: list[str], is_active: bool = False) -> list[str]:
             if name and len(name) < 90:
                 out.append(name)
 
-    return out
+    # Rejoin chemical names that contain a comma, e.g. "1,2-Hexanediol" splits
+    # into "1" and "2-Hexanediol". A fragment that is only digits belongs to
+    # the piece after it.
+    merged: list[str] = []
+    for name in out:
+        if merged and name and name[0].isdigit() and merged[-1].strip().isdigit():
+            merged[-1] = f"{merged[-1]},{name}"
+        else:
+            merged.append(name)
+
+    return [m for m in merged if not m.strip().isdigit()]
 
 
 # Words in nearly every sunscreen name, so they carry no matching signal.
