@@ -200,7 +200,9 @@ def _gather_via_apify(product_name: str, brand: str, limit: int) -> dict:
     }
 
 
-def gather_sentiment_raw(product_name: str, brand: str, limit: int = 40) -> dict:
+def gather_sentiment_raw(
+    product_name: str, brand: str, limit: int = 40, asin: str = ""
+) -> dict:
     """Collect Reddit comments about a product across our trusted subreddits.
 
     Tries the official API first (cleaner data, free), then falls back to Apify.
@@ -228,6 +230,29 @@ def gather_sentiment_raw(product_name: str, brand: str, limit: int = 40) -> dict
         from tools.reddit_public import gather as public_gather
 
         result = public_gather(product_name, brand, limit)
+
+        # FALLBACK: when a skincare community has almost nothing on a product,
+        # fall back to Amazon reviews -- LABELLED, and weighted far lower.
+        # A flat neutral 50 makes "we know nothing" look like "this is
+        # average", which is the dishonesty we guard against everywhere else.
+        from tools.amazon_reviews import MIN_REDDIT
+
+        if result["comment_count"] < MIN_REDDIT and asin:
+            from tools.amazon_reviews import gather_as_comments
+
+            amazon = gather_as_comments(asin, product_name, brand)
+            if amazon["comment_count"] >= MIN_REDDIT:
+                print(
+                    f"    [reddit] only {result['comment_count']} community comments; "
+                    f"using {amazon['comment_count']} Amazon reviews (labelled, down-weighted)"
+                )
+                # Keep any real community comments alongside them.
+                amazon["comments"] = result["comments"] + amazon["comments"]
+                amazon["comment_count"] = len(amazon["comments"])
+                amazon["source"] = "amazon-reviews"
+                cache_put("reddit", cache_key, amazon)
+                return amazon
+
         if result["comment_count"]:
             cache_put("reddit", cache_key, result)
             return result

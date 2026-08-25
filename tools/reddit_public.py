@@ -132,11 +132,15 @@ def gather(product_name: str, brand: str, limit: int = 40) -> dict:
     query = f"{brand} {product_name}".strip()
     comments: list[dict] = []
 
-    for subreddit in SUBREDDITS[:4]:
-        posts = _search_subreddit(subreddit, query, limit=4)
+    # ALL six communities, not the first four, and more threads each. The old
+    # caps were there to limit Apify spend -- Reddit's public API is free, so
+    # they were costing us coverage for no reason. Half our products came back
+    # with zero themes largely because of this.
+    for subreddit in SUBREDDITS:
+        posts = _search_subreddit(subreddit, query, limit=8)
         time.sleep(_PAUSE)
 
-        for post in posts[:3]:
+        for post in posts[:6]:
             permalink = post.get("permalink", "")
             if not permalink:
                 continue
@@ -162,6 +166,65 @@ def gather(product_name: str, brand: str, limit: int = 40) -> dict:
                 break
         if len(comments) >= limit:
             break
+
+    # Nothing found for the full name? Try the brand plus one distinctive word.
+    # Long Amazon titles ("Ultra Sheer Dry-Touch Sunscreen Lotion, SPF 70, 3 fl
+    # oz") rarely match how people write, and a product with no data scores a
+    # flat neutral -- which reads as "average" when it actually means "unknown".
+    if not comments and brand:
+        import re as _re
+
+        generic = {"sunscreen", "sunblock", "lotion", "cream", "spray", "serum",
+                   "cleanser", "toner", "moisturizer", "balm", "spf", "broad", "spectrum"}
+        distinctive = [
+            w for w in _re.findall(r"[A-Za-z]{4,}", product_name)
+            if w.lower() not in generic
+        ][:1]
+        fallback_query = f"{brand} {' '.join(distinctive)}".strip()
+
+        if fallback_query != query:
+            print(f"    [reddit] no hits for full name, retrying as {fallback_query!r}")
+            for subreddit in SUBREDDITS[:3]:
+                for post in _search_subreddit(subreddit, fallback_query, limit=6)[:4]:
+                    permalink = post.get("permalink", "")
+                    if not permalink:
+                        continue
+                    for c in _fetch_comments(permalink):
+                        if len(c["body"]) >= MIN_COMMENT_LENGTH:
+                            comments.append(
+                                {
+                                    "text": c["body"][:1000],
+                                    "score": c["score"],
+                                    "subreddit": subreddit,
+                                    "permalink": f"https://reddit.com{permalink}",
+                                }
+                            )
+                    time.sleep(_PAUSE)
+                if len(comments) >= limit:
+                    break
+
+    # HARVEST FIRST. Most of what we fetched is about OTHER products -- real
+    # opinions we would otherwise throw away, then re-scrape later when that
+    # product's turn comes. Bank them now, keyed by brand.
+    if comments:
+        from rag.comments import harvest as harvest_rag
+
+        banked = harvest_rag(comments, searched_for=query)
+        if banked:
+            print(f"    [harvest] banked {banked} comments into the vector store")
+
+    # Pull anything previously banked about THIS brand. Those are candidates,
+    # not evidence -- the relevance agent below still has to approve them.
+    if len(comments) < limit:
+        from rag.comments import retrieve as retrieve_rag
+
+        pooled = retrieve_rag(brand, product_name, n_results=limit - len(comments))
+        if pooled:
+            seen_text = {c["text"][:200] for c in comments}
+            fresh = [p for p in pooled if p["text"][:200] not in seen_text]
+            if fresh:
+                print(f"    [harvest] recalled {len(fresh)} banked comments for {brand}")
+                comments += fresh
 
     # AGENT DECIDES RELEVANCE. String matching could not tell "TJ's spf" or
     # "elta clear" from noise, nor "better than the supergoop" (an opinion

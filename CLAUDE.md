@@ -29,6 +29,12 @@ If a product is #1 on Amazon and scores 45 on evidence, that gap IS the finding.
 - **Amazon rank is never a positive score.** It is only ever an input to the gap.
 - **Safety claims come only from openFDA.** Never from Reddit, never from a
   low rating, never inferred from ingredients.
+- **Amazon reviews are a LABELLED FALLBACK, not a truth source.** Originally
+  banned outright. Relaxed only because niche products get 2-3 relevant Reddit
+  comments, and a flat neutral 50 makes "we know nothing" look identical to
+  "this is average". Fenced in: used only when Reddit yields <3 comments,
+  weighted 0.4x, source shown on the card, never touches a safety claim, and
+  never feeds the hype gap (which would make that comparison circular).
 - **Every claim traces to a source.** PMID, recall number, or the ingredient
   list. No source, no claim.
 - **Revenue never touches ranking order.** No paid placement, ever. Affiliate

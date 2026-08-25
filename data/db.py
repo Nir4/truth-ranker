@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS rankings (
     sources           TEXT,           -- JSON: cited papers, strongest first
     themes            TEXT,           -- JSON: recurring community themes
     skin_types        TEXT,           -- JSON: what each skin type reported
+    sentiment_source  TEXT,           -- reddit-public | amazon-reviews
     experts           TEXT,           -- JSON: named dermatologist mentions
     claims            TEXT,           -- JSON: brand claims vs research
     claim_accuracy    REAL,
@@ -75,10 +76,10 @@ def save_result(product: dict, state: dict) -> None:
                 asin, name, brand, category, price, image_url, score, subscores, hype_gap,
                 bestseller_rank, star_rating, review_count, verdict, confidence,
                 is_safe, safety_notes, expert_findings, evidence, sources, themes,
-                experts, claims, claim_accuracy, researched_themes, skin_types,
+                experts, claims, claim_accuracy, researched_themes, skin_types, sentiment_source,
                 ingredient_functions, function_summary,
                 community_summary, ingredients, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
             """,
             (
                 product["asin"],
@@ -106,6 +107,7 @@ def save_result(product: dict, state: dict) -> None:
                 state.get("claim_accuracy"),
                 json.dumps(state.get("researched_themes", [])),
                 json.dumps(state.get("skin_types", [])),
+                state.get("sentiment_source", ""),
                 json.dumps(state.get("ingredient_functions", [])),
                 json.dumps(state.get("function_summary", {})),
                 state.get("community_summary", ""),

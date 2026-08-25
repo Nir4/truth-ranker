@@ -176,7 +176,9 @@ def ranking_node(state: TruthState) -> dict:
 
     ingredients = product.get("ingredients", [])
     facts = analyse_ingredients_raw(ingredients)
-    reddit = gather_sentiment_raw(product["name"], product["brand"])
+    reddit = gather_sentiment_raw(
+        product["name"], product["brand"], asin=product.get("asin", "")
+    )
 
     # Check the BRAND'S OWN CLAIMS against research. The sharpest version of
     # the thesis: what the label says vs what the evidence supports.
@@ -275,6 +277,9 @@ def ranking_node(state: TruthState) -> dict:
         # Which skin types reported what -- from commenters' own words, never
         # inferred from the formula.
         "skin_types": themes.get("skin_types", []),
+        # Which source the sentiment came from. Amazon-derived sentiment is a
+        # materially weaker claim and the reader must be able to see that.
+        "sentiment_source": reddit.get("source", ""),
         "experts": experts,
         "claims": claims_result["claims"],
         "claim_accuracy": claims_result["accuracy"],

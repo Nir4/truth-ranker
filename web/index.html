@@ -539,6 +539,9 @@ function row(p) {
       ${verdictHtml(p.verdict)}
       <div class="tags">
         <span class="tag ${esc(p.confidence)}">${esc(p.confidence)} evidence</span>
+        ${p.sentiment_source === 'amazon-reviews'
+          ? '<span class="tag" title="Too little community discussion, so sentiment comes from Amazon reviews and is weighted lower">sentiment from Amazon reviews</span>'
+          : ''}
         ${p.is_safe ? '' : '<span class="tag hype">FDA recall on record</span>'}
       </div>
       ${callout}${dupe}${collapsibles(p)}
