@@ -145,8 +145,9 @@ def gather(product_name: str, brand: str, limit: int = 40) -> dict:
                 body = c["body"]
                 if len(body) < MIN_COMMENT_LENGTH:
                     continue
-                if not _looks_relevant(body, brand, product_name):
-                    continue
+                # Relevance is decided by an agent further down, not here --
+                # see filter_comments() at the end of gather(). Collect broadly
+                # now so the agent has the full candidate set to judge.
                 comments.append(
                     {
                         "text": body[:1000],
@@ -161,6 +162,17 @@ def gather(product_name: str, brand: str, limit: int = 40) -> dict:
                 break
         if len(comments) >= limit:
             break
+
+    # AGENT DECIDES RELEVANCE. String matching could not tell "TJ's spf" or
+    # "elta clear" from noise, nor "better than the supergoop" (an opinion
+    # about a RIVAL) from a genuine review. Those distinctions need judgement.
+    if comments:
+        from tools.comment_matcher import filter_comments
+
+        before = len(comments)
+        comments = filter_comments(comments, brand, product_name)
+        if before != len(comments):
+            print(f"    [reddit] kept {len(comments)}/{before} comments after relevance check")
 
     comments.sort(key=lambda c: c["score"], reverse=True)
 
