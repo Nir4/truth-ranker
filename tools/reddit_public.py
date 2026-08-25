@@ -136,7 +136,7 @@ def _fetch_comments(permalink: str, limit: int = 100) -> list[dict]:
     return out
 
 
-def bulk_harvest(subreddit: str, pages: int = 4) -> int:
+def bulk_harvest(subreddit: str, pages: int = 10, per_page: int = 100) -> int:
     """Pull recent and top threads wholesale, banking every comment.
 
     Targeted search finds threads that mention a product. This finds threads
@@ -151,39 +151,102 @@ def bulk_harvest(subreddit: str, pages: int = 4) -> int:
     client = _get_client()
     banked = 0
 
-    for listing in ("hot", "top", "new"):
-        try:
-            response = client.request(
-                "GET",
-                f"/r/{subreddit}/{listing}",
-                params={"limit": "50", "t": "year" if listing == "top" else "all"},
-            )
-        except Exception as exc:  # noqa: BLE001
-            print(f"    [bulk] r/{subreddit}/{listing} failed: {str(exc)[:50]}")
+    # Several listings AND several time windows for "top", because each
+    # surfaces a different slice: hot is this week, top/year is the canonical
+    # threads, new is what search has not indexed yet.
+    listings = [
+        ("hot", "all"), ("new", "all"),
+        ("top", "year"), ("top", "month"), ("top", "all"),
+    ]
+
+    for listing, window in listings:
+        after = None
+
+        # Reddit paginates with an `after` cursor. Following it is the
+        # difference between 50 threads and 1000.
+        for _ in range(pages):
+            params = {"limit": str(per_page), "t": window}
+            if after:
+                params["after"] = after
+
+            try:
+                response = client.request("GET", f"/r/{subreddit}/{listing}", params=params)
+            except Exception as exc:  # noqa: BLE001
+                print(f"    [bulk] r/{subreddit}/{listing} failed: {str(exc)[:50]}")
+                break
+
+            data = response.get("data", {})
+            posts = [c.get("data", {}) for c in data.get("children", [])]
+            after = data.get("after")
+            time.sleep(_PAUSE)
+
+            if not posts:
+                break
+
+            banked += _bank_posts(posts, subreddit, f"{listing}/{window}")
+
+            if not after:
+                break  # no more pages
+
+    return banked
+
+
+_SEEN_PATH = None
+_seen_cache: set[str] | None = None
+
+
+def _already_seen(permalink: str) -> bool:
+    """Have we already harvested this thread? Persisted so restarts resume."""
+    global _SEEN_PATH, _seen_cache
+    import sqlite3
+    from pathlib import Path
+
+    if _SEEN_PATH is None:
+        _SEEN_PATH = Path(__file__).parent.parent / "data" / "harvested_threads.db"
+        _SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(_SEEN_PATH) as conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS seen (permalink TEXT PRIMARY KEY)")
+            _seen_cache = {r[0] for r in conn.execute("SELECT permalink FROM seen")}
+
+    if permalink in _seen_cache:
+        return True
+
+    _seen_cache.add(permalink)
+    with sqlite3.connect(_SEEN_PATH) as conn:
+        conn.execute("INSERT OR IGNORE INTO seen (permalink) VALUES (?)", (permalink,))
+    return False
+
+
+def _bank_posts(posts: list[dict], subreddit: str, source: str) -> int:
+    """Fetch and bank every comment from a batch of threads."""
+    from rag.comments import harvest as harvest_rag
+
+    banked = 0
+    for post in posts:
+        permalink = post.get("permalink", "")
+        if not permalink or post.get("num_comments", 0) < 2:
+            continue  # threads with no discussion are not worth a request
+
+        # Skip threads we have already banked. A 20-hour harvest WILL be
+        # interrupted, and re-fetching the same threads on every restart would
+        # make it impossible to finish.
+        if _already_seen(permalink):
             continue
 
-        posts = [c.get("data", {}) for c in response.get("data", {}).get("children", [])]
+        comments = [
+            {
+                "text": c["body"][:1000],
+                "score": c["score"],
+                "subreddit": subreddit,
+                "permalink": f"https://reddit.com{permalink}",
+                "thread_title": post.get("title", "")[:200],
+            }
+            for c in _fetch_comments(permalink)
+            if len(c["body"]) >= MIN_COMMENT_LENGTH
+        ]
+        if comments:
+            banked += harvest_rag(comments, searched_for=f"r/{subreddit} {source}")
         time.sleep(_PAUSE)
-
-        for post in posts[:pages * 6]:
-            permalink = post.get("permalink", "")
-            if not permalink:
-                continue
-
-            comments = [
-                {
-                    "text": c["body"][:1000],
-                    "score": c["score"],
-                    "subreddit": subreddit,
-                    "permalink": f"https://reddit.com{permalink}",
-                    "thread_title": post.get("title", "")[:200],
-                }
-                for c in _fetch_comments(permalink)
-                if len(c["body"]) >= MIN_COMMENT_LENGTH
-            ]
-            if comments:
-                banked += harvest_rag(comments, searched_for=f"r/{subreddit} {listing}")
-            time.sleep(_PAUSE)
 
     return banked
 
