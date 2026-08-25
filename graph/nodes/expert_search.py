@@ -18,7 +18,13 @@ import re
 
 import requests
 
-from tools.expert_evidence import EDITORIAL_SOURCES, extract_mentions, aggregate
+from tools.expert_evidence import (
+    DERM_AUTHORITIES,
+    EDITORIAL_SOURCES,
+    PRIORITY_SOURCES,
+    extract_mentions,
+    aggregate,
+)
 
 # Editorial coverage changes slowly; refetching weekly would be waste.
 CACHE_DAYS = 30
@@ -34,7 +40,7 @@ _EXCLUDE = (
 )
 
 
-def _search_editorial(product_name: str, brand: str, limit: int = 8) -> list[str]:
+def _search_editorial(product_name: str, brand: str, limit: int = 18) -> list[str]:
     """Find articles that might quote a named dermatologist about this product.
 
     Was restricted to eight publications with `site:`, which made any
@@ -65,9 +71,15 @@ def _search_editorial(product_name: str, brand: str, limit: int = 8) -> list[str
     other: list[str] = []
     brand_key = re.sub(r"[^a-z]", "", brand.lower())
 
-    # Query the trusted publications explicitly first.
-    sites = " OR ".join(f"site:{s}" for s in EDITORIAL_SOURCES)
-    queries = [f"{brand} {product_name} dermatologist ({sites})"] + queries
+    # Query dermatology AUTHORITIES first -- professional bodies and teaching
+    # hospitals are expert sources in their own right, not just vehicles for a
+    # quote. Then the magazines. Then the open web.
+    auth_sites = " OR ".join(f"site:{s}" for s in DERM_AUTHORITIES[:8])
+    mag_sites = " OR ".join(f"site:{s}" for s in EDITORIAL_SOURCES[:8])
+    queries = [
+        f"{brand} {product_name} dermatologist ({auth_sites})",
+        f"{brand} {product_name} dermatologist ({mag_sites})",
+    ] + queries
 
     for query in queries:
         try:
@@ -99,7 +111,7 @@ def _search_editorial(product_name: str, brand: str, limit: int = 8) -> list[str
             if url in known or url in other:
                 continue
 
-            if any(src in lowered for src in EDITORIAL_SOURCES):
+            if any(src in lowered for src in PRIORITY_SOURCES):
                 known.append(url)
             else:
                 other.append(url)

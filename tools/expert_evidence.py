@@ -32,9 +32,31 @@ in Vogue is.
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
+# ACTUAL dermatology authorities. Unlike the magazines below, these ARE
+# expert sources in their own right -- professional bodies, teaching
+# hospitals, and clinical references. A recommendation here carries more
+# weight than the same words in a beauty magazine.
+DERM_AUTHORITIES = [
+    "aad.org",              # American Academy of Dermatology
+    "dermnetnz.org",        # DermNet NZ, clinical reference
+    "skincancer.org",       # Skin Cancer Foundation
+    "mayoclinic.org",
+    "clevelandclinic.org",
+    "hopkinsmedicine.org",
+    "mountsinai.org",
+    "nyulangone.org",
+    "uchicagomedicine.org",
+    "yalemedicine.org",
+    "health.harvard.edu",
+    "aocd.org",             # American Osteopathic College of Dermatology
+    "britishskinfoundation.org.uk",
+    "bad.org.uk",           # British Association of Dermatologists
+]
+
 # Publications that reliably name and credential the experts they quote.
 # Presence here does NOT make a source authoritative -- it just means the
-# extraction is likely to find a real name attached to a real reason.
+# extraction is likely to find a real name attached to a real reason. The
+# dermatologist is the evidence; the magazine is only the envelope.
 EDITORIAL_SOURCES = [
     "vogue.com",
     "allure.com",
@@ -44,7 +66,16 @@ EDITORIAL_SOURCES = [
     "self.com",
     "health.com",
     "goodhousekeeping.com",
+    "realsimple.com",
+    "shape.com",
+    "womenshealthmag.com",
+    "menshealth.com",
+    "nytimes.com",          # Wirecutter tests and quotes derms
+    "cnn.com",              # CNN Underscored
 ]
+
+# Everything we prioritise, authorities first.
+PRIORITY_SOURCES = DERM_AUTHORITIES + EDITORIAL_SOURCES
 
 # Credential markers that indicate an actual clinician.
 CREDENTIALS = [
