@@ -51,17 +51,17 @@
 
   /* ---- product row ---- */
   .item {
-    display:grid; grid-template-columns:150px 1fr auto; gap:24px;
+    display:grid; grid-template-columns:230px 1fr auto; gap:28px;
     align-items:start; padding:30px 0; border-top:1px solid var(--hair);
   }
   .item:first-of-type { border-top:0; padding-top:6px; }
   .shot {
-    width:150px; height:150px; border-radius:16px; background:#fff;
-    border:1px solid var(--hair); object-fit:contain; padding:12px;
+    width:230px; height:230px; border-radius:18px; background:#fff;
+    border:1px solid var(--hair); object-fit:contain; padding:16px;
   }
   .shot.blank {
     display:flex; align-items:center; justify-content:center; background:var(--surface);
-    font-size:36px; font-weight:600; color:var(--muted);
+    font-size:52px; font-weight:600; color:var(--muted);
   }
   .name { font-size:18px; font-weight:600; letter-spacing:-0.02em; margin:0 0 3px; }
   .meta { color:var(--muted); font-size:13px; margin:0 0 12px; }
@@ -84,6 +84,22 @@
   .bar .track { height:6px; background:var(--hair); border-radius:3px; overflow:hidden; }
   .bar .fill { height:100%; border-radius:3px; }
   .bar .v { text-align:right; font-weight:600; font-size:12px; }
+
+  /* ---- collapsible sections ---- */
+  .drops { display:flex; flex-direction:column; gap:1px; margin-top:14px; }
+  .drop { border-top:1px solid var(--hair); }
+  .drop summary {
+    cursor:pointer; list-style:none; padding:9px 0; font-size:13.5px; font-weight:500;
+    display:flex; justify-content:space-between; align-items:center; color:var(--text);
+  }
+  .drop summary::-webkit-details-marker { display:none; }
+  .drop summary::after { content:'+'; color:var(--muted); font-size:15px; }
+  .drop[open] summary::after { content:'\2212'; }
+  .drop summary .n2 {
+    margin-left:auto; margin-right:10px; font-size:11px; color:var(--muted);
+    border:1px solid var(--hair); border-radius:980px; padding:1px 8px;
+  }
+  .drop .body { padding:2px 0 12px; }
 
   /* ---- brand claims vs research ---- */
   .claims { margin-top:15px; }
@@ -249,6 +265,16 @@
   </div>
 
   <div class="bubbles" id="bubbles">
+    <button class="bubble on" data-cat="">All</button>
+    <button class="bubble" data-cat="sunscreen">Sunscreen</button>
+    <button class="bubble" data-cat="moisturizer">Moisturiser</button>
+    <button class="bubble" data-cat="serum">Serum</button>
+    <button class="bubble" data-cat="toner">Toner</button>
+    <button class="bubble" data-cat="cleanser">Cleanser</button>
+    <button class="bubble" data-cat="lip care">Lip care</button>
+  </div>
+
+  <div class="bubbles" style="margin-top:-22px">
     <button class="bubble on" data-view="rankings">All</button>
     <button class="bubble" data-view="hyped">Overhyped</button>
     <button class="bubble" data-view="underrated">Underrated</button>
@@ -317,10 +343,13 @@ const list = document.getElementById('list');
 const count = document.getElementById('count');
 let ALL = [];            // every product, cached so filtering is instant
 let VIEW = 'rankings';
+let CAT = '';            // '' means every category
 
 const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const colour = s => s >= 70 ? 'var(--good)' : s >= 50 ? 'var(--warn)' : 'var(--bad)';
+// Bar colour tracks the number: green when the evidence is good, amber when
+// middling, red when poor. Same scale everywhere so bars are comparable.
+const colour = s => s >= 65 ? 'var(--good)' : s >= 45 ? 'var(--warn)' : 'var(--bad)';
 const DESIGN = {5:'meta-analysis', 4:'trial', 3:'clinical study', 2:'review', 1:'article', 0:'article'};
 
 // Amazon encodes size in the filename; ask for a larger render than the thumbnail.
@@ -361,7 +390,7 @@ function versus(p) {
 function themes(p) {
   const l = p.themes || [];
   if (!l.length) return '';
-  return `<div class="themes"><h3>What people keep saying</h3>
+  return `<div class="themes">
     ${l.map(t => `<div class="theme">
       <span class="dot ${esc(t.sentiment)}"></span>
       <span><span class="label">${esc(t.theme)}</span><span class="n">${t.mentions}×</span>
@@ -416,9 +445,9 @@ function claims(p) {
   const list = p.claims || [];
   if (!list.length) return '';
   const acc = p.claim_accuracy;
-  return `<div class="claims"><h3 style="font-size:11px;font-weight:600;text-transform:uppercase;
-      letter-spacing:.06em;color:var(--muted);margin:0 0 9px">
-      Brand claims vs research${acc != null ? ` · ${Math.round(acc)}% accurate` : ''}</h3>
+  return `<div class="claims">
+    ${acc != null ? `<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">
+      ${Math.round(acc)}% of checkable claims supported</div>` : ''}
     ${list.slice(0, 4).map(c => `<div class="claim">
       <span class="cv ${esc(c.verdict)}">${esc(c.verdict).replace('-', ' ')}</span>
       <span><span class="txt">${esc(c.claim)}</span>
@@ -432,8 +461,7 @@ function skinTypes(p) {
   const list = p.skin_types || [];
   if (!list.length) return '';
   const cls = v => v === 'works-well' ? 'positive' : v === 'poorly' ? 'negative' : 'mixed';
-  return `<div class="themes"><h3 style="font-size:11px;font-weight:600;text-transform:uppercase;
-      letter-spacing:.06em;color:var(--muted);margin:0 0 9px">By skin type</h3>
+  return `<div class="themes">
     ${list.map(s => `<div class="theme">
       <span class="dot ${cls(s.verdict)}"></span>
       <span><span class="label">${esc(s.skin_type)}</span><span class="n">${s.mentions}×</span>
@@ -445,10 +473,9 @@ function skinTypes(p) {
 function experts(p) {
   const e = p.experts || {};
   if (!e.unique_experts) return '';
-  return `<div class="experts"><h3 style="font-size:11px;font-weight:600;text-transform:uppercase;
-      letter-spacing:.06em;color:var(--muted);margin:0 0 9px">
-      ${e.unique_experts} dermatologist${e.unique_experts > 1 ? 's' : ''}
-      ${e.publications.length ? '· ' + e.publications.map(esc).join(', ') : ''}</h3>
+  return `<div class="experts">
+    ${e.publications.length ? `<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">
+      ${e.publications.map(esc).join(', ')}</div>` : ''}
     ${(e.mentions || []).slice(0, 3).map(m => `<div class="expert">
       <span class="rec ${esc(m.recommendation)}">${esc(m.recommendation)}</span>
       <span><span class="who">${esc(m.expert)}</span>
@@ -462,6 +489,26 @@ function banner(p) {
   if (p.hype_gap > 25) return '<div class="banner over">⚠ Overhyped</div>';
   if (p.score >= 65)   return '<div class="banner worth">✓ Worth the hype</div>';
   return '<div class="banner mixed">Mixed evidence</div>';
+}
+
+// Detail sections are CLOSED by default -- the card shows only labels, and a
+// reader opens what they care about. A product page that dumps every finding
+// at once is a wall of text nobody reads.
+function collapsibles(p) {
+  const sections = [
+    ['Dermatologists', (p.experts || {}).unique_experts || 0, experts(p)],
+    ['What people say', (p.themes || []).length, themes(p)],
+    ['By skin type', (p.skin_types || []).length, skinTypes(p)],
+    ['Brand claims vs research', (p.claims || []).length, claims(p)],
+  ].filter(([, n, html]) => n > 0 && html);
+
+  if (!sections.length) return '';
+
+  return `<div class="drops">${sections.map(([label, n, html]) => `
+    <details class="drop">
+      <summary>${label}<span class="n2">${n}</span></summary>
+      <div class="body">${html}</div>
+    </details>`).join('')}</div>`;
 }
 
 function row(p) {
@@ -494,7 +541,7 @@ function row(p) {
         <span class="tag ${esc(p.confidence)}">${esc(p.confidence)} evidence</span>
         ${p.is_safe ? '' : '<span class="tag hype">FDA recall on record</span>'}
       </div>
-      ${callout}${dupe}${skinTypes(p)}${claims(p)}${experts(p)}${themes(p)}${sources(p)}
+      ${callout}${dupe}${collapsibles(p)}
       <details>
         <summary>Ingredients and full findings</summary>
         ${functions(p)}
@@ -532,6 +579,8 @@ function render(products) {
 function apply() {
   const q = document.getElementById('q').value.trim().toLowerCase();
   let out = ALL;
+
+  if (CAT) out = out.filter(p => (p.product_category || p.category) === CAT);
 
   if (VIEW === 'hyped')       out = out.filter(p => p.hype_gap > 25).sort((a,b) => b.hype_gap - a.hype_gap);
   else if (VIEW === 'underrated') out = out.filter(p => p.hype_gap < -20);
@@ -575,8 +624,16 @@ function apply() {
   render(out);
 }
 
-document.querySelectorAll('.bubble').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.bubble').forEach(x => x.classList.remove('on'));
+// Two independent bubble rows: category, and view. Each highlights only
+// within its own row.
+document.querySelectorAll('.bubble[data-cat]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.bubble[data-cat]').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  CAT = b.dataset.cat;
+  apply();
+});
+document.querySelectorAll('.bubble[data-view]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.bubble[data-view]').forEach(x => x.classList.remove('on'));
   b.classList.add('on');
   VIEW = b.dataset.view;
   apply();
@@ -606,11 +663,14 @@ async function load() {
     const r = await (await fetch('/api/recalls?limit=8')).json();
     const box = document.getElementById('recalls');
     box.innerHTML = (r.recalls || []).length
+      // Headline only -- firm and product. The reason and classification are
+      // one click away rather than crowding the sidebar.
       ? r.recalls.map(x => `<div class="recall">
-          <span class="firm">${esc(x.firm)}</span>
-          <span class="why">${esc(x.reason).slice(0, 110)}</span>
+          <a href="https://www.google.com/search?q=${encodeURIComponent('FDA recall ' + x.recall_number + ' ' + x.firm)}"
+             target="_blank" rel="noopener"
+             style="color:var(--text);text-decoration:none;font-weight:600">${esc(x.firm)}</a>
+          <span class="why">${esc(x.product).slice(0, 70)}</span>
           <span class="cls ${x.classification === 'Class I' ? 'c1' : ''}">${esc(x.classification)}</span>
-          <span style="color:var(--muted);font-size:11px"> · ${esc(x.date)}</span>
         </div>`).join('')
       : '<div style="color:var(--muted);font-size:12.5px">No recent recalls on record.</div>';
   } catch (e) { /* the news panel is optional; rankings still render */ }
@@ -622,9 +682,7 @@ async function load() {
       ? n.news.map(x => `<div class="recall">
           <a href="${esc(x.url)}" target="_blank" rel="noopener"
              style="color:var(--text);text-decoration:none;font-weight:600">${esc(x.title)}</a>
-          <span class="why">${esc(x.snippet)}</span>
-          <span class="cls">unverified</span>
-          <span style="color:var(--muted);font-size:11px"> · ${esc(x.source)}</span>
+          <span style="color:var(--muted);font-size:11px">${esc(x.source)}</span>
         </div>`).join('')
       : '<div style="color:var(--muted);font-size:12.5px">No recent coverage found.</div>';
   } catch (e) { /* optional */ }
