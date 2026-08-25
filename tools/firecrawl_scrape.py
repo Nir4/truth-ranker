@@ -89,9 +89,24 @@ def parse_product(scraped: dict) -> dict:
 
     image = _first(r"!\[[^\]]*\]\((https://m\.media-amazon\.com/images/I/[^)]+)\)", md)
 
+    # Amazon's first H1 is often a page heading ("Product summary presents key
+    # product information"), not the product. Prefer the productTitle span,
+    # then any H1 that is not obviously boilerplate.
+    name = _first(r"productTitle[^>]*>\s*([^<\n]{10,200})", md)
+    if not name:
+        for candidate in re.findall(r"^#\s+(.{10,200})$", md, re.M):
+            lowered = candidate.lower()
+            if not any(
+                junk in lowered
+                for junk in ("product summary", "presents key", "about this item",
+                             "customer review", "buying options", "product information")
+            ):
+                name = candidate.strip()
+                break
+
     return {
         "asin": scraped["asin"],
-        "name": _first(r"^#\s+(.{10,200})$", md) or "",
+        "name": name or "",
         "brand": _first(r"\|\s*Brand\s*\|([^|]+)\|", md),
         "category": "skincare",
         "price": float(price) if price else 0.0,

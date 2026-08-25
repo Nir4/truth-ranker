@@ -66,7 +66,15 @@ def load_catalogue(limit: int) -> list[dict]:
         product = detail[0] if detail else row
         product["bestseller_rank"] = row["bestseller_rank"]
         product["image_url"] = product.get("image_url") or row.get("image_url", "")
-        product["name"] = product.get("name") or row.get("name", "")
+        # The LISTING name is authoritative. The detail page's first heading is
+        # often boilerplate ("Product summary presents key product
+        # information"), and a wrong name cascades: the brand agent guesses
+        # from it, then the ingredient lookup searches for the wrong product.
+        listing_name = row.get("name", "")
+        if listing_name and len(listing_name) > 15:
+            product["name"] = listing_name
+        else:
+            product["name"] = product.get("name") or listing_name
 
         resolve_brand(product)
         resolved = resolve_ingredients(product)

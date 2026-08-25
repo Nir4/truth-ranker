@@ -29,6 +29,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from pydantic import BaseModel, Field
+
 from rag.store import retrieve, format_hits
 
 OUT_PATH = Path(__file__).parent / "ragas_results.json"
@@ -150,33 +152,82 @@ def build_dataset() -> list[dict]:
     return rows
 
 
-def main() -> None:
-    from datasets import Dataset
-    from ragas import evaluate
-    from ragas.metrics import (
-        faithfulness,
-        answer_relevancy,
-        context_precision,
-        context_recall,
+# RAGAS 0.2-0.4 all import langchain_community.chat_models.vertexai, a module
+# path removed in langchain-community v1. Rather than downgrade the whole
+# LangChain stack to satisfy an eval dependency, the four metrics are
+# implemented directly below -- they are LLM-as-judge scores, and the
+# definitions are public.
+class _Judgement(BaseModel):
+    score: float = Field(description="0.0 to 1.0.")
+    reason: str = Field(description="One sentence.")
+
+
+def _judge(system: str, user: str) -> float:
+    from langchain_openai import ChatOpenAI
+
+    model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    try:
+        result = model.with_structured_output(_Judgement).invoke(
+            [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        )
+        return max(0.0, min(1.0, float(result.score)))
+    except Exception:  # noqa: BLE001
+        return 0.0
+
+
+def score_row(row: dict) -> dict:
+    """The four RAGAS metrics, computed directly."""
+    ctx = "\n\n".join(row["contexts"])[:6000]
+
+    faithfulness = _judge(
+        "Score FAITHFULNESS 0-1: what fraction of the claims in the ANSWER are "
+        "supported by the CONTEXT? An answer stating only what the context "
+        "supports scores 1.0. Any claim not traceable to the context lowers it. "
+        "Saying 'the context does not answer this' is FAITHFUL and scores 1.0.",
+        f"CONTEXT:\n{ctx}\n\nANSWER:\n{row['answer']}",
+    )
+    relevancy = _judge(
+        "Score ANSWER RELEVANCY 0-1: how directly does the ANSWER address the "
+        "QUESTION? Penalise evasion and padding, not brevity.",
+        f"QUESTION: {row['question']}\n\nANSWER:\n{row['answer']}",
+    )
+    precision = _judge(
+        "Score CONTEXT PRECISION 0-1: what fraction of the retrieved passages are "
+        "actually useful for answering the QUESTION? Retrieving five passages "
+        "where two are relevant scores about 0.4.",
+        f"QUESTION: {row['question']}\n\nRETRIEVED:\n{ctx}",
+    )
+    recall = _judge(
+        "Score CONTEXT RECALL 0-1: what fraction of the GROUND TRUTH could be "
+        "derived from the retrieved CONTEXT? If the context lacks what the "
+        "ground truth states, score low.",
+        f"GROUND TRUTH:\n{row['ground_truth']}\n\nCONTEXT:\n{ctx}",
     )
 
+    return {
+        "faithfulness": faithfulness,
+        "answer_relevancy": relevancy,
+        "context_precision": precision,
+        "context_recall": recall,
+    }
+
+
+def main() -> None:
     print(f"Building evaluation set over {len(GOLD)} questions...\n")
     rows = build_dataset()
 
-    print("\nScoring with RAGAS (this makes several model calls per question)...\n")
-    result = evaluate(
-        Dataset.from_list(rows),
-        metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
-    )
+    print("\nScoring (4 judge calls per question)...\n")
+    totals: dict[str, list[float]] = {}
+    for i, row in enumerate(rows, 1):
+        r = score_row(row)
+        for k, v in r.items():
+            totals.setdefault(k, []).append(v)
+        print(f"  [{i}/{len(rows)}] " + "  ".join(f"{k[:12]}={v:.2f}" for k, v in r.items()))
 
-    scores = {
-        k: round(float(v), 3)
-        for k, v in result._repr_dict.items()
-        if isinstance(v, (int, float))
-    }
+    scores = {k: round(sum(v) / len(v), 3) for k, v in totals.items()}
 
     print("\n" + "=" * 52)
-    print("RAGAS RESULTS")
+    print("RAG EVALUATION RESULTS")
     print("=" * 52)
     for metric, value in scores.items():
         bar = "#" * int(value * 30)

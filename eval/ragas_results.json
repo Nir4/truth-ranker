@@ -1,0 +1,9 @@
+{
+  "n_questions": 8,
+  "scores": {
+    "faithfulness": 0.875,
+    "answer_relevancy": 0.625,
+    "context_precision": 0.5,
+    "context_recall": 0.15
+  }
+}
