@@ -162,7 +162,13 @@ def retrieve(brand: str, product_name: str, n_results: int = 25) -> list[dict]:
 
 
 def stats() -> dict:
+    """How many comments are banked.
+
+    Reports an error rather than 0 on failure. Returning 0 for "could not
+    read" made a healthy 4,000-comment pool look empty, which is the kind of
+    silent lie that sends you debugging the wrong thing.
+    """
     try:
         return {"comments": get_collection().count()}
-    except Exception:  # noqa: BLE001
-        return {"comments": 0}
+    except Exception as exc:  # noqa: BLE001
+        return {"comments": None, "error": str(exc)[:80]}
