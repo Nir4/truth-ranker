@@ -58,14 +58,35 @@ SYSTEM_PROMPT = """You check skincare marketing claims against published researc
 For each claim, identify the ingredient it rests on and judge it against the \
 retrieved evidence.
 
-THE FOUR VERDICTS:
+THE VERDICTS:
 
   supported        the evidence backs the claim as stated
-  partly-supported the effect is real but the claim overstates it. This is the
-                   most common honest answer. "Hydrates" is supported;
-                   "deeply rejuvenates" overstates the same evidence.
-  unsupported      the claim is CHECKABLE and the evidence does not support it
-  untestable       the claim is too vague to check at all
+  partly-supported the effect is real but the claim overstates it. The most
+                   common honest answer. "Hydrates" is supported; "deeply
+                   rejuvenates" overstates the same evidence.
+  not-verified     the claim is plausible and the INGREDIENT evidence supports
+                   it, but no independent study tested THIS product
+  promising        early evidence only -- a couple of small studies, no trials
+  contradicted     research actively shows the claim is wrong
+  untestable       too vague to check at all
+
+SEPARATE INGREDIENT EVIDENCE FROM PRODUCT EVIDENCE. This is the distinction
+that matters most and the one most easily got wrong.
+
+A claim of "broad-spectrum SPF 50" on a sunscreen with established UV filters
+is NOT unsupported just because no paper studied that specific bottle. The
+ingredient evidence is strong, the product is regulated and required to be
+tested, and no independent study existing is a fact about the literature, not
+about the product. That is "not-verified", never "contradicted".
+
+Use "contradicted" ONLY when research actively points the other way. "We could
+not find a study" and "studies found it does not work" are completely different
+statements, and collapsing them into one verdict would be exactly the
+manufactured doubt this project exists to avoid.
+
+NOVELTY IS NOT A FAILING. A genuinely new ingredient with two small studies and
+no trials is "promising", not "unsupported". Early evidence is where interesting
+products live.
 
 BE CAREFUL WITH "untestable". Words like "glowing", "radiant", "revitalised" \
 and "renewed" are chosen by marketers precisely BECAUSE no study can test them. \
@@ -131,7 +152,18 @@ def check_claims(claims: list[str], ingredients: list[str], product_name: str) -
     # a failure would conflate "meaningless" with "false".
     checkable = [v for v in verdicts if v["verdict"] != "untestable"]
     if checkable:
-        points = {"supported": 1.0, "partly-supported": 0.5, "unsupported": 0.0}
+        # not-verified and promising sit in the middle: the claim is plausible
+        # and ingredient-level evidence backs it, but nobody tested this
+        # product. Scoring them as failures would punish products for gaps in
+        # the literature rather than for anything they did.
+        points = {
+            "supported": 1.0,
+            "partly-supported": 0.6,
+            "not-verified": 0.5,
+            "promising": 0.5,
+            "unsupported": 0.0,
+            "contradicted": 0.0,
+        }
         accuracy = 100 * sum(points.get(v["verdict"], 0) for v in checkable) / len(checkable)
     else:
         accuracy = None

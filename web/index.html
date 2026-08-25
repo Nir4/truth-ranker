@@ -51,12 +51,12 @@
 
   /* ---- product row ---- */
   .item {
-    display:grid; grid-template-columns:230px 1fr auto; gap:28px;
+    display:grid; grid-template-columns:270px 1fr auto; gap:30px;
     align-items:start; padding:30px 0; border-top:1px solid var(--hair);
   }
   .item:first-of-type { border-top:0; padding-top:6px; }
   .shot {
-    width:230px; height:230px; border-radius:18px; background:#fff;
+    width:270px; height:270px; border-radius:20px; background:#fff;
     border:1px solid var(--hair); object-fit:contain; padding:16px;
   }
   .shot.blank {
@@ -76,13 +76,20 @@
   .versus .lbl { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
   .versus .arrow { color:var(--muted); font-size:17px; }
 
+  .sig { display:grid; grid-template-columns:120px 1fr; gap:12px; padding:4px 0; font-size:13px; }
+  .sig .k { color:var(--muted); }
+  .sig .sv { font-weight:500; }
+
   /* ---- score breakdown bars ---- */
   .bars { margin:12px 0; }
   .bar { display:grid; grid-template-columns:112px 1fr 34px; gap:10px;
          align-items:center; font-size:12px; margin-bottom:5px; }
   .bar .k { color:var(--muted); }
-  .bar .track { height:6px; background:var(--hair); border-radius:3px; overflow:hidden; }
-  .bar .fill { height:100%; border-radius:3px; }
+  /* display:block matters -- these are spans, and an inline element ignores
+     height and width, so the bars rendered as empty hairlines. */
+  .bar .track { display:block; height:8px; background:var(--hair);
+                border-radius:4px; overflow:hidden; }
+  .bar .fill  { display:block; height:8px; border-radius:4px; }
   .bar .v { text-align:right; font-weight:600; font-size:12px; }
 
   /* ---- collapsible sections ---- */
@@ -112,6 +119,9 @@
   .cv.supported        { color:var(--good); border-color:currentColor; }
   .cv.partly-supported { color:var(--warn); border-color:currentColor; }
   .cv.unsupported      { color:var(--bad);  border-color:currentColor; }
+  .cv.contradicted     { color:var(--bad);  border-color:currentColor; }
+  .cv.not-verified     { color:var(--muted); }
+  .cv.promising        { color:var(--accent); border-color:currentColor; }
   .cv.untestable       { color:var(--muted); }
 
   /* ---- expert panel ---- */
@@ -171,6 +181,16 @@
     background:color-mix(in srgb, var(--bad) 8%, transparent); color:var(--bad);
   }
   .callout.gem { background:color-mix(in srgb, var(--good) 9%, transparent); color:var(--good); }
+
+  .vs2 { display:flex; align-items:center; gap:14px; }
+  .vsx { text-align:center; }
+  .vsx img, .vsx .ph { width:72px; height:72px; border-radius:10px; background:#fff;
+                       border:1px solid var(--hair); object-fit:contain; padding:6px; display:block; }
+  .vsx .nm { font-size:11px; margin-top:5px; color:var(--muted); max-width:80px; }
+  .vsx .pr { font-size:14px; font-weight:600; }
+  .arw { color:var(--muted); font-size:12px; }
+  .sav { margin-left:auto; text-align:right; font-size:11px; color:var(--good); }
+  .sav b { font-size:16px; }
 
   /* ---- dupes ---- */
   .dupe {
@@ -419,23 +439,65 @@ function functions(p) {
 
 // Score breakdown, mirroring the mockup: each signal as its own bar so a
 // reader can see WHICH evidence agrees and which disagrees.
+// Signals as LABELS, not scores out of 100.
+//
+// "Research: 50/100" implies a rubric precise enough to distinguish 50 from
+// 54. We do not have one, so the precision is fake. Worse, a single blended
+// score collapses different concepts -- an ingredient flag and a missing study
+// are not commensurable, and averaging them produces a number nobody can
+// interpret. Each signal now says what it actually found.
+function label(kind, v, p) {
+  if (typeof v !== 'number') return ['—', 'var(--muted)'];
+  if (kind === 'reddit') {
+    const n = (p.themes || []).reduce((a, t) => a + (t.mentions || 0), 0);
+    if (!n) return ['No discussion found', 'var(--muted)'];
+    return v >= 65 ? [`Positive · ${n} mentions`, 'var(--good)']
+         : v >= 45 ? [`Mixed · ${n} mentions`, 'var(--warn)']
+                   : [`Negative · ${n} mentions`, 'var(--bad)'];
+  }
+  if (kind === 'research') {
+    return v >= 70 ? ['Strong evidence', 'var(--good)']
+         : v >= 55 ? ['Supported', 'var(--good)']
+         : v >= 45 ? ['Limited evidence', 'var(--warn)']
+                   : ['Evidence conflicts', 'var(--bad)'];
+  }
+  if (kind === 'derm') {
+    const n = (p.experts || {}).unique_experts || 0;
+    if (!n) return ['No expert mentions found', 'var(--muted)'];
+    return [`${n} expert mention${n > 1 ? 's' : ''}`, v >= 60 ? 'var(--good)' : 'var(--warn)'];
+  }
+  if (kind === 'ingredients') {
+    const flags = (p.ingredient_functions || []).filter(f =>
+      /fragrance|parfum/i.test(f.name)).length;
+    return flags ? [`${flags} sensitivity flag${flags > 1 ? 's' : ''}`, 'var(--warn)']
+                 : ['No flags found', 'var(--good)'];
+  }
+  if (kind === 'claims') {
+    const cs = p.claims || [];
+    if (!cs.length) return ['No claims captured', 'var(--muted)'];
+    const sup = cs.filter(c => c.verdict === 'supported').length;
+    const part = cs.filter(c => c.verdict === 'partly-supported').length;
+    const untest = cs.filter(c => c.verdict === 'untestable').length;
+    return [`${sup} supported · ${part} partial · ${untest} untestable`,
+            sup > cs.length / 2 ? 'var(--good)' : 'var(--warn)'];
+  }
+  return ['—', 'var(--muted)'];
+}
+
 function bars(p) {
   const s = p.subscores || {};
   const rows = [
-    ['Amazon popularity', Math.max(0, 100 - ((p.bestseller_rank ?? 100) - 1) * 2)],
-    ['Reddit users',      s.sentiment],
-    ['Research support',  s.efficacy],
-    ['Dermatologists',    s.expert],
-    ['Ingredients',       s.ingredients],
-    ['Claim accuracy',    p.claim_accuracy],
-  ].filter(([, v]) => typeof v === 'number');
+    ['Amazon', p.bestseller_rank >= 999 ? 'Not sold on Amazon' : `#${p.bestseller_rank} bestseller`, 'var(--text)'],
+    ['Reddit', ...label('reddit', s.sentiment, p)],
+    ['Research', ...label('research', s.efficacy, p)],
+    ['Dermatologists', ...label('derm', s.expert, p)],
+    ['Claims', ...label('claims', null, p)],
+    ['Ingredients', ...label('ingredients', s.ingredients, p)],
+  ];
 
-  return `<div class="bars">${rows.map(([k, v]) => `
-    <div class="bar">
-      <span class="k">${k}</span>
-      <span class="track"><span class="fill" style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>
-      <span class="v">${Math.round(v)}</span>
-    </div>`).join('')}</div>`;
+  return `<div class="bars">${rows.map(([k, text, col]) => `
+    <div class="sig"><span class="k">${k}</span>
+      <span class="sv" style="color:${col}">${text}</span></div>`).join('')}</div>`;
 }
 
 // What the brand claims vs what research supports. Untestable claims are
@@ -521,9 +583,24 @@ function row(p) {
       only #${p.bestseller_rank} in sales.</div>`;
   }
 
+  // Dupes side by side, so the comparison is visual rather than a sentence.
   const d = (p.dupes || [])[0];
-  const dupe = d ? `<div class="dupe"><b>Dupe:</b> ${esc(d.brand)} ${esc(d.name).slice(0,44)} —
-    same actives, $${d.price.toFixed(2)} (save $${d.saving.toFixed(2)})</div>` : '';
+  const dupe = d ? `<div class="dupe">
+    <div style="font-weight:600;margin-bottom:8px">Same formula, lower price</div>
+    <div class="vs2">
+      <div class="vsx">
+        ${p.image_url ? `<img src="${esc(bigImage(p.image_url))}" alt="">` : '<div class="ph"></div>'}
+        <div class="nm">${esc(p.brand)}</div>
+        <div class="pr">$${(p.price ?? 0).toFixed(2)}</div>
+      </div>
+      <div class="arw">vs</div>
+      <div class="vsx">
+        ${d.image_url ? `<img src="${esc(bigImage(d.image_url))}" alt="">` : '<div class="ph"></div>'}
+        <div class="nm">${esc(d.brand)}</div>
+        <div class="pr" style="color:var(--good)">$${d.price.toFixed(2)}</div>
+      </div>
+      <div class="sav">save<br><b>$${d.saving.toFixed(2)}</b></div>
+    </div></div>` : '';
 
   const summary = p.function_summary?.counts || {};
   const shape = Object.entries(summary).slice(0, 3).map(([k, v]) => `${v} ${k.toLowerCase()}`).join(', ');
@@ -531,7 +608,10 @@ function row(p) {
   return `<article class="item">
     ${shot(p)}
     <div>
-      <h2 class="name">${esc(p.name)}</h2>
+      <h2 class="name">${p.asin && !p.asin.startsWith('TJ-')
+        ? `<a href="https://www.amazon.com/dp/${esc(p.asin)}" target="_blank" rel="noopener"
+             style="color:inherit;text-decoration:none">${esc(p.name)} ↗</a>`
+        : esc(p.name)}</h2>
       <p class="meta">${esc(p.brand)} · $${(p.price ?? 0).toFixed(2)}${shape ? ' · ' + esc(shape) : ''}</p>
       ${banner(p)}
       ${versus(p)}
@@ -552,8 +632,12 @@ function row(p) {
       </details>
     </div>
     <div class="score">
-      <div class="num" style="color:${colour(p.score)}">${Math.round(p.score)}</div>
-      <div class="outof">out of 100</div>
+      <div class="num" style="color:${colour(p.score)};font-size:15px;font-weight:600;
+           text-align:right;line-height:1.3">${
+        p.hype_gap > 25 ? 'Overhyped'
+        : p.score >= 65 ? 'Worth it'
+        : 'Mixed'}</div>
+      <div class="outof">${p.bestseller_rank >= 999 ? '' : 'vs #' + p.bestseller_rank}</div>
     </div>
   </article>`;
 }
@@ -663,7 +747,7 @@ async function load() {
   }
 
   try {
-    const r = await (await fetch('/api/recalls?limit=8')).json();
+    const r = await (await fetch('/api/recalls?limit=3')).json();
     const box = document.getElementById('recalls');
     box.innerHTML = (r.recalls || []).length
       // Headline only -- firm and product. The reason and classification are
@@ -672,14 +756,14 @@ async function load() {
           <a href="https://www.google.com/search?q=${encodeURIComponent('FDA recall ' + x.recall_number + ' ' + x.firm)}"
              target="_blank" rel="noopener"
              style="color:var(--text);text-decoration:none;font-weight:600">${esc(x.firm)}</a>
-          <span class="why">${esc(x.product).slice(0, 70)}</span>
-          <span class="cls ${x.classification === 'Class I' ? 'c1' : ''}">${esc(x.classification)}</span>
+          <span class="why">${esc(x.product).slice(0, 60)}</span>
+          <span style="color:var(--muted);font-size:11px">${esc(x.date)}</span>
         </div>`).join('')
       : '<div style="color:var(--muted);font-size:12.5px">No recent recalls on record.</div>';
   } catch (e) { /* the news panel is optional; rankings still render */ }
 
   try {
-    const n = await (await fetch('/api/news?limit=5')).json();
+    const n = await (await fetch('/api/news?limit=3')).json();
     const box = document.getElementById('newsitems');
     box.innerHTML = (n.news || []).length
       ? n.news.map(x => `<div class="recall">

@@ -187,7 +187,12 @@ def ranking_node(state: TruthState) -> dict:
     if marketing:
         from graph.nodes.claim_check import check_claims
 
-        claims_result = check_claims(marketing, ingredients, product["name"])
+        # The PRODUCT NAME is itself the biggest marketing claim -- "Clear
+        # Face Breakout Free", "Ultra Sheer", "Unseen". Those words are on the
+        # bottle and are what a shopper actually reads, so they get checked
+        # ahead of the feature bullets.
+        headline_claims = [product["name"]] + marketing
+        claims_result = check_claims(headline_claims, ingredients, product["name"])
         if claims_result["accuracy"] is not None:
             print(f"  [claims] accuracy {claims_result['accuracy']:.0f}% -- {claims_result['note']}")
 

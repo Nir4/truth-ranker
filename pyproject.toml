@@ -5,6 +5,7 @@ description = "Truth Ranker - rank products by what is actually true, not by hyp
 requires-python = ">=3.12"
 dependencies = [
     "chromadb>=1.5.9",
+    "datasets>=5.0.1",
     "fastapi>=0.141.1",
     "grandalf>=0.8",
     "httpx>=0.28.1",
@@ -14,6 +15,7 @@ dependencies = [
     "langgraph>=1.2.11",
     "praw>=8.0.3",
     "python-dotenv>=1.2.3",
+    "ragas>=0.4.3",
     "redditwarp>=1.3.0",
     "requests>=2.34.2",
     "uvicorn[standard]>=0.52.4",
