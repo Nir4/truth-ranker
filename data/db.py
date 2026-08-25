@@ -115,13 +115,20 @@ def save_result(product: dict, state: dict) -> None:
 def _row_to_dict(row: sqlite3.Row) -> dict:
     """Turn a row into a dict, decoding the JSON columns."""
     d = dict(row)
-    for field in ("subscores", "evidence", "sources", "themes", "experts", "claims", "researched_themes",
-                  "ingredient_functions", "function_summary", "ingredients"):
+    # Columns are added over time, so a row written by an older schema will be
+    # missing some. Default instead of raising -- a KeyError here takes down the
+    # whole site for one absent field.
+    for field in ("subscores", "evidence", "sources", "themes", "experts", "claims",
+                  "researched_themes", "ingredient_functions", "function_summary",
+                  "ingredients"):
+        empty = {} if field in ("subscores", "function_summary", "experts") else []
+        raw = d.get(field)
         try:
-            empty = {} if field in ("subscores", "function_summary", "experts") else []
-            d[field] = json.loads(d[field]) if d[field] else empty
+            d[field] = json.loads(raw) if raw else empty
         except (json.JSONDecodeError, TypeError):
-            d[field] = {} if field in ("subscores", "function_summary", "experts") else []
+            d[field] = empty
+
+    d.setdefault("claim_accuracy", None)
     d["is_safe"] = bool(d["is_safe"])
     return d
 

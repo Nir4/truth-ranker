@@ -219,6 +219,21 @@ def gather_sentiment_raw(product_name: str, brand: str, limit: int = 40) -> dict
     if cached is not None:
         return cached
 
+    # PRIMARY PATH: Reddit's public JSON, keyless and free.
+    # Tried first because the alternatives all have a way to fail silently --
+    # PRAW needs credentials Reddit no longer grants on demand, and the Apify
+    # actor hit a monthly hard limit mid-run, zeroing our biggest scoring
+    # signal without any error the pipeline noticed.
+    try:
+        from tools.reddit_public import gather as public_gather
+
+        result = public_gather(product_name, brand, limit)
+        if result["comment_count"]:
+            cache_put("reddit", cache_key, result)
+            return result
+    except Exception as exc:  # noqa: BLE001
+        print(f"    [reddit] public API failed: {str(exc)[:70]}")
+
     reddit = _get_client()
 
     if reddit is None:
