@@ -91,7 +91,7 @@ found it for free. Never discard it silently."""
 
 
 def route_comments(
-    comments: list[dict], brand: str, product_name: str, max_batch: int = 40
+    comments: list[dict], brand: str, product_name: str, max_batch: int = 60
 ) -> tuple[list[dict], list[dict]]:
     """Split comments into (about the target, about something else).
 
@@ -100,6 +100,16 @@ def route_comments(
     """
     if not comments:
         return [], []
+
+    # Judge in chunks so a long candidate list is not silently truncated --
+    # we were fetching 180 comments and only ever showing the router 40.
+    if len(comments) > max_batch:
+        mine_all, others_all = [], []
+        for i in range(0, min(len(comments), max_batch * 3), max_batch):
+            m, o = route_comments(comments[i:i + max_batch], brand, product_name, max_batch)
+            mine_all += m
+            others_all += o
+        return mine_all, others_all
 
     batch = comments[:max_batch]
     numbered = "\n\n".join(

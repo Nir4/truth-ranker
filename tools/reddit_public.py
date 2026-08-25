@@ -98,12 +98,17 @@ def _search_subreddit(subreddit: str, query: str, limit: int = 5) -> list[dict]:
     return [child.get("data", {}) for child in response.get("data", {}).get("children", [])]
 
 
-def _fetch_comments(permalink: str, limit: int = 25) -> list[dict]:
-    """Fetch a thread's top-level comments."""
+def _fetch_comments(permalink: str, limit: int = 100) -> list[dict]:
+    """Fetch a thread's comments, including replies.
+
+    depth=2 rather than 1, because the useful detail is often in a REPLY --
+    someone asks "does it pill?" and the answer sits one level down. Limiting
+    to top-level was discarding most of the substance.
+    """
     client = _get_client()
     try:
         response = client.request(
-            "GET", f"{permalink.rstrip('/')}.json", params={"limit": str(limit), "depth": "1"}
+            "GET", f"{permalink.rstrip('/')}.json", params={"limit": str(limit), "depth": "2"}
         )
     except Exception:  # noqa: BLE001
         return []
@@ -112,18 +117,78 @@ def _fetch_comments(permalink: str, limit: int = 25) -> list[dict]:
     if not isinstance(response, list) or len(response) < 2:
         return []
 
-    out = []
-    for child in response[1].get("data", {}).get("children", []):
-        data = child.get("data", {})
-        if child.get("kind") != "t1":
-            continue  # "more comments" placeholder, not a comment
-        body = data.get("body", "")
-        if body and body not in ("[deleted]", "[removed]"):
-            out.append({"body": body, "score": data.get("score", 0)})
+    out: list[dict] = []
+
+    def _walk(children: list) -> None:
+        for child in children:
+            if child.get("kind") != "t1":
+                continue  # "more comments" placeholder
+            data = child.get("data", {})
+            body = data.get("body", "")
+            if body and body not in ("[deleted]", "[removed]"):
+                out.append({"body": body, "score": data.get("score", 0)})
+            # Replies carry the answers to the questions people ask.
+            replies = data.get("replies")
+            if isinstance(replies, dict):
+                _walk(replies.get("data", {}).get("children", []))
+
+    _walk(response[1].get("data", {}).get("children", []))
     return out
 
 
-def gather(product_name: str, brand: str, limit: int = 40) -> dict:
+def bulk_harvest(subreddit: str, pages: int = 4) -> int:
+    """Pull recent and top threads wholesale, banking every comment.
+
+    Targeted search finds threads that mention a product. This finds threads
+    ABOUT SKINCARE, full stop -- and banks the lot. Most of those comments are
+    about products we have not searched for yet, so the pool fills up ahead of
+    demand rather than one product at a time.
+
+    Run periodically (see refresh/harvest.py), not per product.
+    """
+    from rag.comments import harvest as harvest_rag
+
+    client = _get_client()
+    banked = 0
+
+    for listing in ("hot", "top", "new"):
+        try:
+            response = client.request(
+                "GET",
+                f"/r/{subreddit}/{listing}",
+                params={"limit": "50", "t": "year" if listing == "top" else "all"},
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"    [bulk] r/{subreddit}/{listing} failed: {str(exc)[:50]}")
+            continue
+
+        posts = [c.get("data", {}) for c in response.get("data", {}).get("children", [])]
+        time.sleep(_PAUSE)
+
+        for post in posts[:pages * 6]:
+            permalink = post.get("permalink", "")
+            if not permalink:
+                continue
+
+            comments = [
+                {
+                    "text": c["body"][:1000],
+                    "score": c["score"],
+                    "subreddit": subreddit,
+                    "permalink": f"https://reddit.com{permalink}",
+                    "thread_title": post.get("title", "")[:200],
+                }
+                for c in _fetch_comments(permalink)
+                if len(c["body"]) >= MIN_COMMENT_LENGTH
+            ]
+            if comments:
+                banked += harvest_rag(comments, searched_for=f"r/{subreddit} {listing}")
+            time.sleep(_PAUSE)
+
+    return banked
+
+
+def gather(product_name: str, brand: str, limit: int = 120) -> dict:
     """Collect comments about a product across our trusted communities.
 
     Returns the same shape as the other Reddit paths, so callers never need to
@@ -164,7 +229,7 @@ def gather(product_name: str, brand: str, limit: int = 40) -> dict:
                  if p.get("permalink") and not (p["permalink"] in seen_links
                                                 or seen_links.add(p["permalink"]))]
 
-        for post in posts[:8]:
+        for post in posts[:10]:
             permalink = post.get("permalink", "")
             if not permalink:
                 continue

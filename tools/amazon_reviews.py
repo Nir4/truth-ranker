@@ -29,7 +29,13 @@ SO THIS IS FENCED IN:
 
 import re
 
-# Below this many Reddit comments, we allow the Amazon fallback.
+# We want at least this many voices before a sentiment score is trustworthy.
+# Reddit alone rarely reaches it -- a top-5 bestseller gets ~30 direct
+# mentions and obscure products far fewer -- so Amazon tops up the difference.
+TARGET_VOICES = 500
+
+# Below this many Reddit comments we lean on Amazon heavily; above it Amazon
+# only tops up toward TARGET_VOICES.
 MIN_REDDIT = 3
 
 # How much an Amazon-derived sentiment counts relative to a Reddit one.
@@ -55,7 +61,7 @@ def _is_incentivised(text: str) -> bool:
     return any(marker in lowered for marker in INCENTIVE_MARKERS)
 
 
-def fetch_reviews(asin: str, limit: int = 25) -> list[dict]:
+def fetch_reviews(asin: str, limit: int = 100) -> list[dict]:
     """Scrape review text for one product via Firecrawl.
 
     Returns [] on any failure -- this is a fallback, and a fallback that
@@ -70,7 +76,27 @@ def fetch_reviews(asin: str, limit: int = 25) -> list[dict]:
     if key:
         headers["Authorization"] = f"Bearer {key}"
 
-    url = f"https://www.amazon.com/product-reviews/{asin}/?sortBy=recent&pageNumber=1"
+    # Several pages, since one page holds ~10 reviews and we want volume.
+    # Amazon shows ~10 reviews per page, so 500 needs many pages. Capped at 25
+    # because Firecrawl's keyless tier allows ~10 scrapes/minute and a single
+    # product should not monopolise the budget.
+    pages = max(1, min(25, (limit + 9) // 10))
+    md = ""
+
+    for page in range(1, pages + 1):
+        url = (
+            f"https://www.amazon.com/product-reviews/{asin}/"
+            f"?sortBy=helpful&pageNumber={page}"
+        )
+        md += _scrape_page(url, headers) or ""
+        if len(md) > 400_000:
+            break
+
+    return _parse_reviews(md, limit)
+
+
+def _scrape_page(url: str, headers: dict) -> str:
+    import requests
 
     try:
         response = requests.post(
@@ -81,14 +107,17 @@ def fetch_reviews(asin: str, limit: int = 25) -> list[dict]:
         )
         response.raise_for_status()
     except requests.RequestException:
-        return []
+        return ""
 
     payload = response.json()
     if not payload.get("success"):
-        return []
+        return ""
 
-    md = payload.get("data", {}).get("markdown", "")
+    return payload.get("data", {}).get("markdown", "")
 
+
+def _parse_reviews(md: str, limit: int) -> list[dict]:
+    """Pull review text out of scraped markdown."""
     # Reviews follow a star rating line. Grab the prose after each.
     reviews = []
     for match in re.finditer(r"([\d.]+)\s+out of 5 stars\s*\n+(.{60,1200}?)(?=\n\s*\n|\Z)", md, re.S):
@@ -115,7 +144,7 @@ def gather_as_comments(asin: str, product_name: str, brand: str) -> dict:
     sentiment derived from Amazon is a materially weaker claim than sentiment
     derived from a skincare community.
     """
-    reviews = fetch_reviews(asin)
+    reviews = fetch_reviews(asin, limit=TARGET_VOICES)
     if not reviews:
         return {
             "available": False,

@@ -237,19 +237,29 @@ def gather_sentiment_raw(
         # average", which is the dishonesty we guard against everywhere else.
         from tools.amazon_reviews import MIN_REDDIT
 
-        if result["comment_count"] < MIN_REDDIT and asin:
+        # Reddit is PRIMARY and Amazon TOPS UP. Reddit rarely reaches 100
+        # voices for any single product -- a top-5 bestseller gets ~30 direct
+        # mentions -- so Amazon supplies volume while Reddit supplies trust.
+        # Both are kept; the source label reflects the mix.
+        from tools.amazon_reviews import TARGET_VOICES
+
+        if result["comment_count"] < TARGET_VOICES and asin:
             from tools.amazon_reviews import gather_as_comments
 
             amazon = gather_as_comments(asin, product_name, brand)
-            if amazon["comment_count"] >= MIN_REDDIT:
+            if amazon["comment_count"]:
+                reddit_n = result["comment_count"]
                 print(
-                    f"    [reddit] only {result['comment_count']} community comments; "
-                    f"using {amazon['comment_count']} Amazon reviews (labelled, down-weighted)"
+                    f"    [sentiment] {reddit_n} Reddit + {amazon['comment_count']} Amazon "
+                    f"= {reddit_n + amazon['comment_count']} voices"
                 )
-                # Keep any real community comments alongside them.
+                # Reddit comments FIRST, so they dominate the weighted sample
+                # even though Amazon supplies the volume.
                 amazon["comments"] = result["comments"] + amazon["comments"]
                 amazon["comment_count"] = len(amazon["comments"])
-                amazon["source"] = "amazon-reviews"
+                amazon["reddit_count"] = reddit_n
+                amazon["amazon_count"] = amazon["comment_count"] - reddit_n
+                amazon["source"] = "reddit+amazon" if reddit_n else "amazon-reviews"
                 cache_put("reddit", cache_key, amazon)
                 return amazon
 
