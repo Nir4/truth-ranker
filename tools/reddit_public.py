@@ -136,11 +136,35 @@ def gather(product_name: str, brand: str, limit: int = 40) -> dict:
     # caps were there to limit Apify spend -- Reddit's public API is free, so
     # they were costing us coverage for no reason. Half our products came back
     # with zero themes largely because of this.
-    for subreddit in SUBREDDITS:
-        posts = _search_subreddit(subreddit, query, limit=8)
-        time.sleep(_PAUSE)
+    # Two queries per community: the full name, then brand + one distinctive
+    # word. Long Amazon titles ("Ultra Sheer Dry-Touch Sunscreen Lotion, SPF
+    # 70, 3 fl oz") almost never match how people write, so the second query
+    # is usually the one that finds the discussion.
+    import re as _re
 
-        for post in posts[:6]:
+    _generic = {"sunscreen", "sunblock", "lotion", "cream", "spray", "serum",
+                "cleanser", "toner", "moisturizer", "balm", "spf", "broad",
+                "spectrum", "protection", "daily", "face", "body"}
+    _distinct = [w for w in _re.findall(r"[A-Za-z]{4,}", product_name)
+                 if w.lower() not in _generic][:2]
+    queries = [query]
+    short = f"{brand} {' '.join(_distinct)}".strip()
+    if short and short != query:
+        queries.append(short)
+
+    for subreddit in SUBREDDITS:
+        posts = []
+        for q in queries:
+            posts += _search_subreddit(subreddit, q, limit=8)
+            time.sleep(_PAUSE)
+
+        # Deduplicate threads found by both queries.
+        seen_links = set()
+        posts = [p for p in posts
+                 if p.get("permalink") and not (p["permalink"] in seen_links
+                                                or seen_links.add(p["permalink"]))]
+
+        for post in posts[:8]:
             permalink = post.get("permalink", "")
             if not permalink:
                 continue
@@ -158,6 +182,12 @@ def gather(product_name: str, brand: str, limit: int = 40) -> dict:
                         "score": c["score"],
                         "subreddit": subreddit,
                         "permalink": f"https://reddit.com{permalink}",
+                        # The THREAD TITLE is what makes a bare reply usable.
+                        # Someone answering "what do you think of Supergoop
+                        # Unseen?" with "it is so good, helped my skin" never
+                        # names the product -- but the title does, and without
+                        # it we were discarding every such reply.
+                        "thread_title": post.get("title", "")[:200],
                     }
                 )
             time.sleep(_PAUSE)
@@ -226,16 +256,31 @@ def gather(product_name: str, brand: str, limit: int = 40) -> dict:
                 print(f"    [harvest] recalled {len(fresh)} banked comments for {brand}")
                 comments += fresh
 
-    # AGENT DECIDES RELEVANCE. String matching could not tell "TJ's spf" or
-    # "elta clear" from noise, nor "better than the supergoop" (an opinion
-    # about a RIVAL) from a genuine review. Those distinctions need judgement.
+    # ROUTE, do not just filter. Every comment goes to the product it is
+    # actually about: ours are kept, and the rest are banked as evidence for
+    # whatever product they DO discuss -- named by the agent in the
+    # commenter's own words, so no hardcoded brand list can miss one.
     if comments:
-        from tools.comment_matcher import filter_comments
+        from tools.comment_router import route_comments
 
         before = len(comments)
-        comments = filter_comments(comments, brand, product_name)
-        if before != len(comments):
-            print(f"    [reddit] kept {len(comments)}/{before} comments after relevance check")
+        mine, others = route_comments(comments, brand, product_name)
+        comments = mine
+
+        print(f"    [route] {len(mine)} about this product, {len(others)} about others, "
+              f"{before - len(mine) - len(others)} about nothing")
+
+        if others:
+            from rag.comments import harvest as harvest_rag
+
+            harvest_rag(others, searched_for=f"{brand} {product_name}")
+
+            # Products people talk about that are NOT in our catalogue are
+            # worth discovering -- that is how the catalogue grows beyond
+            # whatever Amazon happens to rank.
+            from tools.product_discovery import note_mentions
+
+            note_mentions(others)
 
     comments.sort(key=lambda c: c["score"], reverse=True)
 

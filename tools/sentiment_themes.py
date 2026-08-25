@@ -156,9 +156,13 @@ def extract_themes(comments: list[dict], product_name: str) -> dict:
 
     # Number the comments so the model can count distinct sources rather than
     # counting the same comment twice.
+    # Read up to 60 comments, not 25. The pool can hold far more than one
+    # search returns, and a theme counted over 60 comments is much better
+    # evidence than the same theme counted over 25. Truncate each comment
+    # rather than dropping comments -- the COUNT is what matters here.
     numbered = "\n\n".join(
-        f"[comment {i + 1}, +{c.get('score', 0)} upvotes] {c['text'][:500]}"
-        for i, c in enumerate(comments[:25])
+        f"[comment {i + 1}, +{c.get('score', 0)} upvotes] {c['text'][:380]}"
+        for i, c in enumerate(comments[:60])
     )
 
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0)

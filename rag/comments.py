@@ -78,20 +78,35 @@ def harvest(comments: list[dict], searched_for: str = "") -> int:
     except RuntimeError:
         return 0
 
-    ids, documents, metadatas = [], [], []
+    # Deduplicate WITHIN the batch. The same comment often appears in several
+    # threads (crossposts, repeated advice), and Chroma rejects duplicate ids
+    # even in an upsert -- which failed the whole write rather than skipping
+    # the repeat.
+    by_id: dict[str, tuple[str, dict]] = {}
     for c in usable:
         text = c["text"]
-        ids.append(hashlib.sha1(text[:300].encode()).hexdigest())
-        documents.append(text)
-        metadatas.append(
+        cid = hashlib.sha1(text[:300].encode()).hexdigest()
+        by_id[cid] = (
+            text,
             {
                 "score": int(c.get("score", 0)),
                 "subreddit": c.get("subreddit", ""),
                 "permalink": c.get("permalink", ""),
                 "harvested_at": time.time(),
                 "found_while_searching": searched_for[:120],
-            }
+                # What the ROUTER said this comment is about, in the
+                # commenter's own words. Empty when it is about the product
+                # we were searching for.
+                "about_product": (c.get("about_product") or "")[:120],
+            },
         )
+
+    if not by_id:
+        return 0
+
+    ids = list(by_id)
+    documents = [by_id[i][0] for i in ids]
+    metadatas = [by_id[i][1] for i in ids]
 
     collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
     return len(ids)

@@ -217,7 +217,23 @@ def ranking_node(state: TruthState) -> dict:
     if reddit["available"] and reddit["comment_count"]:
         from tools.sentiment_themes import extract_themes
 
-        themes = extract_themes(reddit["comments"], product["name"])
+        # Themes come from EVERY comment we have ever banked about this
+        # product, not just this run's search. A theme backed by 14 separate
+        # people is a property of the product; one backed by 2 is an anecdote
+        # that happened to appear twice.
+        from rag.comment_themes import themes_from_pool
+
+        themes = themes_from_pool(
+            product["brand"],
+            product["name"],
+            product.get("product_category", "sunscreen"),
+            direct_comments=reddit["comments"],
+        )
+        if themes.get("from_pool"):
+            print(
+                f"  [themes] {themes['comment_count']} comments "
+                f"({themes['from_pool']} recalled from the pool)"
+            )
         if themes["themes"]:
             labels = ", ".join(
                 f"{t['theme']} ({t['mentions']}x)" for t in themes["themes"][:3]

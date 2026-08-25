@@ -143,6 +143,20 @@ def main() -> None:
             print(f"  FAILED: {type(exc).__name__}: {str(exc)[:120]}\n")
             failed += 1
 
+    # Products the community talks about that Amazon does not rank. These are
+    # discovered from comments during the run -- Korean/Japanese sunscreens,
+    # pharmacy lines, small brands. Ranking only best-sellers means ranking
+    # only what is already popular, which is the hype we exist to see past.
+    from tools.product_discovery import ready_for_promotion, mark_promoted, stats as disc_stats
+
+    discovered = ready_for_promotion(limit=15)
+    if discovered:
+        print(f"\nDiscovered {len(discovered)} products the community discusses "
+              "that are not in the catalogue:")
+        for d in discovered:
+            print(f"  {d['mentions']:3d} mentions  {d['raw_name']}")
+        print("\n  Add them with: uv run python -m refresh.discover")
+
     total = (time.time() - started) / 60
     mem, cache = memory_stats(), cache_stats()
     print(f"Done in {total:.0f} min. {succeeded} succeeded, {failed} failed.")

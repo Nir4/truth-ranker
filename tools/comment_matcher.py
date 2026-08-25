@@ -54,6 +54,12 @@ names:
     "elta clear"          -> EltaMD UV Clear
     "think baby stick"    -> Thinkbaby Sheer Mineral Stick
 
+IMPORTANT -- each comment shows the THREAD it was posted in. A reply in a
+thread about this product IS about this product, even when it names nothing.
+"it is so good, helped my skin" under a post titled "Supergoop Unseen --
+thoughts?" is a review of that product. Treat the thread title as context the
+commenter is answering.
+
 Say FALSE when:
 
   - the product is named only as a COMPARISON to something else
@@ -73,7 +79,9 @@ When genuinely unsure, say FALSE. A dropped comment costs us a little signal; \
 a wrong one silently corrupts the score."""
 
 
-def _obvious_match(text: str, brand: str, product_name: str) -> bool | None:
+def _obvious_match(
+    text: str, brand: str, product_name: str, thread_title: str = ""
+) -> bool | None:
     """Cheap pre-check. Returns True/False when confident, None to ask the model.
 
     Most comments are decided here, so the model is only paid for the
@@ -81,6 +89,35 @@ def _obvious_match(text: str, brand: str, product_name: str) -> bool | None:
     """
     lowered = text.lower()
     squashed = re.sub(r"[^a-z]", "", lowered)
+
+    # A reply in a thread ABOUT this product is about this product, even when
+    # it names nothing. "it is so good, helped my skin" under a post titled
+    # "Supergoop Unseen -- thoughts?" is a review. Rejecting those was
+    # discarding roughly 40 of every 41 comments we fetched.
+    if thread_title:
+        title_l = thread_title.lower()
+        title_squashed = re.sub(r"[^a-z]", "", title_l)
+        brand_sq = re.sub(r"[^a-z]", "", brand.lower())
+        if len(brand_sq) > 3 and brand_sq in title_squashed:
+            # The thread is about this brand -- but a thread about one product
+            # is full of people recommending OTHERS. "I love the biossance
+            # sunscreen" in a Supergoop thread is not a Supergoop review.
+            #
+            # So: if the comment names a DIFFERENT known brand, it is not a
+            # free pass; send it to the model. Only a comment naming no other
+            # brand can be accepted on thread context alone.
+            from tools.comment_harvest import KNOWN_BRANDS
+
+            others = [
+                b for b in KNOWN_BRANDS
+                if b in lowered and re.sub(r"[^a-z]", "", b) != brand_sq
+            ]
+            if others:
+                return None  # names someone else -- the model must decide
+
+            if re.search(r"\b(instead|try|switch to|better than|i use|i prefer)\b", lowered):
+                return None
+            return True
 
     brand_squashed = re.sub(r"[^a-z]", "", brand.lower())
     brand_present = len(brand_squashed) > 3 and brand_squashed in squashed
@@ -181,7 +218,9 @@ def filter_comments(comments: list[dict], brand: str, product_name: str) -> list
     ambiguous: list[dict] = []
 
     for c in sorted(comments, key=lambda x: x.get("score", 0), reverse=True):
-        quick = _obvious_match(c["text"], brand, product_name)
+        quick = _obvious_match(
+            c["text"], brand, product_name, c.get("thread_title", "")
+        )
         if quick is True:
             kept.append(c)
         elif quick is None:
@@ -193,8 +232,11 @@ def filter_comments(comments: list[dict], brand: str, product_name: str) -> list
 
     # Cap what we send, not how many calls we make. The highest-scored
     # comments matter most and a huge prompt costs more than it returns.
-    batch = ambiguous[:20]
-    numbered = "\n\n".join(f"[{i}] {c['text'][:400]}" for i, c in enumerate(batch))
+    batch = ambiguous[:40]
+    numbered = "\n\n".join(
+        f"[{i}] (thread: {c.get('thread_title', 'unknown')[:90]})\n{c['text'][:400]}"
+        for i, c in enumerate(batch)
+    )
 
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     judge = model.with_structured_output(BatchMatch)
