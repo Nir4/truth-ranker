@@ -98,9 +98,29 @@ def themes_from_pool(
     known = {c["text"][:200] for c in direct}
     fresh = [p for p in pooled if p["text"][:200] not in known]
 
+    # Comments stating a skin type are worth keeping even when the router is
+    # unsure, because they answer a question nothing else can. A comment like
+    # "I have sensitive skin and this did not sting" is precisely the signal
+    # we want, and it often names no product -- so strict routing discarded
+    # every one, leaving skin types empty across the whole catalogue.
+    import re as _re
+
+    _skin = _re.compile(
+        r"\b(oily|dry|combination|sensitive|acne[- ]prone|mature)\s+skin\b"
+        r"|\bmy\s+(oily|dry|sensitive|combination)\b",
+        _re.I,
+    )
+    skin_comments = [c for c in fresh if _skin.search(c.get("text", ""))]
+
     approved = direct
     if fresh:
         kept = filter_comments(fresh, brand, product_name)
+        # Add back any skin-type comment the filter dropped.
+        kept_texts = {c["text"][:200] for c in kept}
+        recovered = [c for c in skin_comments if c["text"][:200] not in kept_texts]
+        if recovered:
+            print(f"    [pool] kept {len(recovered)} skin-type comments the filter dropped")
+            kept += recovered
         if kept:
             print(
                 f"    [pool] {len(kept)} of {len(fresh)} banked comments are about this product"

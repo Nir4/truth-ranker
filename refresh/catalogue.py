@@ -94,6 +94,40 @@ def load_catalogue(limit: int) -> list[dict]:
     return products
 
 
+def preflight() -> bool:
+    """Prove a full result can be written and read back before spending an hour."""
+    from data.db import save_result, get_product, get_connection
+
+    probe = {
+        "asin": "__PREFLIGHT__", "name": "preflight", "brand": "preflight",
+        "category": "skincare", "price": 0.0, "ingredients": ["water"],
+        "bestseller_rank": 999, "star_rating": 0.0, "review_count": 0,
+    }
+    # Every field the graph can emit, so a missing column fails HERE.
+    state = {
+        "score": 50.0, "subscores": {"efficacy": 50}, "hype_gap": 0.0,
+        "verdict": "preflight", "confidence": "mixed", "is_safe": True,
+        "safety_notes": "", "expert_findings": "", "evidence": [], "sources": [],
+        "themes": [], "skin_types": [], "sentiment_source": "preflight",
+        "experts": {}, "claims": [], "claim_accuracy": None,
+        "researched_themes": [], "ingredient_functions": [], "function_summary": {},
+        "community_summary": "",
+    }
+
+    try:
+        save_result(probe, state)
+        if not get_product("__PREFLIGHT__"):
+            print("  [preflight] wrote a row but could not read it back")
+            return False
+        with get_connection() as conn:
+            conn.execute("DELETE FROM rankings WHERE asin = '__PREFLIGHT__'")
+        print("  [preflight] database accepts a full result\n")
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"  [preflight] FAILED: {exc}")
+        return False
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Score the full sunscreen catalogue")
     parser.add_argument("--limit", type=int, default=60, help="how many best-sellers")
@@ -101,6 +135,15 @@ def main() -> None:
     args = parser.parse_args()
 
     init_db()
+
+    # PRE-FLIGHT. A schema mismatch once burned 31 minutes across 20 products
+    # before surfacing -- every save failed with "no column named skin_types"
+    # while the run reported progress normally. Write one throwaway row with
+    # the full shape the pipeline produces, and refuse to start if it fails.
+    if not preflight():
+        print("\nAborting: the database cannot store what the pipeline produces.")
+        return
+
     if setup_tracing():
         print("LangSmith tracing ON\n")
 

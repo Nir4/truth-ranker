@@ -509,10 +509,14 @@ function label(kind, v, p) {
                    : [`Negative · ${n} mentions`, 'var(--bad)'];
   }
   if (kind === 'research') {
-    return v >= 70 ? ['Strong evidence', 'var(--good)']
-         : v >= 55 ? ['Supported', 'var(--good)']
-         : v >= 45 ? ['Limited evidence', 'var(--warn)']
-                   : ['Evidence conflicts', 'var(--bad)'];
+    // These describe the INGREDIENT evidence, not a study of this bottle.
+    // "Limited evidence" previously read as "this product is poorly
+    // evidenced", when it actually meant "few papers on its ingredients" --
+    // a statement about our corpus, not about the product.
+    return v >= 70 ? ['Ingredients well studied', 'var(--good)']
+         : v >= 55 ? ['Ingredients supported', 'var(--good)']
+         : v >= 45 ? ['Little ingredient research found', 'var(--muted)']
+                   : ['Research raises concerns', 'var(--warn)'];
   }
   if (kind === 'derm') {
     const n = (p.experts || {}).unique_experts || 0;
@@ -542,7 +546,7 @@ function bars(p) {
   const rows = [
     ['Amazon', p.bestseller_rank >= 999 ? 'Not sold on Amazon' : `#${p.bestseller_rank} bestseller`, 'var(--text)'],
     ['Reddit', ...label('reddit', s.sentiment, p)],
-    ['Research', ...label('research', s.efficacy, p)],
+    ['Ingredient research', ...label('research', s.efficacy, p)],
     ['Dermatologists', ...label('derm', s.expert, p)],
     ['Claims', ...label('claims', null, p)],
     ['Ingredients', ...label('ingredients', s.ingredients, p)],
