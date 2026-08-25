@@ -271,6 +271,17 @@
       <label><input type="checkbox" class="f" data-filter="mineral"> Mineral only</label>
     </div>
     <div class="fgroup">
+      <h4>My skin type</h4>
+      <label><input type="radio" name="skin" class="f" value=""> Any</label>
+      <label><input type="radio" name="skin" class="f" value="oily"> Oily</label>
+      <label><input type="radio" name="skin" class="f" value="dry"> Dry</label>
+      <label><input type="radio" name="skin" class="f" value="combination"> Combination</label>
+      <label><input type="radio" name="skin" class="f" value="sensitive"> Sensitive</label>
+      <label><input type="radio" name="skin" class="f" value="acne-prone"> Acne-prone</label>
+      <label><input type="radio" name="skin" class="f" value="mature"> Mature</label>
+    </div>
+
+    <div class="fgroup">
       <h4>Budget</h4>
       <label>Max $<span id="priceLabel">50</span><br>
         <input type="range" id="price" min="5" max="50" value="50" step="1"></label>
@@ -415,6 +426,21 @@ function claims(p) {
     </div>`).join('')}</div>`;
 }
 
+// What people with each skin type reported, in their own words. Never
+// inferred from the formula -- only from commenters stating their own skin.
+function skinTypes(p) {
+  const list = p.skin_types || [];
+  if (!list.length) return '';
+  const cls = v => v === 'works-well' ? 'positive' : v === 'poorly' ? 'negative' : 'mixed';
+  return `<div class="themes"><h3 style="font-size:11px;font-weight:600;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted);margin:0 0 9px">By skin type</h3>
+    ${list.map(s => `<div class="theme">
+      <span class="dot ${cls(s.verdict)}"></span>
+      <span><span class="label">${esc(s.skin_type)}</span><span class="n">${s.mentions}×</span>
+      <span class="q">${esc(s.detail)}</span></span>
+    </div>`).join('')}</div>`;
+}
+
 // Named dermatologists with stated reasons. Unique experts, not article count.
 function experts(p) {
   const e = p.experts || {};
@@ -468,7 +494,7 @@ function row(p) {
         <span class="tag ${esc(p.confidence)}">${esc(p.confidence)} evidence</span>
         ${p.is_safe ? '' : '<span class="tag hype">FDA recall on record</span>'}
       </div>
-      ${callout}${dupe}${claims(p)}${experts(p)}${themes(p)}${sources(p)}
+      ${callout}${dupe}${skinTypes(p)}${claims(p)}${experts(p)}${themes(p)}${sources(p)}
       <details>
         <summary>Ingredients and full findings</summary>
         ${functions(p)}
@@ -529,6 +555,16 @@ function apply() {
 
   if (document.querySelector('.f[data-filter="derm"]:checked'))
     out = out.filter(p => (p.experts?.unique_experts || 0) > 0);
+
+  // Skin-type filter uses what people with that skin type REPORTED, not a
+  // marketing label. A product only survives if commenters with this skin type
+  // said it worked -- and products nobody with this skin type discussed are
+  // dropped rather than assumed fine.
+  const skin = document.querySelector('input[name="skin"]:checked')?.value;
+  if (skin) {
+    out = out.filter(p => (p.skin_types || []).some(s =>
+      s.skin_type === skin && s.verdict !== 'poorly'));
+  }
 
   const maxPrice = +document.getElementById('price').value;
   if (maxPrice < 50) out = out.filter(p => (p.price || 0) <= maxPrice);

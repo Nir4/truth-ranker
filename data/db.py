@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS rankings (
     evidence          TEXT,           -- JSON
     sources           TEXT,           -- JSON: cited papers, strongest first
     themes            TEXT,           -- JSON: recurring community themes
+    skin_types        TEXT,           -- JSON: what each skin type reported
     experts           TEXT,           -- JSON: named dermatologist mentions
     claims            TEXT,           -- JSON: brand claims vs research
     claim_accuracy    REAL,
@@ -74,10 +75,10 @@ def save_result(product: dict, state: dict) -> None:
                 asin, name, brand, category, price, image_url, score, subscores, hype_gap,
                 bestseller_rank, star_rating, review_count, verdict, confidence,
                 is_safe, safety_notes, expert_findings, evidence, sources, themes,
-                experts, claims, claim_accuracy, researched_themes,
+                experts, claims, claim_accuracy, researched_themes, skin_types,
                 ingredient_functions, function_summary,
                 community_summary, ingredients, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
             """,
             (
                 product["asin"],
@@ -104,6 +105,7 @@ def save_result(product: dict, state: dict) -> None:
                 json.dumps(state.get("claims", [])),
                 state.get("claim_accuracy"),
                 json.dumps(state.get("researched_themes", [])),
+                json.dumps(state.get("skin_types", [])),
                 json.dumps(state.get("ingredient_functions", [])),
                 json.dumps(state.get("function_summary", {})),
                 state.get("community_summary", ""),
@@ -118,7 +120,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     # Columns are added over time, so a row written by an older schema will be
     # missing some. Default instead of raising -- a KeyError here takes down the
     # whole site for one absent field.
-    for field in ("subscores", "evidence", "sources", "themes", "experts", "claims",
+    for field in ("subscores", "evidence", "sources", "themes", "skin_types", "experts", "claims",
                   "researched_themes", "ingredient_functions", "function_summary",
                   "ingredients"):
         empty = {} if field in ("subscores", "function_summary", "experts") else []

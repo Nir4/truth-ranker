@@ -159,24 +159,73 @@ def is_about_product(text: str, brand: str, product_name: str) -> bool:
     return result.is_about_product and result.confidence >= 0.6
 
 
+class BatchMatch(BaseModel):
+    """Which of the numbered comments are about this product."""
+
+    relevant_indices: list[int] = Field(
+        default_factory=list,
+        description="0-based indices of comments that ARE about this product.",
+    )
+
+
 def filter_comments(comments: list[dict], brand: str, product_name: str) -> list[dict]:
     """Keep only the comments genuinely about this product.
 
-    Judges the highest-scored comments first and caps model calls, since those
-    carry the most weight in the sentiment score anyway.
+    BATCHED: the ambiguous comments are judged in ONE call rather than one call
+    each. This was the single most expensive step in the pipeline -- up to 10
+    calls per product, ~22 of 47 total when combined with shill weighting.
+    Judging them together is also slightly BETTER, because the model can see
+    the set and notice when one comment is comparing against another product.
     """
-    kept, calls = [], 0
-    MAX_CALLS = 10
+    kept: list[dict] = []
+    ambiguous: list[dict] = []
 
     for c in sorted(comments, key=lambda x: x.get("score", 0), reverse=True):
         quick = _obvious_match(c["text"], brand, product_name)
-
         if quick is True:
             kept.append(c)
-        elif quick is None and calls < MAX_CALLS:
-            calls += 1
-            if is_about_product(c["text"], brand, product_name):
-                kept.append(c)
-        # quick is False, or we are out of model calls -> drop it
+        elif quick is None:
+            ambiguous.append(c)
+        # quick is False -> drop
+
+    if not ambiguous:
+        return kept
+
+    # Cap what we send, not how many calls we make. The highest-scored
+    # comments matter most and a huge prompt costs more than it returns.
+    batch = ambiguous[:20]
+    numbered = "\n\n".join(f"[{i}] {c['text'][:400]}" for i, c in enumerate(batch))
+
+    model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    judge = model.with_structured_output(BatchMatch)
+
+    try:
+        result: BatchMatch = judge.invoke(
+            [
+                {"role": "system", "content": SYSTEM_PROMPT + BATCH_SUFFIX},
+                {
+                    "role": "user",
+                    "content": (
+                        f"PRODUCT: {brand} {product_name}\n\n"
+                        f"COMMENTS:\n{numbered}"
+                    ),
+                },
+            ]
+        )
+        for i in result.relevant_indices:
+            if 0 <= i < len(batch):
+                kept.append(batch[i])
+    except Exception as exc:  # noqa: BLE001
+        # On failure keep nothing ambiguous -- including a wrong comment
+        # corrupts sentiment silently, dropping one only costs a little signal.
+        print(f"    [match] batch judgement failed: {str(exc)[:70]}")
 
     return kept
+
+
+BATCH_SUFFIX = """
+
+You will be given SEVERAL numbered comments at once. Return the indices of the \
+ones that ARE about this product. Judge each independently -- seeing them \
+together helps you spot when one comment is comparing this product against \
+another, but it must not make you lump them into one verdict."""

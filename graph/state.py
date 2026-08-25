@@ -73,6 +73,7 @@ class TruthState(TypedDict, total=False):
     # Recurring community themes -- what people repeatedly say ("sticky",
     # "white cast"), with a count of how many separate commenters said it.
     themes: list[dict]
+    skin_types: list[dict]
     experts: dict
     claims: list[dict]
     claim_accuracy: float | None

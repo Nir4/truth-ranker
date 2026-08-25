@@ -37,6 +37,23 @@ from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
 
+class JudgedComment(BaseModel):
+    """One comment's quality judgement, carrying its index in the batch."""
+
+    index: int = Field(description="0-based index of the comment being judged.")
+    reads_as_experience: bool = Field(
+        description="True if this reads like someone's actual use of the product."
+    )
+    specificity: float = Field(description="0.0-1.0. How much concrete, checkable detail.")
+    promotional_markers: list[str] = Field(
+        default_factory=list, description="Marketing-copy features observed. Empty if none."
+    )
+
+
+class BatchQuality(BaseModel):
+    judgements: list[JudgedComment] = Field(default_factory=list)
+
+
 class CommentQuality(BaseModel):
     """How much this comment should count toward sentiment."""
 
@@ -134,35 +151,54 @@ def weight_comments(comments: list[dict], product_name: str, use_model: bool = T
     if not use_model:
         return comments
 
-    model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    judge = model.with_structured_output(CommentQuality)
+    # BATCHED: all comments judged in one call rather than one call each.
+    # This was 12 calls per product -- the most expensive single step in the
+    # pipeline. Scoring them together also gives the model a baseline to
+    # compare against, which makes the specificity judgements more consistent
+    # than judging each comment in isolation.
+    batch = comments[:12]
+    numbered = "\n\n".join(f"[{i}] {c['text'][:450]}" for i, c in enumerate(batch))
 
-    # Only judge the comments that will actually drive the score.
-    for c in comments[:12]:
-        try:
-            quality: CommentQuality = judge.invoke(
-                [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {
-                        "role": "user",
-                        "content": f"PRODUCT: {product_name}\n\nCOMMENT:\n{c['text'][:600]}",
-                    },
-                ]
-            )
-        except Exception:  # noqa: BLE001 - a failed judgement leaves the heuristic weight
+    model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    judge = model.with_structured_output(BatchQuality)
+
+    try:
+        result: BatchQuality = judge.invoke(
+            [
+                {"role": "system", "content": SYSTEM_PROMPT + BATCH_SUFFIX},
+                {
+                    "role": "user",
+                    "content": f"PRODUCT: {product_name}\n\nCOMMENTS:\n{numbered}",
+                },
+            ]
+        )
+    except Exception:  # noqa: BLE001 - failure leaves the heuristic weights intact
+        return comments
+
+    for judged in result.judgements:
+        i = judged.index
+        if not (0 <= i < len(batch)):
             continue
+        c = batch[i]
 
         # Specific lived detail is worth up to ~1.5x; generic praise ~0.5x.
-        c["weight"] *= 0.5 + quality.specificity
-        if not quality.reads_as_experience:
+        c["weight"] *= 0.5 + judged.specificity
+        if not judged.reads_as_experience:
             c["weight"] *= 0.6
-        if quality.promotional_markers:
+        if judged.promotional_markers:
             c["weight"] *= 0.5
-            c["promotional_markers"] = quality.promotional_markers
+            c["promotional_markers"] = judged.promotional_markers
 
         c["weight"] = round(max(0.1, min(2.0, c["weight"])), 2)
 
     return comments
+
+
+BATCH_SUFFIX = """
+
+You will be given SEVERAL numbered comments at once. Return one judgement per \
+comment, each carrying its index. Judge every comment you are given -- omitting \
+one silently leaves it at its default weight."""
 
 
 def weighted_summary(comments: list[dict]) -> dict:

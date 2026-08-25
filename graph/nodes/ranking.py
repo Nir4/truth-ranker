@@ -272,6 +272,9 @@ def ranking_node(state: TruthState) -> dict:
         "hype_gap": round(hype_gap, 1),
         "verdict": verdict,
         "themes": themes["themes"],
+        # Which skin types reported what -- from commenters' own words, never
+        # inferred from the formula.
+        "skin_types": themes.get("skin_types", []),
         "experts": experts,
         "claims": claims_result["claims"],
         "claim_accuracy": claims_result["accuracy"],

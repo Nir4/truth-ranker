@@ -51,8 +51,28 @@ class Theme(BaseModel):
     )
 
 
+class SkinTypeSignal(BaseModel):
+    """What people with a given skin type reported.
+
+    Extracted from what commenters SAY about themselves ("on my oily skin
+    this was greasy"), never inferred from the ingredient list. A formula
+    cannot tell you how it behaves on someone's face; only they can.
+    """
+
+    skin_type: str = Field(
+        description="One of: oily, dry, combination, sensitive, acne-prone, mature."
+    )
+    verdict: str = Field(description="One of: works-well, mixed, poorly.")
+    mentions: int = Field(description="How many distinct commenters with this skin type.")
+    detail: str = Field(description="One sentence on what they specifically reported.")
+
+
 class ThemeAnalysis(BaseModel):
     themes: list[Theme] = Field(default_factory=list)
+    skin_types: list[SkinTypeSignal] = Field(
+        default_factory=list,
+        description="Only skin types a commenter explicitly said they had. Never inferred.",
+    )
     overall: str = Field(description="One sentence summarising the community view.")
 
 
@@ -96,7 +116,21 @@ own words. Copy it exactly -- never paraphrase into quotation marks, and never \
 invent a quote.
 
 If nothing recurs across several comments, return an empty themes list. That is \
-a correct answer when there is simply not enough discussion."""
+a correct answer when there is simply not enough discussion.
+
+SKIN TYPES -- a separate, stricter job.
+
+Report a skin type ONLY when a commenter explicitly states their own skin type \
+("on my oily skin...", "I have rosacea", "as someone with dry skin"). Never \
+infer it from what they liked or disliked, and never guess from the product's \
+marketing. If nobody states a skin type, return an empty list.
+
+Requires at least 2 distinct commenters with the same stated skin type before \
+you report it. One person's oily skin is one person.
+
+This matters because the whole point is to let a reader filter to people like \
+them. A guessed skin type is worse than none -- it sends someone toward a \
+product on the strength of a label we invented."""
 
 
 def extract_themes(comments: list[dict], product_name: str) -> dict:
@@ -107,11 +141,12 @@ def extract_themes(comments: list[dict], product_name: str) -> dict:
     recurrence rule is the whole point, so it is enforced deterministically.
     """
     if not comments:
-        return {"themes": [], "overall": "No community discussion found.", "comment_count": 0}
+        return {"themes": [], "skin_types": [], "overall": "No community discussion found.", "comment_count": 0}
 
     if len(comments) < MIN_MENTIONS:
         return {
             "themes": [],
+            "skin_types": [],
             "overall": (
                 f"Only {len(comments)} comment(s) found -- too few to identify "
                 "recurring themes."
@@ -144,7 +179,7 @@ def extract_themes(comments: list[dict], product_name: str) -> dict:
         )
     except Exception as exc:  # noqa: BLE001
         print(f"    [themes] failed: {str(exc)[:90]}")
-        return {"themes": [], "overall": "Theme analysis unavailable.", "comment_count": len(comments)}
+        return {"themes": [], "skin_types": [], "overall": "Theme analysis unavailable.", "comment_count": len(comments)}
 
     # Enforce recurrence in code. A theme claimed once is dropped outright --
     # the model does not get to decide that one mention is "enough".
@@ -166,7 +201,21 @@ def extract_themes(comments: list[dict], product_name: str) -> dict:
         print(f"    [themes] dropped unverifiable quote: {quote[:60]!r}")
         return ""
 
+    # Skin types need 2+ distinct commenters, same as themes. Enforced here in
+    # code rather than trusted to the prompt.
+    skin_types = [
+        {
+            "skin_type": st.skin_type,
+            "verdict": st.verdict,
+            "mentions": st.mentions,
+            "detail": st.detail,
+        }
+        for st in result.skin_types
+        if st.mentions >= MIN_MENTIONS
+    ]
+
     return {
+        "skin_types": skin_types,
         "themes": [
             {
                 "theme": t.theme,
