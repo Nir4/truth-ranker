@@ -63,8 +63,36 @@ def get_connection() -> sqlite3.Connection:
 
 
 def init_db() -> None:
+    """Create the table, then add any columns missing from an older database.
+
+    CREATE TABLE IF NOT EXISTS does NOT add columns to an existing table. When
+    a new column is added to SCHEMA, a database created before that change
+    keeps its old shape and every INSERT fails with "no such column" -- which
+    is how a 31-minute run over 20 products produced zero rows.
+
+    So: create, then reconcile the actual columns against the expected ones.
+    """
     with get_connection() as conn:
         conn.executescript(SCHEMA)
+
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(rankings)")}
+
+        # Column name -> SQL type, for everything the code writes today.
+        expected = {
+            "image_url": "TEXT", "subscores": "TEXT", "hype_gap": "REAL",
+            "verdict": "TEXT", "confidence": "TEXT", "is_safe": "INTEGER",
+            "safety_notes": "TEXT", "expert_findings": "TEXT", "evidence": "TEXT",
+            "sources": "TEXT", "themes": "TEXT", "skin_types": "TEXT",
+            "sentiment_source": "TEXT", "experts": "TEXT", "claims": "TEXT",
+            "claim_accuracy": "REAL", "researched_themes": "TEXT",
+            "ingredient_functions": "TEXT", "function_summary": "TEXT",
+            "community_summary": "TEXT", "ingredients": "TEXT",
+        }
+
+        for column, sql_type in expected.items():
+            if column not in existing:
+                conn.execute(f"ALTER TABLE rankings ADD COLUMN {column} {sql_type}")
+                print(f"  [db] added missing column: {column}")
 
 
 def save_result(product: dict, state: dict) -> None:
