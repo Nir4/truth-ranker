@@ -52,8 +52,9 @@ class ClaimVerdict(BaseModel):
     )
     user_evidence: str = Field(
         description=(
-            "One sentence on what users actually said. When nobody mentioned it, "
-            "say so plainly."
+            "One sentence on what users said, WITHOUT counting them. Write "
+            "'users report it feels greasy', never 'three users report...'. "
+            "The number is noise -- what they said is the point."
         )
     )
     mentions: int = Field(
@@ -89,9 +90,23 @@ THE VERDICTS:
 claims nobody bothers to remark on, and marking those as disputed would be \
 manufacturing a complaint nobody made. Say plainly that nobody mentioned it.
 
-COUNT DISTINCT USERS. One person saying it is greasy is that person's skin. \
-Four people saying it independently is a property of the product. Put the real \
-number in `mentions` and never inflate it.
+COUNT DISTINCT USERS in the `mentions` field -- one person saying it is greasy \
+is that person's skin, several saying it independently is a property of the \
+product, so the count decides whether a verdict is worth returning at all.
+
+But DO NOT put numbers in `user_evidence`. Write "users report it feels greasy \
+after a couple of hours", never "three users report...". A reader wants to know \
+what people said, not how many rows we matched.
+
+WRITE IT IN YOUR OWN WORDS, not by splicing a quote into a sentence. Do not \
+write "users report it feels greasy on me" -- that mixes your framing with \
+their first person and reads as broken. Summarise instead: "users describe a \
+greasy finish that needs blotting within an hour". Put any verbatim phrase in \
+`quote`, where it belongs.
+
+BOTH DIRECTIONS MATTER EQUALLY. A confirmed claim is as useful as a disputed \
+one -- "the brand says no white cast and people with deep skin tones agree" is \
+a genuinely helpful finding. Do not hunt only for contradictions.
 
 USE THEIR WORDS. Put a short verbatim phrase in `quote`, copied exactly. Never \
 paraphrase into quotation marks, and never invent a quote.

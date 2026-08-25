@@ -572,7 +572,7 @@ function claims(p) {
     ${list.slice(0, 4).map(c => `<div class="claim">
       <span class="cv ${esc(c.verdict)}">${esc(c.verdict).replace('-', ' ')}</span>
       <span><span class="txt">${esc(c.claim)}</span>
-      <span class="ev">${esc(c.evidence)}</span></span>
+      <span class="ev">${esc(c.evidence)}${c.quote ? ' &mdash; &ldquo;' + esc(c.quote) + '&rdquo;' : ''}</span></span>
     </div>`).join('')}</div>`;
 }
 
