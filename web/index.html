@@ -36,6 +36,43 @@
   }
   .searchbar input:focus { border-color:var(--accent); }
 
+  /* ---- autocomplete ---- */
+  .ac { position:absolute; top:calc(100% + 5px); left:0; right:0; z-index:40;
+        background:var(--surface); border:1px solid var(--hair); border-radius:12px;
+        overflow:hidden; display:none; box-shadow:0 8px 26px rgba(0,0,0,.13); }
+  .ac.open { display:block; }
+  .ac div { padding:9px 15px; cursor:pointer; font-size:14px; }
+  .ac div:hover, .ac div.sel { background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .ac .b { color:var(--muted); font-size:12px; }
+
+  /* ---- compare bar ---- */
+  .cmpbar { display:none; justify-content:center; align-items:center; gap:10px;
+            flex-wrap:wrap; margin:0 auto 24px; }
+  .cmpbar.open { display:flex; }
+  .cmpbar input { padding:9px 15px; font-size:14px; font-family:inherit; width:210px;
+                  border:1px solid var(--hair); border-radius:980px;
+                  background:var(--surface); color:var(--text); outline:none; }
+  .cmplbl { font-size:13px; color:var(--muted); }
+
+  /* ---- comparison result ---- */
+  .cmp { border:1px solid var(--hair); border-radius:16px; padding:22px;
+         margin:0 auto 30px; background:var(--surface); }
+  .cmphead { text-align:center; margin-bottom:18px; }
+  .cmphead .hl { font-size:19px; font-weight:600; letter-spacing:-0.02em; }
+  .cmphead .sim { color:var(--muted); font-size:13px; margin-top:4px; }
+  .cmpgrid { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .cmpcol h4 { margin:0 0 10px; font-size:12px; font-weight:600; text-transform:uppercase;
+               letter-spacing:.05em; color:var(--muted); }
+  .cmpprod { text-align:center; margin-bottom:14px; }
+  .cmpprod img { width:120px; height:120px; object-fit:contain; background:#fff;
+                 border:1px solid var(--hair); border-radius:14px; padding:9px; }
+  .cmpprod .nm { font-size:14px; font-weight:600; margin-top:8px; }
+  .cmpprod .pr { font-size:13px; color:var(--muted); }
+  .ing { font-size:12.5px; padding:3px 0; }
+  .ing .fn { color:var(--muted); font-size:11px; margin-left:6px; }
+  .ing.filt { font-weight:600; }
+  .shared { margin-top:18px; padding-top:16px; border-top:1px solid var(--hair); }
+
   /* ---- filter bubbles ---- */
   .bubbles { display:flex; justify-content:center; gap:9px; flex-wrap:wrap; margin-bottom:34px; }
   .bubble {
@@ -281,8 +318,23 @@
   </header>
 
   <div class="searchbar">
-    <input id="q" type="search" placeholder="Search a product or brand — try &ldquo;Anua&rdquo;" autocomplete="off">
+    <div style="position:relative;width:100%;max-width:520px">
+      <input id="q" type="search" placeholder="Search a product or brand" autocomplete="off">
+      <div id="ac" class="ac"></div>
+    </div>
   </div>
+
+  <div class="cmpbar" id="cmpbar">
+    <span class="cmplbl">Compare</span>
+    <div style="position:relative"><input id="cA" placeholder="First product" autocomplete="off">
+      <div id="acA" class="ac"></div></div>
+    <span style="color:var(--muted)">vs</span>
+    <div style="position:relative"><input id="cB" placeholder="Second product" autocomplete="off">
+      <div id="acB" class="ac"></div></div>
+    <button class="bubble" id="doCompare">Compare</button>
+    <button class="bubble" id="closeCmp">✕</button>
+  </div>
+  <div id="cmpout"></div>
 
   <div class="bubbles" id="bubbles">
     <button class="bubble on" data-cat="">All</button>
@@ -301,6 +353,7 @@
     <button class="bubble" data-view="dupes">Dupes</button>
     <button class="bubble" data-view="expert">Derm-recommended</button>
     <button class="bubble" id="filterToggle">Filters</button>
+    <button class="bubble" id="cmpToggle">Compare two</button>
   </div>
 
   <div class="filters" id="filters">
@@ -774,6 +827,114 @@ async function load() {
       : '<div style="color:var(--muted);font-size:12.5px">No recent coverage found.</div>';
   } catch (e) { /* optional */ }
 }
+
+// ---- autocomplete: attach to any input, suggesting from the loaded catalogue
+function autocomplete(input, box, onPick) {
+  let sel = -1;
+
+  const close = () => { box.classList.remove('open'); sel = -1; };
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) return close();
+
+    const hits = ALL.filter(p =>
+      (p.name || '').toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q)
+    ).slice(0, 6);
+
+    if (!hits.length) return close();
+
+    box.innerHTML = hits.map(p =>
+      `<div data-asin="${esc(p.asin)}">${esc(p.brand)}
+         <span class="b">${esc(p.name).slice(0, 46)}</span></div>`).join('');
+    box.classList.add('open');
+
+    box.querySelectorAll('div').forEach(el => el.onclick = () => {
+      const p = ALL.find(x => x.asin === el.dataset.asin);
+      input.value = `${p.brand} ${p.name}`.slice(0, 60);
+      close();
+      if (onPick) onPick(p); else apply();
+    });
+  });
+
+  // Arrow keys and enter, so it is usable without a mouse.
+  input.addEventListener('keydown', e => {
+    const items = [...box.querySelectorAll('div')];
+    if (!items.length || !box.classList.contains('open')) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items.forEach((el, i) => el.classList.toggle('sel', i === sel));
+    } else if (e.key === 'Enter' && sel >= 0) {
+      e.preventDefault(); items[sel].click();
+    } else if (e.key === 'Escape') close();
+  });
+
+  document.addEventListener('click', e => {
+    if (!box.contains(e.target) && e.target !== input) close();
+  });
+}
+
+// ---- compare two products side by side
+let pickA = null, pickB = null;
+
+async function runCompare() {
+  if (!pickA || !pickB) return;
+  const out = document.getElementById('cmpout');
+  out.innerHTML = '<div class="empty">Comparing…</div>';
+
+  try {
+    const d = await (await fetch(`/api/compare?a=${pickA.asin}&b=${pickB.asin}`)).json();
+    const c = d.comparison;
+
+    if (!c.comparable) { out.innerHTML = `<div class="cmp">${esc(c.note)}</div>`; return; }
+
+    const col = (p, list, label) => `<div class="cmpcol">
+      <div class="cmpprod">
+        ${p.image_url ? `<img src="${esc(bigImage(p.image_url))}" alt="">` : ''}
+        <div class="nm">${esc(p.brand)}</div>
+        <div class="pr">$${(p.price ?? 0).toFixed(2)}</div>
+      </div>
+      <h4>${label}</h4>
+      ${list.length ? list.map(i => `<div class="ing ${i.is_filter ? 'filt' : ''}">
+        ${esc(i.name)}${i.function ? `<span class="fn">${esc(i.function)}</span>` : ''}</div>`).join('')
+        : '<div class="ing" style="color:var(--muted)">Nothing unique</div>'}
+    </div>`;
+
+    out.innerHTML = `<div class="cmp">
+      <div class="cmphead">
+        <div class="hl">${esc(c.headline)}</div>
+        <div class="sim">${c.shared_count} ingredients in common · ${c.similarity}% overlap${
+          c.price_diff ? ` · $${Math.abs(c.price_diff).toFixed(2)} ${c.price_diff > 0 ? 'more' : 'less'}` : ''}</div>
+      </div>
+      <div class="cmpgrid">
+        ${col(d.a, c.only_a, 'Only in this one')}
+        ${col(d.b, c.only_b, 'Only in this one')}
+      </div>
+      ${c.shared.length ? `<div class="shared"><h4 style="margin:0 0 9px;font-size:12px;
+        font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+        Shared by both</h4>${c.shared.map(i => `<span class="ing ${i.is_filter ? 'filt' : ''}"
+        style="display:inline-block;margin-right:14px">${esc(i.name)}</span>`).join('')}</div>` : ''}
+    </div>`;
+  } catch (e) {
+    out.innerHTML = `<div class="cmp">Could not compare. ${esc(e.message)}</div>`;
+  }
+}
+
+document.getElementById('cmpToggle').onclick = () => {
+  document.getElementById('cmpbar').classList.toggle('open');
+  document.getElementById('cmpToggle').classList.toggle('on');
+};
+document.getElementById('closeCmp').onclick = () => {
+  document.getElementById('cmpbar').classList.remove('open');
+  document.getElementById('cmpToggle').classList.remove('on');
+  document.getElementById('cmpout').innerHTML = '';
+};
+document.getElementById('doCompare').onclick = runCompare;
+
+autocomplete(document.getElementById('q'), document.getElementById('ac'));
+autocomplete(document.getElementById('cA'), document.getElementById('acA'), p => { pickA = p; });
+autocomplete(document.getElementById('cB'), document.getElementById('acB'), p => { pickB = p; });
 
 load();
 

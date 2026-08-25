@@ -95,6 +95,34 @@ def news(limit: int = 6) -> dict:
     return {"count": len(items), "news": items, "verified": False}
 
 
+@app.get("/api/compare")
+def compare(a: str, b: str) -> dict:
+    """Compare two products by formula. Pure arithmetic -- no LLM, no scrape."""
+    from pipeline.similarity import compare as compare_formulas
+
+    pa, pb = get_product(a), get_product(b)
+    if not pa or not pb:
+        raise HTTPException(status_code=404, detail="One or both products not found")
+
+    return {
+        "a": {k: pa[k] for k in ("asin", "name", "brand", "price", "image_url", "score")},
+        "b": {k: pb[k] for k in ("asin", "name", "brand", "price", "image_url", "score")},
+        "comparison": compare_formulas(pa, pb),
+    }
+
+
+@app.get("/api/similar/{asin}")
+def similar(asin: str, limit: int = 4) -> dict:
+    """Products with the most formula overlap."""
+    from pipeline.similarity import find_similar
+
+    product = get_product(asin)
+    if not product:
+        raise HTTPException(status_code=404, detail=f"No product with ASIN {asin}")
+
+    return {"similar": find_similar(product, get_rankings(limit=300), limit=limit)}
+
+
 @app.get("/api/product/{asin}")
 def product(asin: str) -> dict:
     """Full detail for one product, including findings and evidence."""
