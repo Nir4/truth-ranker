@@ -105,6 +105,86 @@ def parse_product(scraped: dict) -> dict:
     }
 
 
+# Amazon rotates category node ids; if this returns nothing, find a live one
+# with `uv run python -m scripts.find_category`.
+BESTSELLER_URL = "https://www.amazon.com/Best-Sellers-Sunscreens/zgbs/beauty/15239990011"
+
+
+def fetch_bestsellers(limit: int = 50) -> list[dict]:
+    """Scrape the Amazon best-seller list. Keyless -- no Apify needed.
+
+    Returns rank, ASIN, name and image. Ingredients and claims come from the
+    per-product scrape; this is only the ranking, which is the hype signal.
+    """
+    headers = {"Content-Type": "application/json"}
+    if API_KEY:
+        headers["Authorization"] = f"Bearer {API_KEY}"
+
+    try:
+        response = requests.post(
+            SCRAPE_URL,
+            json={"url": BESTSELLER_URL, "formats": ["markdown"], "onlyMainContent": True},
+            headers=headers,
+            timeout=120,
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        print(f"  [firecrawl] best-seller scrape failed: {str(exc)[:80]}")
+        return []
+
+    payload = response.json()
+    if not payload.get("success"):
+        print(f"  [firecrawl] {str(payload.get('error'))[:100]}")
+        return []
+
+    md = payload.get("data", {}).get("markdown", "")
+
+    # Entries look like:  "01. #1 ... [![NAME](IMAGE)](URL/dp/ASIN/...)"
+    # We walk rank markers and take the first ASIN after each, which keeps
+    # rank and product aligned even when Amazon pads the markup between them.
+    products: list[dict] = []
+    seen: set[str] = set()
+
+    for match in re.finditer(r"^\s*\d+\.\s+#(\d+)", md, re.M):
+        rank = int(match.group(1))
+        chunk = md[match.end() : match.end() + 1400]
+
+        asin_match = re.search(r"/dp/([A-Z0-9]{10})", chunk)
+        if not asin_match:
+            continue
+        asin = asin_match.group(1)
+        if asin in seen:
+            continue
+        seen.add(asin)
+
+        name = re.search(r"!\[([^\]]{12,200})\]", chunk)
+        image = re.search(r"\((https://[^)]*images[^)]*\.jpg)\)", chunk)
+
+        products.append(
+            {
+                "asin": asin,
+                "name": (name.group(1).strip() if name else ""),
+                "brand": "",  # resolved by the brand agent
+                "category": "skincare",
+                "bestseller_rank": rank,
+                "image_url": image.group(1) if image else "",
+                "price": 0.0,
+                "star_rating": 0.0,
+                "review_count": 0,
+                "ingredients": [],
+                "marketing_claims": [],
+                "gallery_images": [],
+                "source": "firecrawl",
+            }
+        )
+
+        if len(products) >= limit:
+            break
+
+    products.sort(key=lambda p: p["bestseller_rank"])
+    return products
+
+
 def fetch_products(asins: list[str]) -> list[dict]:
     """Scrape several products. Skips failures rather than aborting."""
     import time

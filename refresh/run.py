@@ -83,31 +83,58 @@ async def load_live(limit: int) -> list[dict]:
     )
     from tools.ingredient_source import resolve_ingredients
 
-    print(f"Scraping top {limit} sunscreen best-sellers via Apify...")
-    bestsellers = await fetch_bestsellers(limit=limit)
-    if not bestsellers:
-        print("  no results -- the category URL may be stale.")
-        print("  run: uv run python -m scripts.find_category")
-        return []
+    # PRIMARY: Firecrawl, keyless. Apify remains as a fallback but is no longer
+    # required -- it hit a monthly hard limit mid-run once and silently zeroed
+    # our data, which is not something the critical path should be able to do.
+    from tools.firecrawl_scrape import fetch_bestsellers as fc_bestsellers
+    from tools.firecrawl_scrape import fetch_products as fc_products
 
-    products = [to_product(row) for row in bestsellers]
+    print(f"Scraping top {limit} sunscreen best-sellers (Firecrawl, keyless)...")
+    products = fc_bestsellers(limit=limit)
+
+    if not products:
+        print("  Firecrawl returned nothing; falling back to Apify...")
+        bestsellers = await fetch_bestsellers(limit=limit)
+        if not bestsellers:
+            print("  no results -- the category URL may be stale.")
+            print("  run: uv run python -m scripts.find_category")
+            return []
+        products = [to_product(row) for row in bestsellers]
+
     ranks = {p["asin"]: p["bestseller_rank"] for p in products}
     print(f"  got {len(products)} products; fetching details...")
 
-    # Detail pages give us the real brand, marketing claims and full gallery.
-    asins = [p["asin"] for p in products if p["asin"]]
-    details = await fetch_product_details(asins)
+    # Detail pages carry price, rating, claims and sometimes ingredients.
+    # Cached per ASIN, so a weekly re-run only pays for products it has not
+    # seen -- which is the whole point of tiering the cache.
+    from data.cache import get as cache_get, put as cache_put
 
     detailed = []
-    for row in details:
-        product = to_product(row)
-        # The bestsellers list is the authority on rank; detail pages are not.
-        product["bestseller_rank"] = ranks.get(product["asin"], product["bestseller_rank"])
-        detailed.append(product)
+    to_fetch = []
+    for p in products:
+        cached = cache_get("detail", p["asin"])
+        if cached:
+            cached["bestseller_rank"] = ranks.get(p["asin"], cached.get("bestseller_rank", 999))
+            if not cached.get("image_url"):
+                cached["image_url"] = p.get("image_url", "")
+            detailed.append(cached)
+        else:
+            to_fetch.append(p)
 
-    # Fall back to the bestseller rows for anything the detail scrape missed.
-    seen = {p["asin"] for p in detailed}
-    detailed += [p for p in products if p["asin"] not in seen]
+    if detailed:
+        print(f"  {len(detailed)} from cache, {len(to_fetch)} to scrape")
+
+    for p in to_fetch:
+        fetched = fc_products([p["asin"]])
+        if fetched:
+            product = fetched[0]
+            product["bestseller_rank"] = ranks.get(p["asin"], 999)
+            product["image_url"] = product.get("image_url") or p.get("image_url", "")
+            product["name"] = product.get("name") or p.get("name", "")
+            cache_put("detail", p["asin"], product)
+            detailed.append(product)
+        else:
+            detailed.append(p)  # keep the listing row; better than dropping it
 
     print(f"\nResolving brands and ingredients for {len(detailed)} products...")
     for i, product in enumerate(detailed):
