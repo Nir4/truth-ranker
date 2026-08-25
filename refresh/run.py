@@ -51,9 +51,19 @@ CORE_RESEARCH = [
 ]
 
 
+EXTRA_PATH = Path(__file__).parent.parent / "data" / "extra_products.json"
+
+
 def load_seed(limit: int | None = None) -> list[dict]:
     with open(SEED_PATH) as f:
         products = json.load(f)
+
+    # Products not sold on Amazon (Trader Joe's, pharmacy-only, K-beauty).
+    # They still get ranked on evidence -- they just have no hype signal.
+    if EXTRA_PATH.exists():
+        with open(EXTRA_PATH) as f:
+            products += json.load(f)
+
     return products[:limit] if limit else products
 
 

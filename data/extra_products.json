@@ -1,0 +1,47 @@
+[
+  {
+    "asin": "TJ-SPF40",
+    "name": "Daily Facial Sunscreen SPF 40",
+    "brand": "Trader Joe's",
+    "category": "skincare",
+    "price": 8.99,
+    "ingredients": [],
+    "bestseller_rank": 999,
+    "star_rating": 0,
+    "review_count": 0,
+    "note": "Not sold on Amazon. Rank 999 means 'no Amazon presence' -- it is excluded from the hype gap rather than treated as unpopular."
+  },
+  {
+    "asin": "TJ-MINERAL",
+    "name": "Mineral Sunscreen SPF 30",
+    "brand": "Trader Joe's",
+    "category": "skincare",
+    "price": 7.99,
+    "ingredients": [],
+    "bestseller_rank": 999,
+    "star_rating": 0,
+    "review_count": 0
+  },
+  {
+    "asin": "TJ-GELMOIST",
+    "name": "Ultra Hydrating Gel Moisturizer",
+    "brand": "Trader Joe's",
+    "category": "skincare",
+    "price": 5.99,
+    "ingredients": [],
+    "bestseller_rank": 999,
+    "star_rating": 0,
+    "review_count": 0
+  },
+  {
+    "asin": "TJ-VITC",
+    "name": "Vitamin C Facial Serum",
+    "brand": "Trader Joe's",
+    "category": "skincare",
+    "price": 9.99,
+    "ingredients": [],
+    "bestseller_rank": 999,
+    "star_rating": 0,
+    "review_count": 0
+  }
+]

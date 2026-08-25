@@ -227,8 +227,16 @@ def ranking_node(state: TruthState) -> dict:
     # --- the hype gap ---
     # Convert best-seller rank to a 0-100 popularity figure. Rank 1 = 100.
     rank = product.get("bestseller_rank", 999)
-    popularity = max(0.0, 100.0 - (rank - 1) * 2) if rank <= 50 else 0.0
-    hype_gap = popularity - score  # positive = more popular than it deserves
+
+    # Rank 999 is our sentinel for "not sold on Amazon" (Trader Joe's, Korean
+    # brands, pharmacy-only lines). There is no hype to measure against, so the
+    # gap is zero rather than a huge negative -- otherwise every off-Amazon
+    # product would be labelled "underrated" purely for not being listed there.
+    if rank >= 999:
+        hype_gap = 0.0
+    else:
+        popularity = max(0.0, 100.0 - (rank - 1) * 2) if rank <= 50 else 0.0
+        hype_gap = popularity - score  # positive = more popular than it deserves
 
     verdict = _write_verdict(
         state, score, subscores, hype_gap, sentiment_note, researched, expert_note

@@ -41,8 +41,11 @@ SUBREDDITS = [
 
 # A comment needs some substance before it counts as a data point.
 MIN_COMMENT_LENGTH = 40
-# And some community agreement -- 1 upvote is just one person talking.
-MIN_SCORE = 2
+# Upvotes are a weak filter, not a gate. Reddit shows most comments at 1 point
+# regardless of quality, and the scraper often reports 1 even for well-received
+# ones -- requiring 2+ discarded every real comment we fetched. Vote count still
+# WEIGHTS the signal in shill_detect; it just no longer excludes.
+MIN_SCORE = 0
 
 
 def _get_client():
@@ -95,38 +98,54 @@ def _gather_via_apify(product_name: str, brand: str, limit: int) -> dict:
 
     query = f"{brand} {product_name}"
 
+    async def _run_one(session, subreddit: str | None):
+        """One search, optionally scoped to a single community.
+
+        Searching all of Reddit returns whatever is most relevant globally --
+        for one product that was 30 rows from r/IndianSkincareAddicts, none of
+        which survived our allowlist. Scoping the search per community is the
+        only way to actually get comments from the subreddits we trust.
+        """
+        actor_input = {
+            # `startUrls` MUST be explicitly empty. The actor ships a prefill
+            # (a pasta recipe URL); leaving the key out means the prefill wins,
+            # `searches` is ignored, and you get nothing back.
+            "startUrls": [],
+            "ignoreStartUrls": True,
+            "searches": [query],
+            "searchPosts": True,
+            "searchComments": True,
+            "searchCommunities": False,
+            "searchUsers": False,
+            # Off by default -- without it there are no upVotes at all.
+            "includeMediaLinks": True,
+            "skipComments": False,
+            "maxItems": 25,
+            "maxComments": 20,
+            # LOWERCASE. The enum is relevance|hot|top|new|rising|comments;
+            # the docs page shows capitalised display labels that fail validation.
+            "sort": "relevance",
+            "includeNSFW": False,
+        }
+        if subreddit:
+            actor_input["searchCommunityName"] = subreddit
+        return await _run_actor(session, REDDIT_ACTOR, actor_input, 25)
+
     async def _run():
         client = build_client()
+        rows: list[dict] = []
         async with client.session("apify") as session:
-            return await _run_actor(
-                session,
-                REDDIT_ACTOR,
-                {
-                    # `startUrls` MUST be explicitly empty. The actor ships a
-                    # prefill (a pasta recipe URL); leaving the key out means
-                    # the prefill wins, `searches` is ignored, and you get
-                    # nothing back. That is exactly what was happening.
-                    "startUrls": [],
-                    "ignoreStartUrls": True,
-                    "searches": [query],
-                    "searchPosts": True,
-                    "searchComments": True,
-                    "searchCommunities": False,
-                    "searchUsers": False,
-                    # Off by default -- without it there are no upVotes, and
-                    # our score filter would discard every comment.
-                    "includeMediaLinks": True,
-                    "skipComments": False,
-                    "maxItems": limit,
-                    "maxComments": 25,
-                    # LOWERCASE. The actor's enum is
-                    # relevance|hot|top|new|rising|comments -- the docs page
-                    # shows capitalised display labels, which fail validation.
-                    "sort": "relevance",
-                    "includeNSFW": False,
-                },
-                limit,
-            )
+            # Query each trusted community directly. Slower than one global
+            # search, but a global search returns whatever Reddit thinks is
+            # most relevant anywhere -- which is usually not our communities.
+            for sub in SUBREDDITS[:3]:
+                try:
+                    rows += await _run_one(session, sub)
+                except Exception as exc:  # noqa: BLE001
+                    print(f"    [reddit] r/{sub} failed: {str(exc)[:60]}")
+            if not rows:
+                rows = await _run_one(session, None)  # fall back to a broad search
+        return rows
 
     try:
         rows = asyncio.run(_run())
