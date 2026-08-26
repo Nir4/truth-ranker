@@ -99,12 +99,16 @@ def news(limit: int = 6) -> dict:
 def compare(a: str, b: str) -> dict:
     """Compare two products by formula. Pure arithmetic -- no LLM, no scrape."""
     from pipeline.similarity import compare as compare_formulas
+    from pipeline.vector_similarity import similarity as vector_sim
 
     pa, pb = get_product(a), get_product(b)
     if not pa or not pb:
         raise HTTPException(status_code=404, detail="One or both products not found")
 
     return {
+        # Weighted cosine across five facets, so a reader can see WHICH
+        # dimension two products share rather than one blended number.
+        "vector_similarity": vector_sim(pa, pb),
         "a": {k: pa[k] for k in ("asin", "name", "brand", "price", "image_url", "score")},
         "b": {k: pb[k] for k in ("asin", "name", "brand", "price", "image_url", "score")},
         "comparison": compare_formulas(pa, pb),
@@ -112,9 +116,14 @@ def compare(a: str, b: str) -> dict:
 
 
 @app.get("/api/similar/{asin}")
-def similar(asin: str, limit: int = 4) -> dict:
-    """Products with the most formula overlap."""
-    from pipeline.similarity import find_similar
+def similar(asin: str, limit: int = 5) -> dict:
+    """Products ranked by weighted multi-facet cosine similarity.
+
+    Facets: actives (0.40), functions (0.20), composition (0.15),
+    claims (0.15), experience (0.10). Pure arithmetic over stored fields --
+    no LLM, no scrape.
+    """
+    from pipeline.vector_similarity import find_similar
 
     product = get_product(asin)
     if not product:
