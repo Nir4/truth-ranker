@@ -101,6 +101,164 @@ GOLD = [
             "benzophenone over time, which is why the EU restricts its concentration."
         ),
     },
+    {
+        "question": "Does titanium dioxide provide UVA protection?",
+        "ground_truth": (
+            "Partially. Titanium dioxide covers UVB and short UVA well but is "
+            "weaker across long UVA than zinc oxide."
+        ),
+    },
+    {
+        "question": "Is avobenzone photostable on its own?",
+        "ground_truth": (
+            "No. Avobenzone degrades under UV exposure and requires stabilisers "
+            "such as octocrylene to remain effective."
+        ),
+    },
+    {
+        "question": "Does higher SPF give proportionally more protection?",
+        "ground_truth": (
+            "No. SPF 30 blocks about 97 percent of UVB and SPF 50 about 98 "
+            "percent. The gain flattens sharply above SPF 30."
+        ),
+    },
+    {
+        "question": "Does sunscreen use cause vitamin D deficiency?",
+        "ground_truth": (
+            "Real-world studies have not shown clinically significant vitamin D "
+            "deficiency from typical sunscreen use, largely because people apply "
+            "far less than the tested amount."
+        ),
+    },
+    {
+        "question": "Is fragrance in skincare a common cause of contact dermatitis?",
+        "ground_truth": (
+            "Yes. Fragrance mix is among the most frequent positive allergens in "
+            "patch testing, and 'fragrance' can conceal many undisclosed compounds."
+        ),
+    },
+    {
+        "question": "Does retinol reduce photoageing?",
+        "ground_truth": (
+            "Yes. Topical retinoids have randomised trial evidence for reducing "
+            "fine wrinkles and improving photoaged skin."
+        ),
+    },
+    {
+        "question": "Are silicones such as dimethicone comedogenic?",
+        "ground_truth": (
+            "Evidence does not support this. Dimethicone is semi-occlusive and "
+            "permeable to gases; the belief that it suffocates skin is not borne out."
+        ),
+    },
+    {
+        "question": "Does cosmetic-grade mineral oil cause cancer?",
+        "ground_truth": (
+            "No. Untreated industrial mineral oils are classified as carcinogenic, "
+            "but cosmetic-grade mineral oil is highly refined and safety assessments "
+            "have not supported the claim."
+        ),
+    },
+    {
+        "question": "Is sodium lauryl sulfate a carcinogen?",
+        "ground_truth": (
+            "No. SLS is a genuine irritant at higher concentrations, which is a "
+            "separate issue. The carcinogen claim traces to a 1990s hoax."
+        ),
+    },
+    {
+        "question": "Does vitamin C serum oxidise and lose potency?",
+        "ground_truth": (
+            "Yes. L-ascorbic acid is unstable in aqueous formulations and degrades "
+            "with light, air and pH shifts, which is why formulation matters."
+        ),
+    },
+    {
+        "question": "Does salicylic acid work inside pores?",
+        "ground_truth": (
+            "Yes. Salicylic acid is lipid-soluble, so it penetrates sebum and acts "
+            "within the follicle, unlike water-soluble AHAs."
+        ),
+    },
+    {
+        "question": "Do ceramides support the skin barrier?",
+        "ground_truth": (
+            "Yes. Ceramides are a major lipid component of the stratum corneum and "
+            "topical application improves barrier function and reduces water loss."
+        ),
+    },
+    {
+        "question": "Is phenoxyethanol unsafe in cosmetics?",
+        "ground_truth": (
+            "Safety assessments support it at cosmetic concentrations. The concern "
+            "traces to a 2008 FDA warning about infant ingestion of a nipple cream, "
+            "which is a different exposure route."
+        ),
+    },
+    {
+        "question": "Does niacinamide reduce hyperpigmentation?",
+        "ground_truth": (
+            "Yes. Niacinamide interferes with melanosome transfer and has clinical "
+            "evidence for reducing hyperpigmentation, typically studied at 2-5 percent."
+        ),
+    },
+    {
+        "question": "Do peptides in skincare penetrate to build collagen?",
+        "ground_truth": (
+            "Evidence varies sharply by peptide. Some signal peptides have supporting "
+            "data; many marketed peptides have little independent evidence, and "
+            "penetration is a genuine limitation."
+        ),
+    },
+    {
+        "question": "Is benzene a normal ingredient in sunscreen?",
+        "ground_truth": (
+            "No. Benzene is not an ingredient; it has appeared as a manufacturing "
+            "contaminant, which triggered recalls rather than reformulation."
+        ),
+    },
+    {
+        "question": "Does zinc oxide leave a white cast on deeper skin tones?",
+        "ground_truth": (
+            "Non-nano zinc oxide scatters visible light and commonly leaves a cast. "
+            "Micronised and tinted formulations reduce but do not always eliminate it."
+        ),
+    },
+    {
+        "question": "Is oxybenzone banned in the United States?",
+        "ground_truth": (
+            "Not nationally. It is banned in Hawaii and Key West over reef concerns "
+            "and remains FDA-permitted elsewhere in the US."
+        ),
+    },
+    {
+        "question": "Does hyaluronic acid draw water from deeper skin in dry climates?",
+        "ground_truth": (
+            "This is a plausible mechanism discussed in the literature but not firmly "
+            "established. Occlusion over it is the usual practical recommendation."
+        ),
+    },
+    {
+        "question": "Do AHAs increase photosensitivity?",
+        "ground_truth": (
+            "Yes. Alpha hydroxy acids increase UV sensitivity, which is why the FDA "
+            "requires a sun-protection warning on AHA products."
+        ),
+    },
+    {
+        "question": "Is 'non-comedogenic' a regulated term?",
+        "ground_truth": (
+            "No. It is not defined or enforced by the FDA, and there is no "
+            "standardised test a product must pass to use it."
+        ),
+    },
+    {
+        "question": "Does azelaic acid treat rosacea?",
+        "ground_truth": (
+            "Yes. Azelaic acid has clinical trial evidence for papulopustular rosacea "
+            "and is an established treatment."
+        ),
+    },
 ]
 
 
