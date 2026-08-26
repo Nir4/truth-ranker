@@ -157,9 +157,18 @@
     background:linear-gradient(135deg,var(--accent-soft),var(--sky-soft));
     font-family:"Fredoka",sans-serif; font-size:58px; font-weight:600; color:var(--accent);
   }
-  .name { font-family:"Fredoka",sans-serif; font-size:20px; font-weight:500;
-          letter-spacing:-0.01em; margin:0 0 4px; line-height:1.25; }
+  .name { font-family:"Fredoka",sans-serif; font-size:16px; font-weight:500;
+          letter-spacing:-0.01em; margin:0 0 6px; line-height:1.3; }
   .meta { color:var(--muted); font-size:13px; margin:0 0 12px; }
+
+  /* At-a-glance tags, directly under the product name. */
+  .toptags { display:flex; gap:7px; flex-wrap:wrap; margin:0 0 10px; }
+  .ttag { font-size:11.5px; font-weight:700; padding:5px 13px; border-radius:999px; }
+  .ttag.worth { background:var(--mint-soft); color:var(--good); }
+  .ttag.over  { background:color-mix(in srgb,var(--bad) 14%,transparent); color:var(--bad); }
+  .ttag.mixed { background:var(--butter-soft); color:var(--warn); }
+  .ttag.derm  { background:var(--sky-soft); color:#2b7bb9; }
+  .ttag.skin  { background:var(--accent-soft); color:var(--accent); }
 
   /* the headline comparison: bestseller rank vs what people say */
   .versus {
@@ -622,9 +631,7 @@ function bars(p) {
   const rows = [
     ['Amazon', p.bestseller_rank >= 999 ? 'Not sold on Amazon' : `#${p.bestseller_rank} bestseller`, 'var(--text)'],
     ['Reddit', ...label('reddit', s.sentiment, p)],
-    ['Ingredient research', ...label('research', s.efficacy, p)],
     ['Dermatologists', ...label('derm', s.expert, p)],
-    ['Ingredients', ...label('ingredients', s.ingredients, p)],
   ];
 
   return `<div class="bars">${rows.map(([k, text, col]) => `
@@ -676,6 +683,28 @@ function experts(p) {
         <span class="cred">${esc(m.credential)}</span>
         <span class="why">${esc(m.reason)}${m.for_whom ? ` — for ${esc(m.for_whom)}` : ''}</span></span>
     </div>`).join('')}</div>`;
+}
+
+// Every at-a-glance signal in one row directly under the product name:
+// the verdict, whether a dermatologist recommended it, and which skin types
+// reported well. A reader should not have to open a dropdown to learn that a
+// dermatologist recommends it.
+function topTags(p) {
+  const tags = [];
+
+  if (p.hype_gap > 25)      tags.push(['Overhyped', 'over']);
+  else if (p.score >= 65)   tags.push(['Worth the hype', 'worth']);
+  else                      tags.push(['Mixed evidence', 'mixed']);
+
+  const n = (p.experts || {}).unique_experts || 0;
+  if (n) tags.push([`Dermatologist recommended`, 'derm']);
+
+  (p.skin_types || [])
+    .filter(st => st.verdict === 'works-well')
+    .forEach(st => tags.push([`Good for ${st.skin_type}`, 'skin']));
+
+  return `<div class="toptags">${tags.map(([t, cls]) =>
+    `<span class="ttag ${cls}">${esc(t)}</span>`).join('')}</div>`;
 }
 
 // One-line verdict, mirroring the mockup's "Worth the hype / Overhyped".
@@ -744,8 +773,8 @@ function row(p) {
         ? `<a href="https://www.amazon.com/dp/${esc(p.asin)}" target="_blank" rel="noopener"
              style="color:inherit;text-decoration:none">${esc(p.name)} ↗</a>`
         : esc(p.name)}</h2>
+      ${topTags(p)}
       <p class="meta">${esc(p.brand)} · $${(p.price ?? 0).toFixed(2)}${shape ? ' · ' + esc(shape) : ''}</p>
-      ${banner(p)}
       ${versus(p)}
       ${bars(p)}
       ${verdictHtml(p.verdict)}

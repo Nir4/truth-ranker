@@ -1,0 +1,176 @@
+{
+  "outcome": {
+    "passed": 18,
+    "total": 18,
+    "rate": 1.0,
+    "cases": [
+      {
+        "name": "identifies mineral filters",
+        "passed": true,
+        "got": "mineral"
+      },
+      {
+        "name": "identifies chemical filters",
+        "passed": true,
+        "got": "chemical"
+      },
+      {
+        "name": "identifies hybrid formulas",
+        "passed": true,
+        "got": "hybrid"
+      },
+      {
+        "name": "flags EU-restricted homosalate",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "does not flag a clean mineral formula",
+        "passed": true,
+        "got": "0"
+      },
+      {
+        "name": "handles descriptor-prefixed filters",
+        "passed": true,
+        "got": "mineral"
+      },
+      {
+        "name": "routes skincare to the dermatology branch",
+        "passed": true,
+        "got": "dermatology"
+      },
+      {
+        "name": "routes unknown category to the default branch",
+        "passed": true,
+        "got": "dermatology"
+      },
+      {
+        "name": "safety veto sends a recalled product to flag_avoid",
+        "passed": true,
+        "got": "flag_avoid"
+      },
+      {
+        "name": "safety veto sends a clean product to rank",
+        "passed": true,
+        "got": "rank"
+      },
+      {
+        "name": "classifies a lip product as lip care, not sunscreen",
+        "passed": true,
+        "got": "lip care"
+      },
+      {
+        "name": "detects a stated skin type",
+        "passed": true,
+        "got": "oily"
+      },
+      {
+        "name": "does NOT infer skin type from a complaint",
+        "passed": true,
+        "got": ""
+      },
+      {
+        "name": "guardrail blocks prompt injection",
+        "passed": true,
+        "got": "injection"
+      },
+      {
+        "name": "guardrail blocks off-domain queries",
+        "passed": true,
+        "got": "off_domain"
+      },
+      {
+        "name": "guardrail blocks medical-advice requests",
+        "passed": true,
+        "got": "medical_advice"
+      },
+      {
+        "name": "guardrail allows a legitimate query",
+        "passed": true,
+        "got": "None"
+      },
+      {
+        "name": "output guardrail rejects an unsupportable safety claim",
+        "passed": true,
+        "got": "False"
+      }
+    ]
+  },
+  "tool_use": {
+    "passed": 7,
+    "total": 7,
+    "rate": 1.0,
+    "cases": [
+      {
+        "name": "openFDA returns structured recalls",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "openFDA treats 'no matches' as empty, not an error",
+        "passed": true,
+        "got": "[]"
+      },
+      {
+        "name": "openFDA survives reserved characters in a brand",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "PubMed returns PMIDs",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "PubMed grades study design",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "dupe finder rejects different actives",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "dupe finder accepts identical actives",
+        "passed": true,
+        "got": "True"
+      }
+    ]
+  },
+  "trajectory": {
+    "checks": [
+      {
+        "name": "orchestrator exists",
+        "passed": true
+      },
+      {
+        "name": "safety node exists",
+        "passed": true
+      },
+      {
+        "name": "every expert branch reaches safety",
+        "passed": true
+      },
+      {
+        "name": "safety can veto to flag_avoid",
+        "passed": true
+      },
+      {
+        "name": "safety can pass to rank",
+        "passed": true
+      },
+      {
+        "name": "ranking precedes confidence",
+        "passed": true
+      },
+      {
+        "name": "no path skips safety",
+        "passed": true
+      }
+    ],
+    "in_order_match": 1.0,
+    "required_steps_present": 7,
+    "required_steps_total": 7
+  }
+}

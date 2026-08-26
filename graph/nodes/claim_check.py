@@ -118,7 +118,18 @@ SKIP claims users could not possibly speak to:
   - regulated lab specifications: SPF number, water-resistance minutes, PA rating
   - proprietary technology names with no experiential meaning (Helioplex)
 
-Leave those out entirely rather than returning them as not-mentioned."""
+Leave those out entirely rather than returning them as not-mentioned.
+
+NEVER say "no study on this product's formulation exists". Brands run their own
+trials and never publish them, so that sentence is true of essentially every
+cosmetic on the market -- it tells a reader nothing and reads as a criticism
+when it is really a fact about publishing. You are judging what USERS report,
+not what a journal published.
+
+When a claim is about a specific INGREDIENT rather than an experience -- "Blue
+Algae is antioxidant-rich", "niacinamide brightens" -- you may still judge it,
+but judge it on whether the INGREDIENT is established, never on whether this
+particular bottle was trialled."""
 
 
 def check_claims(
