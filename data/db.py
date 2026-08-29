@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS rankings (
     name              TEXT NOT NULL,
     brand             TEXT NOT NULL,
     category          TEXT NOT NULL,
+    product_category  TEXT,           -- sunscreen | toner | serum | ...
     price             REAL,
     image_url         TEXT,           -- product photo, from the Amazon listing
     score             REAL NOT NULL,
@@ -81,6 +82,7 @@ def init_db() -> None:
 
         # Column name -> SQL type, for everything the code writes today.
         expected = {
+            "product_category": "TEXT",
             "image_url": "TEXT", "subscores": "TEXT", "hype_gap": "REAL",
             "verdict": "TEXT", "confidence": "TEXT", "is_safe": "INTEGER",
             "safety_notes": "TEXT", "expert_findings": "TEXT", "evidence": "TEXT",
@@ -103,19 +105,22 @@ def save_result(product: dict, state: dict) -> None:
         conn.execute(
             """
             INSERT OR REPLACE INTO rankings (
-                asin, name, brand, category, price, image_url, score, subscores, hype_gap,
+                asin, name, brand, category, product_category, price, image_url, score, subscores, hype_gap,
                 bestseller_rank, star_rating, review_count, verdict, confidence,
                 is_safe, safety_notes, expert_findings, evidence, sources, themes,
                 experts, claims, claim_accuracy, researched_themes, skin_types, sentiment_source, marketed_for,
                 ingredient_functions, function_summary,
                 community_summary, ingredients, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
             """,
             (
                 product["asin"],
                 product["name"],
                 product["brand"],
                 product.get("category", "skincare"),
+                # Which of the six product types this is. Defaults to sunscreen
+                # because that is all the pipeline scored before categories.
+                product.get("product_category", "sunscreen"),
                 product.get("price", 0),
                 product.get("image_url", ""),
                 state.get("score", 0),
