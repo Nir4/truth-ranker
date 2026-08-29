@@ -88,7 +88,7 @@ Agents: orchestrator, dermatology, reflection, brand extraction, label
 matching, match verification, themes, comment weighting, scoring, confidence.
 
 NOT agents: the router (dict lookup), the safety gate (one REST call), the UV
-filter lists (17 FDA-approved filters — a closed set), score arithmetic, and
+filter lists (13 UV filters — a closed set), score arithmetic, and
 the guardrails. A guardrail a model can argue past is not a guardrail.
 
 ## Data sources
