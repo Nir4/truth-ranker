@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 data/*.db
 data/chroma/
+.vercel
+.env*
+.env.local
