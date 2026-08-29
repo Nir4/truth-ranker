@@ -143,7 +143,32 @@ def resolve_ingredients(product: dict, allow_ocr: bool = True) -> dict:
             "note": "",
         }
 
-    # 4. OCR the product photos.
+    # 4. Research the open web for the INCI list.
+    #
+    # This is where most non-sunscreen products are actually resolved. The FDA
+    # only covers US OTC drugs, and Open Beauty Facts has never heard of most
+    # K-beauty and indie brands -- but the ingredient list is printed on the
+    # brand's own product page, and republished by INCIDecoder, Ulta, Sephora
+    # and DailyMed.
+    #
+    # It runs BEFORE OCR because it is cheaper (text, not vision tokens) and
+    # more reliable than reading a photograph of a label.
+    if brand:
+        from tools.ingredient_research import find_ingredients
+
+        researched = find_ingredients(brand, name)
+        if researched["ingredients"]:
+            result = {
+                "ingredients": researched["ingredients"],
+                "active_ingredients": [],
+                "source": researched["source"],
+                "confidence": "web",
+                "note": "",
+            }
+            cache_put("ingredients", cache_key, result)
+            return result
+
+    # 5. OCR the product photos.
     images = product.get("gallery_images") or []
     if allow_ocr and images:
         from tools.ingredient_ocr import extract_ingredients
