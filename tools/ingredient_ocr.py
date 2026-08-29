@@ -27,6 +27,7 @@ An unread label must produce "ingredients unavailable" -- never a guess.
 """
 
 import base64
+import os
 import json
 
 import requests
@@ -49,6 +50,26 @@ MIN_CONFIDENCE = 0.7
 
 class VisionRateLimited(RuntimeError):
     """The vision quota is exhausted. Distinct from an unreadable image."""
+
+
+# OCR is OFF by default, and that is a capacity decision rather than a
+# preference.
+#
+# The account limit is 200,000 tokens per minute. A base64 product photo is
+# tens of thousands of tokens, so a handful of vision calls consumes the
+# minute's entire budget -- measured live: 9,737 of 10,000 requests still
+# available while only 11,650 of 200,000 tokens remained. Requests were never
+# the constraint; tokens were.
+#
+# That budget is shared with every agent in the pipeline, so OCR does not
+# merely fail: it starves scoring of the tokens it needs and the run writes
+# nothing while appearing healthy. That is exactly what cost four hours.
+#
+# Enable it deliberately, for a targeted pass over products that have no
+# ingredients, when nothing else is competing for the quota:
+#
+#     SKINSAYER_ENABLE_OCR=1 uv run python -m scripts.backfill_ingredients
+OCR_ENABLED = os.getenv("SKINSAYER_ENABLE_OCR", "").strip() not in ("", "0", "false")
 
 
 class IngredientRead(BaseModel):
@@ -168,6 +189,13 @@ def extract_ingredients(image_urls: list[str], product_name: str = "") -> dict:
         "source_image": "",
         "note": "No ingredient panel found in the product gallery.",
     }
+
+    if not OCR_ENABLED:
+        best["note"] = (
+            "Ingredient OCR disabled (SKINSAYER_ENABLE_OCR=1 to enable). "
+            "Ingredients unknown -- not the same as none being concerning."
+        )
+        return best
 
     attempted = 0
     for url in image_urls:
