@@ -144,7 +144,14 @@ def fetch_bestsellers(limit: int = 50) -> list[dict]:
         )
         response.raise_for_status()
     except requests.RequestException as exc:
-        print(f"  [firecrawl] best-seller scrape failed: {str(exc)[:80]}")
+        # Distinguish rate limiting from a genuinely broken URL. Reporting a
+        # 429 as "the category URL may be stale" sends you debugging the
+        # wrong thing entirely.
+        if "429" in str(exc):
+            print("  [firecrawl] rate limited (keyless tier is ~10/min).")
+            print("  Wait a few minutes, or add FIRECRAWL_API_KEY to .env for a higher limit.")
+        else:
+            print(f"  [firecrawl] best-seller scrape failed: {str(exc)[:80]}")
         return []
 
     payload = response.json()
