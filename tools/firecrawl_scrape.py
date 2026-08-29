@@ -20,6 +20,7 @@ evidence. The review COUNT is useful (it measures how hyped), the content is not
 """
 
 import re
+import time
 
 import requests
 
@@ -170,19 +171,52 @@ BESTSELLER_URL = "https://www.amazon.com/Best-Sellers-Sunscreens/zgbs/beauty/152
 
 
 def fetch_bestsellers(limit: int = 50) -> list[dict]:
-    """Scrape the Amazon best-seller list. Keyless -- no Apify needed.
+    """Scrape the Amazon best-seller list, following pagination.
 
     Returns rank, ASIN, name and image. Ingredients and claims come from the
     per-product scrape; this is only the ranking, which is the hype signal.
+
+    ONE PAGE IS 30 PRODUCTS, NOT 100. Asking for 100 and getting 30 was
+    silently capping every category at a third of what was requested. Amazon
+    paginates with ?pg=N, so we follow pages until we have enough or a page
+    comes back empty.
+
+    Even paginated the lists are not complete: page 1 gives ranks 1-30 and
+    page 2 gives 51-80, so ranks 31-50 are lazy-loaded and never appear in
+    the markup. We take what is served rather than pretend the gap is not
+    there -- the rank we store is Amazon's own, so a gap costs coverage but
+    never corrupts the hype signal.
     """
     headers = {"Content-Type": "application/json"}
     if API_KEY:
         headers["Authorization"] = f"Bearer {API_KEY}"
 
+    collected: list[dict] = []
+    seen_asins: set[str] = set()
+
+    for page in range(1, 5):
+        if len(collected) >= limit:
+            break
+        if page > 1:
+            time.sleep(20)  # Amazon serves empty pages when pushed
+        page_url = BESTSELLER_URL if page == 1 else f"{BESTSELLER_URL}?pg={page}"
+        found = _fetch_one_page(page_url, headers)
+        if not found:
+            break  # no more pages, or we are being throttled
+        new_rows = [p for p in found if p["asin"] not in seen_asins]
+        seen_asins.update(p["asin"] for p in new_rows)
+        collected.extend(new_rows)
+
+    collected.sort(key=lambda p: p["bestseller_rank"])
+    return collected[:limit]
+
+
+def _fetch_one_page(url: str, headers: dict) -> list[dict]:
+    """One page of a best-seller list. Empty on any failure."""
     try:
         response = requests.post(
             SCRAPE_URL,
-            json={"url": BESTSELLER_URL, "formats": ["markdown"], "onlyMainContent": True},
+            json={"url": url, "formats": ["markdown"], "onlyMainContent": True},
             headers=headers,
             timeout=120,
         )
@@ -244,10 +278,6 @@ def fetch_bestsellers(limit: int = 50) -> list[dict]:
             }
         )
 
-        if len(products) >= limit:
-            break
-
-    products.sort(key=lambda p: p["bestseller_rank"])
     return products
 
 
