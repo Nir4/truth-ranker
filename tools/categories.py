@@ -55,7 +55,12 @@ CATEGORIES = {
     },
     "serum": {
         "label": "Serum",
-        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Facial-Serums/zgbs/beauty/11060421011",
+        # Amazon has no standalone Serums best-seller list; serums sit inside
+        # Treatments & Masks alongside pimple patches and sheet masks. The
+        # name_filter below keeps only the serums, because scoring a hydrocolloid
+        # patch on "does the active work at the concentration used" is nonsense.
+        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Personal-Care-Facial-Treatments-Masks/zgbs/beauty/11062031",
+        "name_filter": ["serum", "ampoule", "booster", "essence"],
         "efficacy_means": (
             "whether the active ingredient works AT THE CONCENTRATION USED, and "
             "whether the formula is stable"

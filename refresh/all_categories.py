@@ -115,6 +115,19 @@ def main() -> None:
             print("  nothing returned -- the category URL may be stale")
             continue
 
+        # Some best-seller lists are broader than the category. Serums live in
+        # Amazon's "Treatments & Masks" with pimple patches and sheet masks;
+        # keeping only the matching names stops a hydrocolloid patch being
+        # judged on whether its active works at the concentration used.
+        keep = CATEGORIES[name].get("name_filter")
+        if keep:
+            before = len(products)
+            products = [
+                p for p in products
+                if any(w in p.get("name", "").lower() for w in keep)
+            ]
+            print(f"  name filter: kept {len(products)} of {before}")
+
         for p in products:
             p["category"] = "skincare"
             p["product_category"] = name
