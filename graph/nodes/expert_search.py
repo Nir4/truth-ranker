@@ -81,21 +81,36 @@ def _search_editorial(product_name: str, brand: str, limit: int = 18) -> list[st
         f"{brand} {product_name} dermatologist ({mag_sites})",
     ] + queries
 
+    # DuckDuckGo's HTML endpoint now answers 202 with an empty results page --
+    # it blocks scripted queries. This silently returned ONE url, duckduckgo.com
+    # itself, so dermatologist evidence found nothing and 61 of 77 products
+    # scored a neutral 50 on the input that carries the most weight (45%).
+    # Firecrawl has a real search API and we already hold a key for it.
+    import os
+
+    key = os.getenv("FIRECRAWL_API_KEY", "")
+
     for query in queries:
         try:
             response = requests.post(
-                "https://html.duckduckgo.com/html/",
-                data={"q": query},
-                headers={"User-Agent": "Mozilla/5.0 (research; skin-sayer/0.1)"},
-                timeout=20,
+                "https://api.firecrawl.dev/v1/search",
+                headers={
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json",
+                },
+                json={"query": query, "limit": 10},
+                timeout=90,
             )
             response.raise_for_status()
-        except requests.RequestException as exc:
+            hits = response.json().get("data") or []
+        except (requests.RequestException, ValueError) as exc:
             print(f"    [expert] search failed: {str(exc)[:60]}")
             continue
 
-        for url in re.findall(r'href="(https?://[^"]+)"', response.text):
-            url = url.replace("&amp;", "&")
+        for hit in hits:
+            url = hit.get("url", "")
+            if not url:
+                continue
             lowered = url.lower()
 
             if any(bad in lowered for bad in _EXCLUDE):
