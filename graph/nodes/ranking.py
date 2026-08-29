@@ -406,6 +406,18 @@ def _write_verdict(
             + "\n\n"
         )
 
+    # The verdict prompt used to say "this sunscreen" for every product, so a
+    # La Roche-Posay face moisturizer came back with "limited evidence on
+    # broad-spectrum UV protection from this sunscreen combination". Fixing
+    # the efficacy SCORE was not enough -- the prose is what a shopper reads.
+    from tools.categories import CATEGORIES
+
+    _cat = CATEGORIES.get(
+        product.get("product_category", "sunscreen"), CATEGORIES["sunscreen"]
+    )
+    verdict_label = _cat["label"].lower()
+    verdict_means = _cat["efficacy_means"]
+
     hype_instruction = ""
     if hype_gap > 30:
         hype_instruction = (
@@ -423,8 +435,11 @@ def _write_verdict(
             {
                 "role": "system",
                 "content": (
-                    "Write exactly 3 SHORT bullets about this sunscreen. One line each, "
-                    "max 15 words per bullet. Write for a shopper, not a journal.\n\n"
+                    f"Write exactly 3 SHORT bullets about this {verdict_label}. One line "
+                    "each, max 15 words per bullet. Write for a shopper, not a journal.\n\n"
+                    f"It is a {verdict_label}. Judge it on what a {verdict_label} is for: "
+                    f"{verdict_means}. Never describe it as a sunscreen or comment on its "
+                    "UV protection unless it actually is one.\n\n"
                     "- Bullet 1: does it work? (efficacy, with a PMID if we have one)\n"
                     "- Bullet 2 and 3: take the claims USERS actually raised and say "
                     "what the research shows about the ingredient responsible. "
