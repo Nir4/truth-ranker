@@ -129,6 +129,17 @@ def main() -> None:
         # Amazon's "Treatments & Masks" with pimple patches and sheet masks;
         # keeping only the matching names stops a hydrocolloid patch being
         # judged on whether its active works at the concentration used.
+        # Drop products the list leaked in from a neighbouring category.
+        reject = CATEGORIES[name].get("name_reject")
+        if reject:
+            before = len(products)
+            products = [
+                p for p in products
+                if not any(w in p.get("name", "").lower() for w in reject)
+            ]
+            if len(products) < before:
+                print(f"  name reject: dropped {before - len(products)} non-{name}")
+
         keep = CATEGORIES[name].get("name_filter")
         if keep:
             before = len(products)

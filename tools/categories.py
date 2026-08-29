@@ -38,6 +38,14 @@ CATEGORIES = {
     "moisturizer": {
         "label": "Moisturiser",
         "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Personal-Care-Facial-Creams-Moisturizers/zgbs/beauty/11061301",
+        # Amazon's Creams & Moisturizers list leaks makeup -- a L'Oreal
+        # setting spray came through and was scored as a moisturizer. Reject
+        # by name rather than trusting the node to hold one product type.
+        "name_reject": [
+            "setting spray", "setting mist", "primer", "foundation",
+            "concealer", "bb cream", "cc cream", "tinted", "makeup",
+            "lipstick", "mascara", "remover wipes",
+        ],
         "efficacy_means": (
             "measured hydration, barrier repair, and how long the effect lasts -- "
             "NOT UV protection"
