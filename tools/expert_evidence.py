@@ -29,6 +29,8 @@ prestigious the publication is. Vogue is not evidence; a dermatologist quoted
 in Vogue is.
 """
 
+import re
+
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
@@ -101,11 +103,18 @@ class ExpertMention(BaseModel):
         description="One of: positive, qualified, negative. 'qualified' means recommended with caveats."
     )
     reason: str = Field(
-        description="WHY they recommended it, in their terms. Empty if no reason was given."
+        description=(
+            "WHY, in their terms -- the property of the product they cited. "
+            "'non-comedogenic and contains niacinamide'. Do NOT name the skin "
+            "type here; that goes in for_whom."
+        )
     )
     for_whom: str = Field(
         default="",
-        description="Who it was recommended for, e.g. 'acne-prone skin'. Empty if unspecified.",
+        description=(
+            "The skin type or concern ONLY, e.g. 'acne-prone skin'. Two or "
+            "three words. Never repeat wording already in `reason`."
+        ),
     )
     publication: str = Field(default="", description="Where the quote appeared.")
 
@@ -125,6 +134,21 @@ NOT -- an unnamed expert cannot be verified or counted.
   3. A REASON for the recommendation. "She recommends it" is not enough; \
 "she recommends it for acne-prone skin because it is non-comedogenic and \
 contains niacinamide" is.
+
+DO NOT REPEAT YOURSELF ACROSS THE TWO FIELDS. `reason` is the property of the
+product; `for_whom` is the skin type. They are displayed together, so
+overlapping them produces text like:
+
+    "may not be ideal for oily or acne-prone skin types -- for oily or
+     acne-prone skin types"
+
+Split them cleanly instead:
+
+    reason:   "can be too occlusive and may trigger congestion"
+    for_whom: "oily or acne-prone skin"
+
+If the source only gives you one of the two, leave the other empty rather than
+padding it with a rephrasing of the first.
 
 Also extract QUALIFIED and NEGATIVE mentions, not only praise. An expert saying \
 "I would avoid this for rosacea patients" is exactly as informative as a \
@@ -180,13 +204,23 @@ def extract_mentions(article_text: str, product_name: str, url: str = "") -> lis
         if not m.reason or len(m.reason.strip()) < 15:
             continue
 
+        # Even told not to, the model repeats the skin type in both fields --
+        # and the UI shows them together, producing "may not be ideal for oily
+        # skin -- for oily skin". Drop for_whom when reason already contains it.
+        for_whom = m.for_whom.strip()
+        if for_whom:
+            reason_words = set(re.findall(r"[a-z]+", m.reason.lower()))
+            whom_words = [w for w in re.findall(r"[a-z]+", for_whom.lower()) if len(w) > 3]
+            if whom_words and all(w in reason_words for w in whom_words):
+                for_whom = ""
+
         mentions.append(
             {
                 "expert": m.expert_name.strip(),
                 "credential": m.credential.strip(),
                 "recommendation": m.recommendation,
                 "reason": m.reason.strip(),
-                "for_whom": m.for_whom.strip(),
+                "for_whom": for_whom,
                 "publication": m.publication or url,
                 "url": url,
             }
