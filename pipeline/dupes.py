@@ -24,6 +24,62 @@ from tools.ingredient import _normalise, MINERAL_FILTERS, CHEMICAL_FILTERS
 ALL_FILTERS = MINERAL_FILTERS | CHEMICAL_FILTERS
 
 
+# Brands that are the same company wearing different names. A dupe across
+# these is still just one company's two products, so it is not the finding
+# the feature exists to surface.
+BRAND_FAMILIES = (
+    {"neutrogena", "aveeno", "clean & clear", "johnson", "johnsons"},
+    {"cerave", "la roche-posay", "la roche posay", "vichy", "l'oreal",
+     "loreal", "l oreal", "garnier", "maybelline", "kiehl's", "kiehls",
+     "skinceuticals"},
+    {"olay", "sk-ii", "skii"},
+    {"eucerin", "aquaphor", "nivea"},
+    {"cetaphil", "differin"},
+    {"banana boat", "hawaiian tropic"},
+    {"the ordinary", "niod", "deciem"},
+    {"supergoop"},
+    {"thinksport", "thinkbaby", "thinkkids", "think sport", "think baby"},
+    {"blue lizard"},
+    {"sun bum"},
+)
+
+
+def _brand_key(brand: str) -> str:
+    """Normalise a brand for comparison.
+
+    Hyphens and apostrophes become spaces rather than vanishing: stripping
+    them turned "La Roche-Posay" into "la rocheposay", which then matched
+    nothing in the family list.
+    """
+    key = re.sub(r"[-'’_.]", " ", (brand or "").lower())
+    key = re.sub(r"[^a-z ]", " ", key)
+    return " ".join(key.split())
+
+
+def _same_company(a: str, b: str) -> bool:
+    """Do these two brands belong to the same company?
+
+    Direct name match catches the common case. The families catch the rest:
+    CeraVe and La Roche-Posay are both L'Oreal, so offering one as a cheaper
+    swap for the other is not the independent comparison it appears to be.
+    """
+    key_a, key_b = _brand_key(a), _brand_key(b)
+    if not key_a or not key_b:
+        return False
+    if key_a == key_b:
+        return True
+    # One name contained in the other: "Neutrogena" vs "Neutrogena Beach Defense".
+    if key_a in key_b or key_b in key_a:
+        return True
+    for family in BRAND_FAMILIES:
+        normalised = {_brand_key(f) for f in family}
+        in_a = any(f and f in key_a for f in normalised)
+        in_b = any(f and f in key_b for f in normalised)
+        if in_a and in_b:
+            return True
+    return False
+
+
 def _format_of(name: str) -> str:
     """Spray, stick, lotion...? A stick is not a dupe for a spray."""
     lowered = (name or "").lower()
@@ -297,6 +353,14 @@ def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
             if (product.get("product_category") or "sunscreen") != (
                 other.get("product_category") or "sunscreen"
             ):
+                continue
+
+            # A brand's own product is not a dupe of itself. Four of the first
+            # seven dupes found were Neutrogena -> Neutrogena: the same formula
+            # in a different bottle size, which a shopper can see on the shelf.
+            # The finding people cannot get anywhere else is "this $38 serum
+            # and this $9 one are the same formula from different companies".
+            if _same_company(product.get("brand", ""), other.get("brand", "")):
                 continue
 
             # Compare on COST PER OUNCE where both sizes are known. A 12 oz
