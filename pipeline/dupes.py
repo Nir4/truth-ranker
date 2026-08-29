@@ -149,7 +149,43 @@ def fingerprint(ingredients: list[str]) -> dict:
         elif not any(inert in name for inert in INERT):
             base.add(name)
 
+    # No UV filters means this is not a sunscreen, so fall back to the
+    # functional actives -- otherwise the product has no actives at all and
+    # can never match anything.
+    if not actives:
+        actives = _functional_actives(ingredients)
+
     return {"actives": actives, "supporting": supporting, "base": base}
+
+
+# For everything that is not a sunscreen, the actives are the functional
+# ingredients, not UV filters. _actives_match returns 0.0 when neither product
+# has filters, and ACTIVE_MATCH_REQUIRED is 0.85, so without this every
+# non-sunscreen pair scores zero and no dupe is ever found outside sunscreen.
+#
+# These are the ingredients people actually choose a product FOR.
+FUNCTIONAL_ACTIVES = {
+    "niacinamide", "retinol", "retinal", "retinaldehyde", "adapalene",
+    "ascorbic acid", "ascorbyl", "salicylic acid", "glycolic acid",
+    "lactic acid", "mandelic acid", "azelaic acid", "tranexamic acid",
+    "hyaluronic acid", "sodium hyaluronate", "ceramide", "peptide",
+    "panthenol", "centella", "madecassoside", "urea", "benzoyl peroxide",
+    "alpha arbutin", "kojic acid", "bakuchiol", "pdrn", "polydeoxyribonucleotide",
+}
+
+
+def _functional_actives(ingredients: list[str]) -> dict[str, float | None]:
+    """Actives for a non-sunscreen: what the product is chosen FOR."""
+    found: dict[str, float | None] = {}
+    for raw in ingredients:
+        name, concentration = _parse_concentration(raw)
+        for active in FUNCTIONAL_ACTIVES:
+            if active in name:
+                # Keep the strongest reading if listed more than once.
+                if active not in found or (concentration or 0) > (found[active] or 0):
+                    found[active] = concentration
+                break
+    return found
 
 
 def _actives_match(a: dict, b: dict) -> float:
@@ -253,6 +289,14 @@ def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
         matches = []
         for other in with_ingredients:
             if other["asin"] == product["asin"]:
+                continue
+
+            # Never cross categories. A toner is not a dupe for a cleanser
+            # however well their ingredient lists line up -- they are not
+            # doing the same job, so the swap the card invites is wrong.
+            if (product.get("product_category") or "sunscreen") != (
+                other.get("product_category") or "sunscreen"
+            ):
                 continue
 
             # Compare on COST PER OUNCE where both sizes are known. A 12 oz

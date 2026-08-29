@@ -164,6 +164,8 @@
   .link:hover { color:var(--accent); background:var(--accent-soft); }
   .link.on { color:var(--accent); background:var(--accent-soft); }
 
+  .basis{display:block;font-size:10.5px;font-weight:400;opacity:.72;margin-top:1px}
+
   /* ---- categories: scrollable pills ---- */
   .cats { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:26px; }
   .cat { border:2px solid var(--hair); background:var(--surface); color:var(--text);
@@ -697,7 +699,8 @@ function dupeBox(p) {
         ${d.price_per_oz ? `<div class="ppo">$${d.price_per_oz.toFixed(2)}/oz</div>` : ''}
       </div>
       <div class="sav">${d.price_per_oz ? 'cheaper per oz' : 'save'}<br>
-        <b>$${(d.saving ?? 0).toFixed(2)}</b></div>
+        <b>$${(d.saving ?? 0).toFixed(2)}</b>
+        ${d.price_per_oz && d.size ? `<span class="basis">for ${d.size} oz</span>` : ''}</div>
     </div>
     <div style="font-size:12.5px;color:var(--muted);margin-top:10px">
       ${d.same_actives ? '✓ Same key actives' : '~ Partially matching actives'}${
