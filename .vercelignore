@@ -1,0 +1,17 @@
+data/chroma/
+data/harvested_threads.db
+data/scrape_cache.db
+data/comment_pool.db
+data/discovered.db
+data/memory.db
+.venv/
+__pycache__/
+graph/
+tools/
+rag/
+refresh/
+eval/
+scripts/
+pipeline/
+*.log
+.env
