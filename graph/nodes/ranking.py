@@ -170,21 +170,37 @@ def _score_sentiment(reddit: dict) -> tuple[float, str]:
     return max(0.0, min(100.0, score)), note
 
 
-def _score_efficacy(findings: str) -> float:
-    """Score efficacy from the expert's research findings. 0-100."""
+def _score_efficacy(findings: str, product_category: str = "sunscreen") -> float:
+    """Score efficacy from the expert's research findings. 0-100.
+
+    "Does it work" means something different per category, and this prompt used
+    to ask about broad-spectrum UV coverage for every product. That produced
+    verdicts like "decent sun protection" for a La Roche-Posay moisturizer and
+    scored a Vanicream face cream on its zinc oxide as though it were a
+    sunscreen. tools/categories.py already defines what efficacy means for each
+    category; it just was not being read.
+    """
+    from tools.categories import CATEGORIES
+
+    category = CATEGORIES.get(product_category, CATEGORIES["sunscreen"])
+    means = category["efficacy_means"]
+    label = category["label"].lower()
+
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     response = model.invoke(
         [
             {
                 "role": "system",
                 "content": (
-                    "Based ONLY on this research analysis, rate how well-supported this "
-                    "sunscreen's protective efficacy is, 0-100. Consider broad-spectrum "
-                    "coverage, filter photostability, and evidence quality.\n\n"
+                    f"Based ONLY on this research analysis, rate how well-supported this "
+                    f"{label}'s efficacy is, 0-100.\n\n"
+                    f"For a {label}, efficacy means: {means}\n\n"
+                    "Judge it on THAT, not on anything else. A moisturizer is not "
+                    "failing because it does not block UVB, and a cleanser is not "
+                    "succeeding because it contains zinc oxide.\n\n"
                     "CRITICAL: absence of research is NOT evidence against a product. "
                     "If something has not been studied, return 50 (neutral) -- never a low "
-                    "score. Only go below 50 when research actively shows a problem, such "
-                    "as a filter that degrades in sunlight or fails to cover UVA. "
+                    "score. Only go below 50 when research actively shows a problem. "
                     "Reply with ONLY the number."
                 ),
             },
@@ -240,7 +256,9 @@ def ranking_node(state: TruthState) -> dict:
     expert_pts, expert_note = expert_score(experts)
 
     subscores = {
-        "efficacy": _score_efficacy(findings),
+        "efficacy": _score_efficacy(
+            findings, product.get("product_category", "sunscreen")
+        ),
         "expert": expert_pts,
     }
     # Computed and shown, but NOT part of the score -- see WEIGHTS above.
