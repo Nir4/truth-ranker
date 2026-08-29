@@ -53,11 +53,14 @@ from tools.ingredient_functions import label_ingredients, function_summary
 #   brand claims    do the promises hold up against what users report?
 #   research        ingredient-level evidence. It separates products least,
 #                   since most sunscreens share the same 4-5 FDA filters.
+# Claim accuracy is DISPLAYED but carries no weight. It is derived from the
+# same community comments as `sentiment`, so scoring both would count one
+# source twice -- and a brand writing modest copy would be rewarded over one
+# that promises more and mostly delivers.
 WEIGHTS = {
-    "expert": 0.35,
-    "sentiment": 0.30,
-    "claims": 0.20,
-    "efficacy": 0.15,
+    "expert": 0.45,      # a named clinician staking their reputation
+    "sentiment": 0.35,   # the least sponsored large-scale signal
+    "efficacy": 0.20,    # ingredient evidence; separates products least
 }
 
 
@@ -286,11 +289,6 @@ def ranking_node(state: TruthState) -> dict:
             researched = research_themes(
                 themes["themes"], ingredients, product["name"]
             )
-
-    # Claim accuracy joins the score. A product whose own marketing its buyers
-    # contradict is worse than one that promises less and delivers it.
-    if claims_result.get("accuracy") is not None:
-        subscores["claims"] = claims_result["accuracy"]
 
     # Renormalise over the signals we actually have. A product with no derm
     # coverage should be judged on the rest, not dragged toward neutral by a

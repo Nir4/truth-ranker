@@ -589,6 +589,7 @@
     <button class="cat" data-cat="sunscreen">SPF</button>
     <button class="cat" data-cat="moisturizer">Moisturiser</button>
     <button class="cat" data-cat="serum">Serum</button>
+    <button class="cat" data-cat="toner">Toner</button>
     <button class="cat" data-cat="cleanser">Cleanser</button>
     <button class="cat" data-cat="lip care">Lip</button>
   </div>
@@ -881,8 +882,14 @@ function autocomplete(input, box, onPick) {
     const hits = ALL.filter(p =>
       (p.name || '').toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q)).slice(0, 6);
     if (!hits.length) return close();
-    box.innerHTML = hits.map(p =>
-      `<div data-asin="${esc(p.asin)}">${esc(p.brand)}<span class="b"> ${esc(p.name).slice(0, 42)}</span></div>`).join('');
+    box.innerHTML = hits.map(p => {
+      // Flag products we cannot compare, so the choice is informed rather
+      // than a dead end discovered after clicking Compare.
+      const noIng = onPick && !(p.ingredients || []).length;
+      return `<div data-asin="${esc(p.asin)}"${noIng ? ' style="opacity:.55"' : ''}>
+        ${esc(p.brand)}<span class="b"> ${esc(p.name).slice(0, 40)}${
+          noIng ? ' — no ingredients on file' : ''}</span></div>`;
+    }).join('');
     box.classList.add('open');
     box.querySelectorAll('div').forEach(el => el.onclick = () => {
       const p = ALL.find(x => x.asin === el.dataset.asin);
@@ -917,7 +924,19 @@ async function runCompare() {
   try {
     const d = await (await fetch(`/api/compare?a=${pickA.asin}&b=${pickB.asin}`)).json();
     const c = d.comparison;
-    if (!c.comparable) { out.innerHTML = `<div class="cmp">${esc(c.note || 'Cannot compare these.')}</div>`; return; }
+    if (!c.comparable) {
+      // Say WHICH product is missing data. "Cannot compare these" leaves a
+      // reader with no idea whether they picked badly or the tool is broken.
+      const missing = [];
+      if (!(pickA.ingredients || []).length) missing.push(pickA.brand);
+      if (!(pickB.ingredients || []).length) missing.push(pickB.brand);
+      out.innerHTML = `<div class="cmp" style="text-align:center;color:var(--muted)">
+        ${missing.length
+          ? `No ingredient list on file for <b>${esc(missing.join(' and '))}</b> yet,
+             so a formula comparison is not possible. Try another product.`
+          : esc(c.note || 'These two cannot be compared.')}</div>`;
+      return;
+    }
     const col = (p, l, label) => `<div class="cmpcol">
       <div class="cmpprod">
         ${p.image_url ? `<img src="${esc(bigImage(p.image_url))}" alt="">` : ''}
