@@ -195,6 +195,29 @@ _SEEN_PATH = None
 _seen_cache: set[str] | None = None
 
 
+def _thread_banked(permalink: str) -> bool:
+    """Is this thread already in the pool? READ-ONLY -- does not mark it.
+
+    _already_seen() both checks AND records, which is right for the harvest
+    but wrong here: a per-product search should not claim threads it did not
+    bank.
+    """
+    global _SEEN_PATH, _seen_cache
+    import sqlite3
+    from pathlib import Path
+
+    if _seen_cache is None:
+        _SEEN_PATH = Path(__file__).parent.parent / "data" / "harvested_threads.db"
+        if not _SEEN_PATH.exists():
+            _seen_cache = set()
+            return False
+        with sqlite3.connect(_SEEN_PATH) as conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS seen (permalink TEXT PRIMARY KEY)")
+            _seen_cache = {r[0] for r in conn.execute("SELECT permalink FROM seen")}
+
+    return permalink in _seen_cache
+
+
 def _already_seen(permalink: str) -> bool:
     """Have we already harvested this thread? Persisted so restarts resume."""
     global _SEEN_PATH, _seen_cache
@@ -295,6 +318,13 @@ def gather(product_name: str, brand: str, limit: int = 120) -> dict:
         for post in posts[:10]:
             permalink = post.get("permalink", "")
             if not permalink:
+                continue
+
+            # Skip threads the bulk harvest already banked. Their comments are
+            # in the vector pool and will be retrieved semantically, so
+            # re-fetching them costs a request and returns nothing new. With
+            # 10k+ threads harvested, most search hits are already ours.
+            if _thread_banked(permalink):
                 continue
 
             for c in _fetch_comments(permalink):
