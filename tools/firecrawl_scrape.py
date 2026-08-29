@@ -211,6 +211,10 @@ def fetch_bestsellers(limit: int = 50) -> list[dict]:
     return collected[:limit]
 
 
+class RateLimited(RuntimeError):
+    """Firecrawl throttled us. Distinct from a category having no products."""
+
+
 def _fetch_one_page(url: str, headers: dict) -> list[dict]:
     """One page of a best-seller list. Empty on any failure."""
     try:
@@ -228,6 +232,10 @@ def _fetch_one_page(url: str, headers: dict) -> list[dict]:
         if "429" in str(exc):
             print("  [firecrawl] rate limited (keyless tier is ~10/min).")
             print("  Wait a few minutes, or add FIRECRAWL_API_KEY to .env for a higher limit.")
+            # Tell the caller this was a throttle, not an empty category. The
+            # pre-flight otherwise marks every url DEAD and aborts the run --
+            # concluding the category is stale when we simply asked too fast.
+            raise RateLimited(str(exc)) from exc
         else:
             print(f"  [firecrawl] best-seller scrape failed: {str(exc)[:80]}")
         return []

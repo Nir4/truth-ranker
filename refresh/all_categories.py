@@ -70,6 +70,16 @@ def main() -> None:
         fc.BESTSELLER_URL = CATEGORIES[name]["bestseller_url"]
         try:
             found = fc.fetch_bestsellers(3)
+        except fc.RateLimited:
+            # Being throttled says nothing about whether the url is good, and
+            # marking it DEAD here aborts the whole run for a reason that
+            # clears itself in a minute. Back off and ask again.
+            print(f"  .... {name} (rate limited, retrying in 90s)")
+            time.sleep(90)
+            try:
+                found = fc.fetch_bestsellers(3)
+            except Exception:  # noqa: BLE001
+                found = []
         except Exception:  # noqa: BLE001
             found = []
         print(f"  {'OK  ' if found else 'DEAD'} {name}")
