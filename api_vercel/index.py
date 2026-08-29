@@ -32,8 +32,8 @@ app = FastAPI(title="Skin Sayer")
 # JSON columns, decoded on read.
 _JSON_FIELDS = (
     "subscores", "evidence", "sources", "themes", "skin_types", "experts",
-    "claims", "researched_themes", "ingredient_functions", "function_summary",
-    "ingredients",
+    "claims", "dupes", "marketed_for", "researched_themes", "ingredient_functions",
+    "function_summary", "ingredients",
 )
 _DICT_FIELDS = {"subscores", "function_summary", "experts"}
 

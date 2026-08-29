@@ -28,6 +28,39 @@ ALL_FILTERS = MINERAL_FILTERS | CHEMICAL_FILTERS
 # the product.
 ACTIVE_MATCH_REQUIRED = 0.85
 
+# Below this we do not use the word "dupe" at all. Calling everything a dupe
+# to generate recommendations is how a comparison tool loses trust.
+DUPE_THRESHOLD = 80
+
+# What the match number is built from. Actives dominate deliberately: two
+# products sharing water, glycerin and phenoxyethanol are not similar
+# products, they are both cosmetics. The old 70/30 actives/base split let
+# base overlap drag down pairs with IDENTICAL actives -- Blue Lizard and
+# Aveeno share all four filters and scored 65%.
+MATCH_WEIGHTS = {
+    "actives": 0.55,       # which UV filters, and at what strength
+    "supporting": 0.25,    # functional ingredients that shape the result
+    "base": 0.20,          # solvents, preservatives, thickeners
+}
+
+# Ingredients that do real work but are not actives. Shared ones are
+# meaningful; shared water is not.
+SUPPORTING = {
+    "niacinamide", "hyaluronic acid", "sodium hyaluronate", "glycerin",
+    "ceramide", "panthenol", "squalane", "dimethicone", "tocopherol",
+    "allantoin", "centella", "madecassoside", "bisabolol", "urea",
+    "salicylic acid", "adenosine", "peptide", "shea", "butyrospermum",
+    "aloe", "green tea", "camellia", "vitamin e", "ascorbic",
+}
+
+# Filler present in nearly every formula. Sharing these says nothing.
+INERT = {
+    "water", "aqua", "phenoxyethanol", "ethylhexylglycerin", "xanthan gum",
+    "citric acid", "sodium hydroxide", "disodium edta", "edta", "fragrance",
+    "parfum", "sodium chloride", "potassium sorbate", "sodium benzoate",
+    "caprylyl glycol", "benzyl alcohol", "carbomer", "propanediol",
+}
+
 # The base can differ a LOT. Two sunscreens with identical actives are doing
 # the same job even when built on different emollients -- one may be a lotion
 # and one a spray. Measured on real pairs: identical-actives products scored
@@ -51,19 +84,29 @@ def _parse_concentration(ingredient: str) -> tuple[str, float | None]:
 
 
 def fingerprint(ingredients: list[str]) -> dict:
-    """Reduce an ingredient list to a comparable formula fingerprint."""
+    """Reduce an ingredient list to a comparable formula fingerprint.
+
+    Three tiers, because they carry very different weight. Sharing avobenzone
+    means something; sharing water means nothing.
+    """
     actives: dict[str, float | None] = {}
+    supporting: set[str] = set()
     base: set[str] = set()
 
     for raw in ingredients:
         name, concentration = _parse_concentration(raw)
+        if not name:
+            continue
+
         matched = next((f for f in ALL_FILTERS if f in name), None)
         if matched:
             actives[matched] = concentration
-        elif name:
+        elif any(sup in name for sup in SUPPORTING):
+            supporting.add(next(sup for sup in SUPPORTING if sup in name))
+        elif not any(inert in name for inert in INERT):
             base.add(name)
 
-    return {"actives": actives, "base": base}
+    return {"actives": actives, "supporting": supporting, "base": base}
 
 
 def _actives_match(a: dict, b: dict) -> float:
@@ -97,13 +140,57 @@ def _actives_match(a: dict, b: dict) -> float:
     return max(0.0, 1.0 - avg_gap)
 
 
-def _base_similarity(a: dict, b: dict) -> float:
-    """Jaccard similarity of the non-active ingredients."""
-    if not a["base"] or not b["base"]:
+def _set_similarity(x: set, y: set) -> float:
+    """Jaccard similarity between two ingredient sets."""
+    if not x or not y:
         return 0.0
-    intersection = len(a["base"] & b["base"])
-    union = len(a["base"] | b["base"])
-    return intersection / union if union else 0.0
+    union = len(x | y)
+    return len(x & y) / union if union else 0.0
+
+
+def _base_similarity(a: dict, b: dict) -> float:
+    """Kept for callers that want the base tier alone."""
+    return _set_similarity(a["base"], b["base"])
+
+
+def formula_match(a: dict, b: dict) -> int:
+    """Weighted formula match, 0-100.
+
+    Actives dominate because they are what the product DOES. Supporting
+    ingredients shape the result. Base filler is nearly irrelevant, which is
+    why sharing water and phenoxyethanol earns almost nothing.
+    """
+    scores = {
+        "actives": _actives_match(a, b),
+        "supporting": _set_similarity(a["supporting"], b["supporting"]),
+        "base": _set_similarity(a["base"], b["base"]),
+    }
+
+    # Renormalise over tiers where at least one product has data, so a product
+    # with no supporting ingredients is not penalised for our missing tier.
+    usable = {
+        tier: weight
+        for tier, weight in MATCH_WEIGHTS.items()
+        if (a[tier] or b[tier])
+    }
+    total = sum(usable.values()) or 1.0
+
+    return round(100 * sum(scores[t] * w for t, w in usable.items()) / total)
+
+
+def match_label(match: int) -> tuple[str, str]:
+    """What to call a given match percentage.
+
+    The wording matters as much as the number. Calling a 74% match a "dupe"
+    to fill out recommendations is how a comparison tool loses trust.
+    """
+    if match >= 90:
+        return "Very close dupe", "very-close"
+    if match >= DUPE_THRESHOLD:
+        return "Strong dupe", "strong"
+    if match >= 70:
+        return "Similar alternative", "similar"
+    return "", ""
 
 
 def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
@@ -133,10 +220,12 @@ def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
             if active_match < ACTIVE_MATCH_REQUIRED:
                 continue
 
-            base_match = _base_similarity(prints[product["asin"]], prints[other["asin"]])
-            if base_match < BASE_SIMILARITY_MIN:
-                continue
+            match = formula_match(prints[product["asin"]], prints[other["asin"]])
+            label, tier = match_label(match)
+            if not label:
+                continue  # below 70 it is simply a different product
 
+            fa, fb = prints[product["asin"]], prints[other["asin"]]
             matches.append(
                 {
                     "asin": other["asin"],
@@ -146,7 +235,12 @@ def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
                     "image_url": other.get("image_url", ""),
                     "saving": round(saving, 2),
                     "saving_percent": round(100 * saving / product["price"]),
-                    "formula_match": round(100 * (active_match * 0.7 + base_match * 0.3)),
+                    "formula_match": match,
+                    "label": label,
+                    "tier": tier,
+                    # Shown on the card so the claim is checkable, not asserted.
+                    "same_actives": set(fa["actives"]) == set(fb["actives"]),
+                    "shared_supporting": sorted(fa["supporting"] & fb["supporting"])[:4],
                 }
             )
 

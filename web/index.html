@@ -627,6 +627,14 @@ function goodAndCatch(p) {
     else if (t.sentiment === 'negative') bad.push(`People report ${t.theme}`);
   });
 
+  // What users with a stated skin type reported. This belongs beside the
+  // other things people said -- not driving the filter, where it would
+  // silently exclude products nobody happened to discuss.
+  (p.skin_types || []).forEach(st => {
+    if (st.verdict === 'works-well') good.push(`Users with ${st.skin_type} skin got on well with it`);
+    else if (st.verdict === 'poorly') bad.push(`Users with ${st.skin_type} skin reported problems`);
+  });
+
   const derms = (p.experts || {}).unique_experts || 0;
   if (derms) good.push(`${derms} dermatologist${derms > 1 ? 's' : ''} recommend it`);
 
@@ -650,10 +658,14 @@ function goodAndCatch(p) {
 
 // A dupe is the most shareable thing we produce, so it gets real estate.
 function dupeBox(p) {
-  const d = (p.dupes || [])[0];
-  if (!d) return '';
+  // Defensive: a malformed dupes field once arrived as a JSON STRING rather
+  // than a list, so indexing [0] returned a character and .toFixed blew up
+  // the entire render. One bad row must never blank the page.
+  const list = Array.isArray(p.dupes) ? p.dupes : [];
+  const d = list[0];
+  if (!d || typeof d.price !== 'number') return '';
   return `<div class="dupebox">
-    <div class="lead">👯 Love it but not the price?</div>
+    <div class="lead">👯 ${esc(d.label || 'Similar alternative')} &middot; ${d.formula_match}% formula match</div>
     <div class="vs2">
       <div class="vsx">
         ${p.image_url ? `<img src="${esc(bigImage(p.image_url))}" alt="">` : '<div class="ph"></div>'}
@@ -663,12 +675,14 @@ function dupeBox(p) {
       <div class="vsx">
         ${d.image_url ? `<img src="${esc(bigImage(d.image_url))}" alt="">` : '<div class="ph"></div>'}
         <div class="nm">${esc(d.brand)}</div>
-        <div class="pr" style="color:var(--good)">$${d.price.toFixed(2)}</div>
+        <div class="pr" style="color:var(--good)">$${(d.price ?? 0).toFixed(2)}</div>
       </div>
-      <div class="sav">save<br><b>$${d.saving.toFixed(2)}</b></div>
+      <div class="sav">save<br><b>$${(d.saving ?? 0).toFixed(2)}</b></div>
     </div>
     <div style="font-size:12.5px;color:var(--muted);margin-top:10px">
-      ${d.formula_match}% formula match — same actives</div>
+      ${d.same_actives ? '✓ Same key actives' : '~ Partially matching actives'}${
+        (d.shared_supporting || []).length
+          ? ' &middot; shares ' + d.shared_supporting.map(esc).join(', ') : ''}</div>
   </div>`;
 }
 
@@ -692,7 +706,6 @@ function seeWhy(p) {
   const sections = [
     ['Dermatologists', (p.experts || {}).unique_experts || 0, experts(p)],
     ['What people say', (p.themes || []).length, themes(p)],
-    ['By skin type', (p.skin_types || []).length, skinTypes(p)],
     ['Brand claims vs users', (p.claims || []).length, claims(p)],
   ].filter(([, n, html]) => n > 0 && html);
 
@@ -765,7 +778,10 @@ function row(p) {
     ${shot(p)}
     <div>
       <h2 class="name">${link}</h2>
-      <p class="meta">${esc(p.brand)} · $${(p.price ?? 0).toFixed(2)}</p>
+      <p class="meta">${esc(p.brand)} · $${(p.price ?? 0).toFixed(2)}${
+        (p.marketed_for || []).length
+          ? ' · <span style="color:var(--accent)">for ' + (p.marketed_for).map(esc).join(', ') + ' skin</span>'
+          : ''}</p>
       <div class="verdictline">
         <span class="vbig ${cls}">${verdict}</span>
         <span class="vscore">${Math.round(p.score)}/100</span>
@@ -788,7 +804,12 @@ function render(products) {
     return;
   }
   count.textContent = `${products.length} product${products.length === 1 ? '' : 's'}`;
-  list.innerHTML = products.map(row).join('');
+  // Render per-product so one malformed row is skipped rather than taking
+  // the whole list down with it.
+  list.innerHTML = products.map(p => {
+    try { return row(p); }
+    catch (e) { console.warn('skipped', p.asin, e.message); return ''; }
+  }).join('');
 }
 
 function apply() {
@@ -807,9 +828,14 @@ function apply() {
       t.sentiment === 'negative' && (t.theme + ' ' + t.summary).toLowerCase().includes(bad)));
   });
 
+  // Filter on what the product is MADE FOR, from its own label. A product
+  // whose label states no skin type shows for EVERYONE -- silence is not
+  // exclusion, and most sunscreens are sold to everybody.
   const skin = document.querySelector('input[name="skin"]:checked')?.value;
-  if (skin) out = out.filter(p => (p.skin_types || []).some(s =>
-    s.skin_type === skin && s.verdict !== 'poorly'));
+  if (skin) out = out.filter(p => {
+    const made = p.marketed_for || [];
+    return made.length === 0 || made.includes(skin);
+  });
 
   if (document.querySelector('.f[data-filter="derm"]:checked'))
     out = out.filter(p => (p.experts?.unique_experts || 0) > 0);

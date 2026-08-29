@@ -318,6 +318,11 @@ def ranking_node(state: TruthState) -> dict:
         # Which skin types reported what -- from commenters' own words, never
         # inferred from the formula.
         "skin_types": themes.get("skin_types", []),
+        # What the LABEL says it is for. Drives the filter, and is a marketing
+        # claim rather than evidence -- what users report goes in the themes.
+        "marketed_for": __import__(
+            "tools.marketed_for", fromlist=["x"]
+        ).marketed_for(product["name"], product.get("marketing_claims") or []),
         # Which source the sentiment came from. Amazon-derived sentiment is a
         # materially weaker claim and the reader must be able to see that.
         "sentiment_source": reddit.get("source", ""),

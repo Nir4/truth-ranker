@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS rankings (
     skin_types        TEXT,           -- JSON: what each skin type reported
     sentiment_source  TEXT,           -- reddit-public | amazon-reviews
     dupes             TEXT,           -- JSON: cheaper products, same formula
+    marketed_for      TEXT,           -- JSON: skin types the LABEL targets
     experts           TEXT,           -- JSON: named dermatologist mentions
     claims            TEXT,           -- JSON: brand claims vs research
     claim_accuracy    REAL,
@@ -84,7 +85,7 @@ def init_db() -> None:
             "verdict": "TEXT", "confidence": "TEXT", "is_safe": "INTEGER",
             "safety_notes": "TEXT", "expert_findings": "TEXT", "evidence": "TEXT",
             "sources": "TEXT", "themes": "TEXT", "skin_types": "TEXT",
-            "sentiment_source": "TEXT", "dupes": "TEXT", "experts": "TEXT", "claims": "TEXT",
+            "sentiment_source": "TEXT", "dupes": "TEXT", "marketed_for": "TEXT", "experts": "TEXT", "claims": "TEXT",
             "claim_accuracy": "REAL", "researched_themes": "TEXT",
             "ingredient_functions": "TEXT", "function_summary": "TEXT",
             "community_summary": "TEXT", "ingredients": "TEXT",
@@ -105,10 +106,10 @@ def save_result(product: dict, state: dict) -> None:
                 asin, name, brand, category, price, image_url, score, subscores, hype_gap,
                 bestseller_rank, star_rating, review_count, verdict, confidence,
                 is_safe, safety_notes, expert_findings, evidence, sources, themes,
-                experts, claims, claim_accuracy, researched_themes, skin_types, sentiment_source,
+                experts, claims, claim_accuracy, researched_themes, skin_types, sentiment_source, marketed_for,
                 ingredient_functions, function_summary,
                 community_summary, ingredients, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP)
             """,
             (
                 product["asin"],
@@ -137,6 +138,7 @@ def save_result(product: dict, state: dict) -> None:
                 json.dumps(state.get("researched_themes", [])),
                 json.dumps(state.get("skin_types", [])),
                 state.get("sentiment_source", ""),
+                json.dumps(state.get("marketed_for", [])),
                 json.dumps(state.get("ingredient_functions", [])),
                 json.dumps(state.get("function_summary", {})),
                 state.get("community_summary", ""),
@@ -152,7 +154,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     # missing some. Default instead of raising -- a KeyError here takes down the
     # whole site for one absent field.
     for field in ("subscores", "evidence", "sources", "themes", "skin_types", "experts", "claims",
-                  "dupes", "researched_themes", "ingredient_functions", "function_summary",
+                  "dupes", "marketed_for", "researched_themes", "ingredient_functions", "function_summary",
                   "ingredients"):
         empty = {} if field in ("subscores", "function_summary", "experts") else []
         raw = d.get(field)
