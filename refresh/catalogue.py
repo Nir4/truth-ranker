@@ -59,6 +59,24 @@ def load_catalogue(limit: int) -> list[dict]:
         if cached:
             cached["bestseller_rank"] = row["bestseller_rank"]
             cached["image_url"] = cached.get("image_url") or row.get("image_url", "")
+
+            # A cached MISS is not a cached answer. 11 of 30 products had no
+            # ingredients because they were cached while brand extraction was
+            # broken ("Sun Bum" -> "Sun"), and the empty list was then served
+            # back forever -- the lookup itself finds all of them today.
+            #
+            # Only the absence is retried; a cached hit is still reused, so
+            # this does not undo the caching.
+            if not cached.get("ingredients"):
+                resolved = resolve_ingredients(cached)
+                cached["ingredients"] = resolved["ingredients"]
+                cached["ingredient_source"] = resolved["source"]
+                if resolved["ingredients"]:
+                    cache_put("detail", asin, cached)
+                    print(f"  [{i}/{len(listing)}] recovered "
+                          f"{len(resolved['ingredients'])} ingredients for "
+                          f"{cached.get('brand', '')[:16]}")
+
             products.append(cached)
             continue
 

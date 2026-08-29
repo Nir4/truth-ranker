@@ -181,4 +181,25 @@ def verify_match(
                 )
                 return MatchVerdict(consistent=True, confidence=0.8, conflict="")
 
+        # SCOPE CHECK. The question here is only "is this the same product",
+        # never "is this claim true". The verifier rejected Thinksport's FDA
+        # filing because natural fragrance oil "contradicts the claim of being
+        # reef friendly" -- a real opinion about an environmental claim, and
+        # entirely beside the point. Reef safety is not an identity attribute,
+        # so it cannot tell us we matched the wrong filing; the product simply
+        # lost its whole ingredient list to an argument about coral.
+        #
+        # Claims we cannot adjudicate from a drug label are also exactly the
+        # ones CLAUDE.md says not to manufacture doubt about.
+        OUT_OF_SCOPE = (
+            "reef", "coral", "ocean", "environment", "eco", "cruelty",
+            "vegan", "natural", "organic", "clean", "sustainab", "biodegrad",
+        )
+        if any(word in quote for word in OUT_OF_SCOPE):
+            print(
+                f"    [verify] ignoring out-of-scope rejection ({verdict.claim_quote!r}): "
+                f"not an identity mismatch"
+            )
+            return MatchVerdict(consistent=True, confidence=0.6, conflict="")
+
     return verdict
