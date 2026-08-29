@@ -326,7 +326,17 @@ def ranking_node(state: TruthState) -> dict:
     if rank >= 999:
         hype_gap = 0.0
     else:
-        popularity = max(0.0, 100.0 - (rank - 1) * 2) if rank <= 50 else 0.0
+        # Rank -> popularity across the full list we actually fetch.
+        #
+        # This used to be `100 - (rank-1)*2 if rank <= 50 else 0`, which was
+        # fine while we only ever read page one (30 products). Pagination now
+        # reaches rank 80, and every product past 50 was being handed
+        # popularity 0 -- so a genuine best-seller at #52 scoring 50 showed a
+        # gap of -50 and was labelled UNDERRATED for selling well.
+        #
+        # 100 at rank 1 falling to ~20 at rank 80. Being #80 of everything
+        # Amazon sells is still popular; it is just not #1.
+        popularity = max(0.0, 100.0 - (rank - 1) * 1.0)
         hype_gap = popularity - score  # positive = more popular than it deserves
 
     verdict = _write_verdict(
