@@ -153,7 +153,18 @@ def resolve_ingredients(product: dict, allow_ocr: bool = True) -> dict:
     #
     # It runs BEFORE OCR because it is cheaper (text, not vision tokens) and
     # more reliable than reading a photograph of a label.
-    if brand:
+    # Off during a scraping run: the scraper and this search share one
+    # Firecrawl quota, and when they compete BOTH lose. Every product in the
+    # serum batch came back "0 ingredients" because each research call was
+    # 429'd while the catalogue scraper held the budget.
+    #
+    # scripts/research_ingredients.py runs it afterwards with the quota to
+    # itself, which recovers the same products reliably.
+    import os as _os
+
+    _web_ok = _os.getenv("SKINSAYER_WEB_INGREDIENTS", "1") not in ("0", "false", "")
+
+    if brand and _web_ok:
         from tools.ingredient_research import find_ingredients
 
         researched = find_ingredients(brand, name)

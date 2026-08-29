@@ -47,6 +47,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # The catalogue scraper needs the whole Firecrawl budget. Web ingredient
+    # research runs afterwards, from scripts/research_ingredients.py, where it
+    # is not competing with the scraper for the same quota.
+    import os
+
+    os.environ.setdefault("SKINSAYER_WEB_INGREDIENTS", "0")
+
     init_db()
 
     wanted = (
