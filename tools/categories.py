@@ -37,7 +37,7 @@ CATEGORIES = {
     },
     "moisturizer": {
         "label": "Moisturiser",
-        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Facial-Moisturizers/zgbs/beauty/11060451011",
+        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Personal-Care-Facial-Creams-Moisturizers/zgbs/beauty/11061301",
         "efficacy_means": (
             "measured hydration, barrier repair, and how long the effect lasts -- "
             "NOT UV protection"
