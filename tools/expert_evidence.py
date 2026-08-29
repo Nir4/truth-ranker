@@ -281,10 +281,14 @@ def expert_score(summary: dict) -> tuple[float, str]:
     positive = summary["positive"] + 0.5 * summary["qualified"]
     ratio = positive / n
 
-    # Confidence grows with the number of independent experts, but slowly --
-    # three experts agreeing is meaningfully better than one, and ten is not
-    # meaningfully better than three.
-    weight = min(1.0, 0.4 + 0.2 * n)
+    # ONE named dermatologist recommending a product is a strong signal -- a
+    # clinician putting their name to it is not something a brand can
+    # manufacture. So a single positive mention already scores well.
+    #
+    # But it should not tie with eleven. Confidence still grows with the
+    # number of independent experts, just from a high floor rather than from
+    # neutral: 1 -> 0.75, 3 -> 0.9, 6+ -> 1.0.
+    weight = min(1.0, 0.65 + 0.06 * n)
     score = 50 + (ratio - 0.5) * 100 * weight
 
     note = (

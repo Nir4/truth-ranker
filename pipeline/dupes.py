@@ -23,6 +23,15 @@ from tools.ingredient import _normalise, MINERAL_FILTERS, CHEMICAL_FILTERS
 
 ALL_FILTERS = MINERAL_FILTERS | CHEMICAL_FILTERS
 
+
+def _format_of(name: str) -> str:
+    """Spray, stick, lotion...? A stick is not a dupe for a spray."""
+    lowered = (name or "").lower()
+    for form in ("spray", "stick", "mist", "gel", "milk", "fluid", "balm", "oil"):
+        if form in lowered:
+            return form
+    return "lotion"  # the default when nothing is stated
+
 # A dupe must match the actives closely. Two sunscreens with different UV
 # filters are not dupes no matter how similar the base is -- the actives ARE
 # the product.
@@ -74,6 +83,40 @@ BASE_SIMILARITY_MIN = 0.15
 # $3: Banana Boat and Aveeno have IDENTICAL actives and differ by $1.79,
 # which is a real dupe that $3 was hiding.
 MIN_SAVING = 1.0
+
+
+def parse_size(name: str) -> float | None:
+    """Total fluid ounces from a product name, accounting for multi-packs.
+
+    Comparing sticker prices without this is meaningless: a 12 oz two-pack
+    at $13.97 was being called "more expensive" than a 1.5 oz stick at $7.90,
+    when it is actually a third of the price per ounce.
+    """
+    lowered = name.lower()
+
+    match = re.search(r"([\d.]+)\s*(?:fl\.?\s*)?(?:oz|ounce|ml)\b", lowered)
+    if not match:
+        return None
+
+    size = float(match.group(1))
+    if "ml" in match.group(0):
+        size /= 29.574  # ml -> fl oz
+
+    # "(2 Pack)", "3-pack", "pack of 2"
+    pack = re.search(r"(\d+)\s*[- ]?pack|pack of\s*(\d+)", lowered)
+    if pack:
+        size *= int(pack.group(1) or pack.group(2))
+
+    return round(size, 2)
+
+
+def price_per_oz(product: dict) -> float | None:
+    """Cost per fluid ounce, or None when the size is unknown."""
+    size = parse_size(product.get("name", ""))
+    price = product.get("price") or 0
+    if not size or not price:
+        return None
+    return round(price / size, 2)
 
 
 def _parse_concentration(ingredient: str) -> tuple[str, float | None]:
@@ -212,7 +255,25 @@ def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
             if other["asin"] == product["asin"]:
                 continue
 
-            saving = product["price"] - other["price"]
+            # Compare on COST PER OUNCE where both sizes are known. A 12 oz
+            # two-pack is not "more expensive" than a 1.5 oz stick just
+            # because the sticker is higher.
+            ppo_a, ppo_b = price_per_oz(product), price_per_oz(other)
+
+            if ppo_a is not None and ppo_b is not None:
+                if ppo_b >= ppo_a:
+                    continue  # not actually cheaper per unit
+                # Saving is expressed for a comparable amount of product.
+                size_a = parse_size(product.get("name", "")) or 1
+                saving = round((ppo_a - ppo_b) * size_a, 2)
+            else:
+                # Size unknown for one of them -- fall back to sticker price,
+                # but only when the format matches, so a stick is not offered
+                # as a dupe for a spray.
+                if _format_of(product["name"]) != _format_of(other["name"]):
+                    continue
+                saving = product["price"] - other["price"]
+
             if saving < MIN_SAVING:
                 continue  # not cheaper enough to matter
 
@@ -234,7 +295,11 @@ def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
                     "price": other["price"],
                     "image_url": other.get("image_url", ""),
                     "saving": round(saving, 2),
-                    "saving_percent": round(100 * saving / product["price"]),
+                    "saving_percent": round(100 * saving / max(product["price"], 0.01)),
+                    # Shown so the comparison is checkable rather than asserted.
+                    "price_per_oz": ppo_b,
+                    "their_price_per_oz": ppo_a,
+                    "size": parse_size(other.get("name", "")),
                     "formula_match": match,
                     "label": label,
                     "tier": tier,

@@ -207,8 +207,21 @@
   .seewhy .inner { margin-top:18px; padding-top:18px; border-top:2px solid var(--hair); }
 
   /* ---- evidence table inside "see why" ---- */
-  .evrow { display:grid; grid-template-columns:150px 1fr 46px; gap:12px;
-           align-items:center; padding:6px 0; font-size:13.5px; }
+  .evrow, .evdrop > summary {
+    display:grid; grid-template-columns:170px 1fr 46px; gap:12px;
+    align-items:center; padding:11px 14px; font-size:13.5px;
+    border-radius:16px; list-style:none;
+  }
+  .evdrop { margin-bottom:6px; border-radius:16px;
+            background:color-mix(in srgb,var(--hair) 35%,transparent);
+            transition:background .18s; }
+  .evdrop > summary { cursor:pointer; }
+  .evdrop > summary::-webkit-details-marker { display:none; }
+  .evdrop:hover, .evdrop[open] { background:var(--accent-soft); }
+  .evdrop > summary .k::after { content:' ›'; color:var(--muted); }
+  .evdrop[open] > summary .k::after { content:' ⌄'; }
+  .evrow.flat { margin-bottom:6px; opacity:.72; }
+  .evbody { padding:2px 16px 16px; }
   .evrow .k { color:var(--muted); font-weight:600; }
   .evrow .track { display:block; height:9px; background:var(--hair); border-radius:999px; overflow:hidden; }
   .evrow .fill { display:block; height:9px; border-radius:999px; }
@@ -402,6 +415,9 @@
                        object-fit:contain; padding:7px; display:block; }
   .vsx .nm { font-size:11px; margin-top:5px; color:var(--muted); max-width:80px; }
   .vsx .pr { font-size:14px; font-weight:600; }
+  /* Per-ounce, because sticker price alone made a 12 oz two-pack look
+     more expensive than a 1.5 oz stick. */
+  .vsx .ppo { font-size:11px; color:var(--muted); margin-top:2px; }
   .arw { color:var(--muted); font-size:12px; }
   .sav { margin-left:auto; text-align:right; font-size:11px; color:var(--good); }
   .sav b { font-size:16px; }
@@ -670,14 +686,17 @@ function dupeBox(p) {
       <div class="vsx">
         ${p.image_url ? `<img src="${esc(bigImage(p.image_url))}" alt="">` : '<div class="ph"></div>'}
         <div class="nm">${esc(p.brand)}</div><div class="pr">$${(p.price ?? 0).toFixed(2)}</div>
+        ${d.their_price_per_oz ? `<div class="ppo">$${d.their_price_per_oz.toFixed(2)}/oz</div>` : ''}
       </div>
       <div class="arw">vs</div>
       <div class="vsx">
         ${d.image_url ? `<img src="${esc(bigImage(d.image_url))}" alt="">` : '<div class="ph"></div>'}
         <div class="nm">${esc(d.brand)}</div>
         <div class="pr" style="color:var(--good)">$${(d.price ?? 0).toFixed(2)}</div>
+        ${d.price_per_oz ? `<div class="ppo">$${d.price_per_oz.toFixed(2)}/oz</div>` : ''}
       </div>
-      <div class="sav">save<br><b>$${(d.saving ?? 0).toFixed(2)}</b></div>
+      <div class="sav">${d.price_per_oz ? 'cheaper per oz' : 'save'}<br>
+        <b>$${(d.saving ?? 0).toFixed(2)}</b></div>
     </div>
     <div style="font-size:12.5px;color:var(--muted);margin-top:10px">
       ${d.same_actives ? '✓ Same key actives' : '~ Partially matching actives'}${
@@ -690,36 +709,35 @@ function dupeBox(p) {
 // RAG, dermatologists and citations surface -- only once someone asks.
 function seeWhy(p) {
   const s = p.subscores || {};
+
+  // ONE list. Each score IS the dropdown -- click the row to open the
+  // evidence behind that number, rather than reading bars in one place and
+  // hunting for the detail in another.
   const rows = [
-    ['🔬 Research', s.efficacy],
-    ['💬 What people say', s.sentiment],
-    ['👩‍⚕️ Dermatologists', s.expert],
-    ['🧴 Ingredients', s.ingredients],
-    ['📣 Claim accuracy', p.claim_accuracy],
+    ['👩‍⚕️ Dermatologists', s.expert, (p.experts || {}).unique_experts || 0, experts(p)],
+    ['💬 What people say', s.sentiment, (p.themes || []).length, themes(p)],
+    ['📣 Brand claims', p.claim_accuracy, (p.claims || []).length, claims(p)],
+    ['🔬 Ingredient research', s.efficacy, 1,
+     `<div class="detail">${esc(p.expert_findings) || 'No findings recorded.'}</div>`],
   ].filter(([, v]) => typeof v === 'number');
 
-  const bars = rows.map(([k, v]) => `
-    <div class="evrow"><span class="k">${k}</span>
-      <span class="track"><span class="fill" style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>
-      <span class="v">${Math.round(v)}</span></div>`).join('');
-
-  const sections = [
-    ['Dermatologists', (p.experts || {}).unique_experts || 0, experts(p)],
-    ['What people say', (p.themes || []).length, themes(p)],
-    ['Brand claims vs users', (p.claims || []).length, claims(p)],
-  ].filter(([, n, html]) => n > 0 && html);
+  const body = rows.map(([label, v, n, html]) => {
+    const bar = `<span class="track"><span class="fill"
+        style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>`;
+    // No evidence to show -> a plain row, not a dead dropdown.
+    if (!n || !html) {
+      return `<div class="evrow flat"><span class="k">${label}</span>${bar}
+        <span class="v">${Math.round(v)}</span></div>`;
+    }
+    return `<details class="evdrop">
+      <summary><span class="k">${label}</span>${bar}
+        <span class="v">${Math.round(v)}</span></summary>
+      <div class="evbody">${html}</div>
+    </details>`;
+  }).join('');
 
   return `<details class="seewhy"><summary>Why did Skin Sayer say this?</summary>
-    <div class="inner">
-      ${bars}
-      ${sections.length ? `<div class="drops">${sections.map(([label, n, html]) => `
-        <details class="drop"><summary>${label}<span class="n2">${n}</span></summary>
-          <div class="body">${html}</div></details>`).join('')}</div>` : ''}
-      <details class="drop" style="margin-top:8px">
-        <summary>Full research findings</summary>
-        <div class="body"><div class="detail">${esc(p.expert_findings) || 'No findings recorded.'}</div></div>
-      </details>
-    </div></details>`;
+    <div class="inner">${body}</div></details>`;
 }
 
 function experts(p) {

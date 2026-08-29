@@ -43,10 +43,21 @@ from tools.ingredient_functions import label_ingredients, function_summary
 # Four evidence tiers, weighted by how hard each is to fake.
 # Reddit dominates because it is the least sponsored signal; expert mentions
 # come from named clinicians with stated reasons; research is the backstop.
+# Ordered by how hard each signal is to fake, and how directly it answers
+# "should I buy this?".
+#
+#   dermatologists  a named clinician staking their reputation on a product
+#                   is the strongest single endorsement available. Brands
+#                   cannot manufacture it the way they can reviews.
+#   what people say the least sponsored large-scale signal
+#   brand claims    do the promises hold up against what users report?
+#   research        ingredient-level evidence. It separates products least,
+#                   since most sunscreens share the same 4-5 FDA filters.
 WEIGHTS = {
-    "sentiment": 0.50,   # what real users report
-    "efficacy": 0.30,    # what published research supports
-    "expert": 0.20,      # named board-certified dermatologists
+    "expert": 0.35,
+    "sentiment": 0.30,
+    "claims": 0.20,
+    "efficacy": 0.15,
 }
 
 
@@ -276,7 +287,17 @@ def ranking_node(state: TruthState) -> dict:
                 themes["themes"], ingredients, product["name"]
             )
 
-    score = sum(subscores[k] * WEIGHTS[k] for k in WEIGHTS)
+    # Claim accuracy joins the score. A product whose own marketing its buyers
+    # contradict is worse than one that promises less and delivers it.
+    if claims_result.get("accuracy") is not None:
+        subscores["claims"] = claims_result["accuracy"]
+
+    # Renormalise over the signals we actually have. A product with no derm
+    # coverage should be judged on the rest, not dragged toward neutral by a
+    # dimension we simply could not measure.
+    usable = {k: w for k, w in WEIGHTS.items() if k in subscores}
+    total_weight = sum(usable.values()) or 1.0
+    score = sum(subscores[k] * w for k, w in usable.items()) / total_weight
 
     # --- the hype gap ---
     # Convert best-seller rank to a 0-100 popularity figure. Rank 1 = 100.
