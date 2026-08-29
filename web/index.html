@@ -364,7 +364,16 @@
     position:sticky; top:22px; border:none; border-radius:30px;
     padding:24px; background:var(--surface);
     box-shadow:0 4px 20px rgba(61,44,58,.06);
+    /* A sticky panel taller than the viewport swallows the scroll wheel --
+       the page stops moving while the cursor is over it. Capping the height
+       and scrolling INSIDE it fixes that; overscroll-behavior stops the
+       inner scroll from chaining back to the page at the boundary. */
+    max-height:calc(100vh - 44px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
   }
+  .news::-webkit-scrollbar { width:6px; }
+  .news::-webkit-scrollbar-thumb { background:var(--hair); border-radius:999px; }
   .news h2 { margin:0 0 5px; font-family:"Fredoka",sans-serif; font-size:17px; font-weight:500; }
   .news .sub { margin:0 0 14px; font-size:12px; color:var(--muted); line-height:1.4; }
   .recall { padding:11px 0; border-top:1px solid var(--hair); font-size:12.5px; line-height:1.45; }
@@ -901,8 +910,16 @@ document.querySelectorAll('.bubble[data-view]').forEach(b => b.onclick = () => {
 document.getElementById('q').addEventListener('input', apply);
 document.getElementById('filterToggle').onclick = e => {
   e.stopPropagation();
-  document.getElementById('filters').classList.toggle('open');
-  document.getElementById('filterToggle').classList.toggle('on');
+  const panel = document.getElementById('filters');
+  const opening = !panel.classList.contains('open');
+
+  // Only one panel open at a time. Leaving both highlighted made it unclear
+  // which controls were actually active.
+  document.getElementById('cmpbar').classList.remove('open');
+  document.getElementById('cmpToggle').classList.remove('on');
+
+  panel.classList.toggle('open', opening);
+  document.getElementById('filterToggle').classList.toggle('on', opening);
 };
 document.querySelectorAll('.f').forEach(cb => cb.onchange = apply);
 document.getElementById('price').addEventListener('input', e => {
@@ -1049,8 +1066,14 @@ async function runCompare() {
 }
 
 document.getElementById('cmpToggle').onclick = () => {
-  document.getElementById('cmpbar').classList.toggle('open');
-  document.getElementById('cmpToggle').classList.toggle('on');
+  const bar = document.getElementById('cmpbar');
+  const opening = !bar.classList.contains('open');
+
+  document.getElementById('filters').classList.remove('open');
+  document.getElementById('filterToggle').classList.remove('on');
+
+  bar.classList.toggle('open', opening);
+  document.getElementById('cmpToggle').classList.toggle('on', opening);
 };
 document.getElementById('closeCmp').onclick = () => {
   document.getElementById('cmpbar').classList.remove('open');

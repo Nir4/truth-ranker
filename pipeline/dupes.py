@@ -28,12 +28,19 @@ ALL_FILTERS = MINERAL_FILTERS | CHEMICAL_FILTERS
 # the product.
 ACTIVE_MATCH_REQUIRED = 0.85
 
-# The base can differ more; texture and preservatives vary without changing
-# what the product does.
-BASE_SIMILARITY_MIN = 0.55
+# The base can differ a LOT. Two sunscreens with identical actives are doing
+# the same job even when built on different emollients -- one may be a lotion
+# and one a spray. Measured on real pairs: identical-actives products scored
+# 0.20-0.67 on base, so 0.55 was rejecting genuine dupes.
+#
+# The actives threshold does the real work; this only excludes pairs that
+# happen to share filters while being fundamentally different formulations.
+BASE_SIMILARITY_MIN = 0.15
 
-# Below this price difference it is not worth telling anyone.
-MIN_SAVING = 3.0
+# Below this price difference it is not worth telling anyone. Lowered from
+# $3: Banana Boat and Aveeno have IDENTICAL actives and differ by $1.79,
+# which is a real dupe that $3 was hiding.
+MIN_SAVING = 1.0
 
 
 def _parse_concentration(ingredient: str) -> tuple[str, float | None]:

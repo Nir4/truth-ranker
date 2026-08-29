@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS rankings (
     themes            TEXT,           -- JSON: recurring community themes
     skin_types        TEXT,           -- JSON: what each skin type reported
     sentiment_source  TEXT,           -- reddit-public | amazon-reviews
+    dupes             TEXT,           -- JSON: cheaper products, same formula
     experts           TEXT,           -- JSON: named dermatologist mentions
     claims            TEXT,           -- JSON: brand claims vs research
     claim_accuracy    REAL,
@@ -83,7 +84,7 @@ def init_db() -> None:
             "verdict": "TEXT", "confidence": "TEXT", "is_safe": "INTEGER",
             "safety_notes": "TEXT", "expert_findings": "TEXT", "evidence": "TEXT",
             "sources": "TEXT", "themes": "TEXT", "skin_types": "TEXT",
-            "sentiment_source": "TEXT", "experts": "TEXT", "claims": "TEXT",
+            "sentiment_source": "TEXT", "dupes": "TEXT", "experts": "TEXT", "claims": "TEXT",
             "claim_accuracy": "REAL", "researched_themes": "TEXT",
             "ingredient_functions": "TEXT", "function_summary": "TEXT",
             "community_summary": "TEXT", "ingredients": "TEXT",
@@ -151,7 +152,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     # missing some. Default instead of raising -- a KeyError here takes down the
     # whole site for one absent field.
     for field in ("subscores", "evidence", "sources", "themes", "skin_types", "experts", "claims",
-                  "researched_themes", "ingredient_functions", "function_summary",
+                  "dupes", "researched_themes", "ingredient_functions", "function_summary",
                   "ingredients"):
         empty = {} if field in ("subscores", "function_summary", "experts") else []
         raw = d.get(field)
