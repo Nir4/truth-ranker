@@ -35,10 +35,20 @@ from pydantic import BaseModel, Field
 
 # Gallery images to examine per product. The ingredient panel is usually a
 # later image (front-of-pack shots come first), so we check several.
-MAX_IMAGES = 5
+#
+# Lowered from 5. This runs for every product without an FDA filing, which
+# is most of the non-sunscreen catalogue, so it is 5 vision calls x hundreds
+# of products -- enough to exhaust the gpt-4o-mini quota and stall the run.
+# Three is the point where the extra calls stop paying for themselves: a
+# gallery whose first three images have no ingredient panel usually has none.
+MAX_IMAGES = 3
 
 # Below this, we treat the read as failed and return nothing.
 MIN_CONFIDENCE = 0.7
+
+
+class VisionRateLimited(RuntimeError):
+    """The vision quota is exhausted. Distinct from an unreadable image."""
 
 
 class IngredientRead(BaseModel):
@@ -132,6 +142,11 @@ def read_ingredients_from_image(image_url: str) -> IngredientRead | None:
             ]
         )
     except Exception as exc:  # noqa: BLE001
+        if "429" in str(exc) or "rate limit" in str(exc).lower():
+            # Out of quota, not a bad image. Say so distinctly so the caller
+            # can stop rather than spend four more calls learning the same
+            # thing, and so the log does not fill with identical lines.
+            raise VisionRateLimited(str(exc)[:120]) from exc
         print(f"    [ocr] vision call failed: {str(exc)[:100]}")
         return None
 
@@ -159,7 +174,18 @@ def extract_ingredients(image_urls: list[str], product_name: str = "") -> dict:
         if attempted >= MAX_IMAGES:
             break
 
-        read = read_ingredients_from_image(url)
+        try:
+            read = read_ingredients_from_image(url)
+        except VisionRateLimited as exc:
+            # Enabling gallery_images turned OCR on for every product without
+            # an FDA filing, which is 5 vision calls each. Across 60 products
+            # that exhausted the gpt-4o-mini quota, and with no backoff the
+            # run wedged for four hours emitting the same 429 line and
+            # scoring nothing. Give up on this product's images; the pipeline
+            # already treats missing ingredients as "unknown".
+            print(f"    [ocr] vision quota exhausted, skipping OCR: {exc}")
+            best["note"] = "Ingredient OCR skipped -- vision quota exhausted."
+            return best
         if read is None:
             # Dead URL or download failure -- does not count against our budget,
             # since no vision call was made.
