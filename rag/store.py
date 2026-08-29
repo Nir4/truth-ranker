@@ -19,6 +19,7 @@ model reads the right paragraph.
 """
 
 import os
+import threading
 from pathlib import Path
 
 import chromadb
@@ -29,6 +30,16 @@ from tools.pubmed import research_raw
 DB_PATH = Path(__file__).parent.parent / "data" / "chroma"
 COLLECTION_NAME = "pubmed_abstracts"
 
+# Chroma's PersistentClient keeps process-wide state, and constructing it from
+# several threads at once corrupts that state. With 4 workers this surfaced as
+# three different errors from one cause -- "Could not connect to tenant
+# default_tenant", a KeyError on the store path, and an AttributeError inside
+# the Rust bindings. Building the client once behind a lock and reusing it
+# fixes all three; over 1000 products it is the difference between a handful
+# of retries and hundreds of lost rows.
+_client_lock = threading.Lock()
+_collection = None
+
 
 def get_collection():
     """Open (or create) the local Chroma collection.
@@ -36,8 +47,9 @@ def get_collection():
     PersistentClient writes to disk, so the corpus survives between runs --
     important because the weekly job should not re-embed everything each time.
     """
-    DB_PATH.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(DB_PATH))
+    global _collection
+    if _collection is not None:
+        return _collection
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -51,11 +63,16 @@ def get_collection():
         model_name="text-embedding-3-small",  # cheap and plenty good for abstracts
     )
 
-    return client.get_or_create_collection(
-        name=COLLECTION_NAME,
-        embedding_function=embedder,
-        metadata={"hnsw:space": "cosine"},
-    )
+    with _client_lock:
+        if _collection is None:  # another thread may have won the race
+            DB_PATH.mkdir(parents=True, exist_ok=True)
+            client = chromadb.PersistentClient(path=str(DB_PATH))
+            _collection = client.get_or_create_collection(
+                name=COLLECTION_NAME,
+                embedding_function=embedder,
+                metadata={"hnsw:space": "cosine"},
+            )
+    return _collection
 
 
 def _split_abstract(abstract: str) -> list[str]:

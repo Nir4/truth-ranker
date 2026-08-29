@@ -26,6 +26,7 @@ catch those, because they match on meaning.
 
 import hashlib
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -42,23 +43,39 @@ TTL_DAYS = 120
 # almost certainly about something else.
 MIN_SIMILARITY = 0.35
 
+# Chroma's PersistentClient keeps process-wide state, and constructing it from
+# several threads at once corrupts that state. With 4 workers this surfaced as
+# three different errors from one cause -- "Could not connect to tenant
+# default_tenant", a KeyError on the store path, and an AttributeError inside
+# the Rust bindings. Building the client once behind a lock and reusing it
+# fixes all three; over 1000 products it is the difference between a handful
+# of retries and hundreds of lost rows.
+_client_lock = threading.Lock()
+_collection = None
+
 
 def get_collection():
     """Open (or create) the harvested-comment collection."""
+    global _collection
+    if _collection is not None:
+        return _collection
+
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is required to embed comments.")
 
-    DB_PATH.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(DB_PATH))
-
-    return client.get_or_create_collection(
-        name=COLLECTION,
-        embedding_function=embedding_functions.OpenAIEmbeddingFunction(
-            api_key=api_key, model_name="text-embedding-3-small"
-        ),
-        metadata={"hnsw:space": "cosine"},
-    )
+    with _client_lock:
+        if _collection is None:
+            DB_PATH.mkdir(parents=True, exist_ok=True)
+            client = chromadb.PersistentClient(path=str(DB_PATH))
+            _collection = client.get_or_create_collection(
+                name=COLLECTION,
+                embedding_function=embedding_functions.OpenAIEmbeddingFunction(
+                    api_key=api_key, model_name="text-embedding-3-small"
+                ),
+                metadata={"hnsw:space": "cosine"},
+            )
+    return _collection
 
 
 def harvest(comments: list[dict], searched_for: str = "") -> int:
