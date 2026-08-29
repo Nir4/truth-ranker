@@ -37,12 +37,22 @@ from refresh.run import PACE_SECONDS, _retry_on_rate_limit
 
 def load_catalogue(limit: int) -> list[dict]:
     """Scrape the best-seller list and resolve brands and ingredients."""
+    import tools.firecrawl_scrape as fc_module
     from tools.firecrawl_scrape import fetch_bestsellers, fetch_products
     from tools.apify_mcp import resolve_brand
     from tools.ingredient_source import resolve_ingredients
     from data.cache import get as cache_get, put as cache_put
 
-    print(f"Scraping the top {limit} sunscreens (Firecrawl, keyless)...")
+    # Name the category actually being scraped. Saying "sunscreens" while
+    # working through toners makes the log lie about what ran.
+    from tools.categories import CATEGORIES
+
+    label = next(
+        (c["label"].lower() for c in CATEGORIES.values()
+         if c["bestseller_url"] == fc_module.BESTSELLER_URL),
+        "products",
+    )
+    print(f"Scraping the top {limit} {label} (Firecrawl, keyless)...")
     listing = fetch_bestsellers(limit=limit)
     if not listing:
         print("  Nothing returned. The category URL may be stale:")
