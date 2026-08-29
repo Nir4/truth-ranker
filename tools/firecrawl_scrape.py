@@ -38,24 +38,46 @@ def scrape_product(asin: str, timeout: int = 90) -> dict | None:
     if API_KEY:
         headers["Authorization"] = f"Bearer {API_KEY}"
 
-    try:
-        response = requests.post(
-            SCRAPE_URL,
-            json={"url": url, "formats": ["markdown"], "onlyMainContent": True},
-            headers=headers,
-            timeout=timeout,
-        )
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        print(f"    [firecrawl] {asin} failed: {str(exc)[:70]}")
-        return None
+    # Amazon renders the product page with JavaScript. Scraped too early we get
+    # the loading shell, whose first heading is "Adding to Cart..." -- that
+    # became the product NAME, and the brand agent and ingredient lookup then
+    # searched for a product called "Adding to Cart".
+    #
+    # waitFor gives the page time to render; onlyMainContent stays off because
+    # it strips the image gallery, which is where the ingredient panel lives
+    # for every product without an FDA filing.
+    body = {
+        "url": url,
+        "formats": ["markdown"],
+        "onlyMainContent": False,
+        "waitFor": 3000,
+    }
 
-    payload = response.json()
-    if not payload.get("success"):
-        print(f"    [firecrawl] {asin}: {str(payload.get('error'))[:90]}")
-        return None
+    for attempt in range(2):
+        try:
+            response = requests.post(SCRAPE_URL, json=body, headers=headers, timeout=timeout)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            print(f"    [firecrawl] {asin} failed: {str(exc)[:70]}")
+            return None
 
-    return {"asin": asin, "url": url, "markdown": payload.get("data", {}).get("markdown", "")}
+        payload = response.json()
+        if not payload.get("success"):
+            print(f"    [firecrawl] {asin}: {str(payload.get('error'))[:90]}")
+            return None
+
+        md = payload.get("data", {}).get("markdown", "")
+
+        # Did we get the shell rather than the page? Retry once, waiting longer.
+        # Accepting it silently is worse than failing: it produces a product
+        # named after a button.
+        shell = ("Adding to Cart" in md[:600]) or len(md) < 2000
+        if not shell or attempt:
+            return {"asin": asin, "url": url, "markdown": md}
+
+        body["waitFor"] = 8000
+
+    return {"asin": asin, "url": url, "markdown": ""}
 
 
 def _first(pattern: str, text: str, group: int = 1) -> str:
@@ -89,6 +111,22 @@ def parse_product(scraped: dict) -> dict:
 
     image = _first(r"!\[[^\]]*\]\((https://m\.media-amazon\.com/images/I/[^)]+)\)", md)
 
+    # EVERY gallery image, not just the first. Toners, cleansers and serums are
+    # not OTC drugs, so they have no FDA filing, and Open Beauty Facts has no
+    # entry for most of them -- medicube, The Ordinary and Thayers all miss.
+    # For those the ingredients exist only as a photo of the back of the box,
+    # which is what the OCR step at ingredient_source.py step 4 reads.
+    #
+    # That step could never fire while this field was hardcoded to []. Without
+    # it every non-sunscreen product scores with "ingredients unknown".
+    gallery: list[str] = []
+    for url in re.findall(r"\((https://m\.media-amazon\.com/images/I/[^)\s]+)\)", md):
+        # Amazon encodes size in the filename (._AC_SX466_.jpg). Strip it to
+        # request the full-resolution image -- OCR cannot read a thumbnail.
+        full = re.sub(r"\._[A-Z0-9_,]+_\.", ".", url)
+        if full not in gallery:
+            gallery.append(full)
+
     # Amazon's first H1 is often a page heading ("Product summary presents key
     # product information"), not the product. Prefer the productTitle span,
     # then any H1 that is not obviously boilerplate.
@@ -96,10 +134,16 @@ def parse_product(scraped: dict) -> dict:
     if not name:
         for candidate in re.findall(r"^#\s+(.{10,200})$", md, re.M):
             lowered = candidate.lower()
+            # "Adding to Cart..." is the JS loading shell, not a product. It
+            # was becoming the NAME, and the brand agent and FDA lookup then
+            # searched for a product called "Adding to Cart".
             if not any(
                 junk in lowered
                 for junk in ("product summary", "presents key", "about this item",
-                             "customer review", "buying options", "product information")
+                             "customer review", "buying options", "product information",
+                             "sign in", "back to results")
+            ) and not lowered.startswith(("adding to cart", "added to cart",
+                                          "add to cart", "added to basket")
             ):
                 name = candidate.strip()
                 break
@@ -115,7 +159,7 @@ def parse_product(scraped: dict) -> dict:
         "ingredients": ingredients,
         "marketing_claims": claims,
         "image_url": image,
-        "gallery_images": [],
+        "gallery_images": gallery[:8],  # enough to include the label panel
         "source": "firecrawl",
     }
 
