@@ -107,8 +107,31 @@ def _search(query: str, limit: int = 8) -> list[str]:
         response.raise_for_status()
         payload = response.json()
     except (requests.RequestException, ValueError) as exc:
-        print(f"    [ing-research] search failed: {str(exc)[:60]}")
-        return []
+        # A 429 means we never asked, which is NOT the same as "this product
+        # has no published ingredients". Reporting it as a miss wrote off
+        # Badger, Cliganic and Good Molecules without a single search running.
+        # Back off and retry once -- the quota recovers in about a minute.
+        if "429" in str(exc):
+            print("    [ing-research] rate limited, waiting 70s")
+            time.sleep(70)
+            try:
+                response = requests.post(
+                    "https://api.firecrawl.dev/v1/search",
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"query": query, "limit": limit},
+                    timeout=90,
+                )
+                response.raise_for_status()
+                payload = response.json()
+            except (requests.RequestException, ValueError):
+                print("    [ing-research] still rate limited, giving up on this query")
+                return []
+        else:
+            print(f"    [ing-research] search failed: {str(exc)[:60]}")
+            return []
 
     urls: list[str] = []
     for item in payload.get("data") or []:
