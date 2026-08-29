@@ -74,7 +74,7 @@ CATEGORIES = {
     },
     "toner": {
         "label": "Toner",
-        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Facial-Toners/zgbs/beauty/11060431011",
+        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Personal-Care-Facial-Toners-Astringents/zgbs/beauty/11061931",
         "efficacy_means": (
             "hydration or gentle exfoliation without stripping the barrier -- most "
             "toner claims are not clinically tested at all"
@@ -92,7 +92,7 @@ CATEGORIES = {
     },
     "cleanser": {
         "label": "Cleanser",
-        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Facial-Cleansers/zgbs/beauty/11060411011",
+        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Personal-Care-Facial-Cleansing-Products/zgbs/beauty/11060901",
         "efficacy_means": (
             "removes oil and sunscreen without stripping the barrier or raising "
             "skin pH excessively"
@@ -109,7 +109,7 @@ CATEGORIES = {
     },
     "lip care": {
         "label": "Lip care",
-        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Lip-Balms-Treatments/zgbs/beauty/11058281",
+        "bestseller_url": "https://www.amazon.com/Best-Sellers-Beauty-Personal-Care-Lip-Care-Products/zgbs/beauty/3761351",
         "efficacy_means": (
             "occlusion that actually holds moisture in, and whether any SPF claim "
             "holds up"

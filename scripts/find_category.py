@@ -42,11 +42,17 @@ PACE = 25
 WANTED = {
     "sunscreen":   ["sunscreen", "sun care", "sun skin"],
     "moisturizer": ["moisturizer", "moisturiser"],
-    "serum":       ["serum"],
+    "serum":       ["serum", "facial treatment"],
     "toner":       ["toner", "astringent"],
-    "cleanser":    ["cleanser", "face wash"],
+    "cleanser":    ["cleanser", "face wash", "cleansing"],
     "lip care":    ["lip balm", "lip care", "lip treatment"],
 }
+
+# Labels that match on words but are the wrong product entirely. "Tinted
+# Moisturizers" lives under Makeup and is a cosmetic -- scoring it as
+# skincare would judge foundation on whether it hydrates. The word match
+# alone cannot tell these apart, so they are excluded by name.
+REJECT = ("tinted", "lipstick", "lip gloss", "lip liner", "sets", "kits")
 
 
 def _scrape(url: str) -> str:
@@ -111,16 +117,36 @@ def main() -> None:
         if any(w in label.lower() for w in ("skin care", "makeup", "lip"))
     ]
 
+    # Two levels down, not one. Moisturizers, serums, toners and cleansers are
+    # not children of Skin Care -- they live under Skin Care > FACE, so a
+    # one-level walk finds only sunscreen and lip care and reports the other
+    # four as missing when they are simply a floor further down.
     for label, url in departments:
         time.sleep(PACE)
         print(f"  opening {label}...")
-        candidates.extend(_links(_scrape(url)))
+        children = _links(_scrape(url))
+        candidates.extend(children)
+
+        for sub_label, sub_url in children:
+            low = sub_label.lower()
+            # Only descend where the categories we want actually live.
+            if not any(w in low for w in ("face", "facial", "skin care", "treatment")):
+                continue
+            # Skip the makeup branch: its "Face" child is foundation and
+            # concealer, which is how Tinted Moisturizers got matched.
+            if "makeup" in label.lower():
+                continue
+            time.sleep(PACE)
+            print(f"    opening {label} > {sub_label}...")
+            candidates.extend(_links(_scrape(sub_url)))
 
     # Match candidates to the categories we care about.
     matched: dict[str, tuple[str, str]] = {}
     for name, words in WANTED.items():
         for label, url in candidates:
             low = label.lower()
+            if any(bad in low for bad in REJECT):
+                continue
             if any(w in low for w in words):
                 matched.setdefault(name, (label, url))
                 break
