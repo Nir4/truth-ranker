@@ -55,6 +55,37 @@ def main() -> None:
         else list(CATEGORIES)
     )
 
+    # PRE-FLIGHT. A stale Amazon node id returns HTTP 200 with "no Best
+    # Sellers available", which the scraper reads as an empty category -- so
+    # a six-hour overnight run can score one category and look like it worked.
+    # Check every url is live BEFORE spending the night on it.
+    print("Pre-flight: checking each category url actually lists products...")
+    import tools.firecrawl_scrape as fc
+
+    live, dead = [], []
+    for name in wanted:
+        if name not in CATEGORIES:
+            print(f"  unknown category: {name}")
+            continue
+        fc.BESTSELLER_URL = CATEGORIES[name]["bestseller_url"]
+        try:
+            found = fc.fetch_bestsellers(3)
+        except Exception:  # noqa: BLE001
+            found = []
+        print(f"  {'OK  ' if found else 'DEAD'} {name}")
+        (live if found else dead).append(name)
+        time.sleep(20)  # Amazon serves empty pages long before it errors
+
+    if dead:
+        print(f"\n{len(dead)} categories have a stale url: {', '.join(dead)}")
+        print("Find live ones:  uv run python -m scripts.find_category --write")
+        if not live:
+            print("Nothing to scrape. Stopping rather than running all night for nothing.")
+            return
+        print(f"Continuing with the {len(live)} that work.\n")
+
+    wanted = live
+
     print(f"Scoring {len(wanted)} categories, up to {args.per_category} each\n")
     started = time.time()
     totals: dict[str, int] = {}
