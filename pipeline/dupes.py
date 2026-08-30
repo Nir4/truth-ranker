@@ -366,20 +366,37 @@ def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
             # Compare on COST PER OUNCE where both sizes are known. A 12 oz
             # two-pack is not "more expensive" than a 1.5 oz stick just
             # because the sticker is higher.
+            # A stick is not a swap for a spray, whatever the formula says.
+            # This check used to run only when a size was missing, so once
+            # both sizes parsed, a spray was offered as a dupe for a lotion.
+            if _format_of(product["name"]) != _format_of(other["name"]):
+                continue
+
             ppo_a, ppo_b = price_per_oz(product), price_per_oz(other)
+
+            # THE ALTERNATIVE MUST ACTUALLY COST LESS AT THE REGISTER.
+            #
+            # A $13.97 two-pack really is cheaper per ounce than a $9.88
+            # bottle, and saying so on a card that prints both sticker prices
+            # reads as broken -- the reader sees a bigger number labelled
+            # "cheaper". Someone who wants one bottle today cannot spend
+            # $9.88 to save money by paying $13.97.
+            #
+            # So per-ounce decides HOW MUCH is saved; sticker price decides
+            # WHETHER anything is saved at all.
+            if other.get("price", 0) >= product.get("price", 0):
+                continue
 
             if ppo_a is not None and ppo_b is not None:
                 if ppo_b >= ppo_a:
-                    continue  # not actually cheaper per unit
+                    continue  # not cheaper per unit either
                 # Saving is expressed for a comparable amount of product.
                 size_a = parse_size(product.get("name", "")) or 1
                 saving = round((ppo_a - ppo_b) * size_a, 2)
+                # Never claim a saving larger than the sticker difference --
+                # that is the money actually leaving the reader's pocket.
+                saving = min(saving, product["price"] - other["price"])
             else:
-                # Size unknown for one of them -- fall back to sticker price,
-                # but only when the format matches, so a stick is not offered
-                # as a dupe for a spray.
-                if _format_of(product["name"]) != _format_of(other["name"]):
-                    continue
                 saving = product["price"] - other["price"]
 
             if saving < MIN_SAVING:
