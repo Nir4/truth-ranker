@@ -166,6 +166,16 @@
 
   .basis{display:block;font-size:10.5px;font-weight:400;opacity:.72;margin-top:1px}
 
+  /* ---- brand selector ---- */
+  .brandbar{display:flex;justify-content:center;margin:2px 0 14px}
+  .brandbar select{
+    font:inherit;font-size:13.5px;color:var(--ink);
+    background:var(--card);border:1.5px solid var(--line);
+    border-radius:999px;padding:7px 16px;cursor:pointer;
+    max-width:min(320px,84vw);
+  }
+  .brandbar select:focus{outline:2px solid var(--accent);outline-offset:2px}
+
   /* ---- categories: scrollable pills ---- */
   .cats { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:26px; }
   .cat { border:2px solid var(--hair); background:var(--surface); color:var(--text);
@@ -596,6 +606,12 @@
     <button class="cat" data-cat="lip care">Lip</button>
   </div>
 
+  <div class="brandbar">
+    <select id="brand">
+      <option value="">All brands</option>
+    </select>
+  </div>
+
   <p class="count" id="count"></p>
   <main id="list"><div class="empty">Loading&hellip;</div></main>
 
@@ -614,7 +630,7 @@
 <script>
 const list  = document.getElementById('list');
 const count = document.getElementById('count');
-let ALL = [], VIEW = '', CAT = '';
+let ALL = [], VIEW = '', CAT = '', BRAND = '';
 
 const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -839,6 +855,7 @@ function apply() {
   let out = ALL;
 
   if (CAT) out = out.filter(p => (p.product_category || p.category) === CAT);
+  if (BRAND) out = out.filter(p => (p.brand || '').toLowerCase() === BRAND.toLowerCase());
 
   if (VIEW === 'hyped')      out = out.filter(p => p.hype_gap > 25).sort((a,b) => b.hype_gap - a.hype_gap);
   else if (VIEW === 'underrated') out = out.filter(p => p.hype_gap < -20);
@@ -975,8 +992,53 @@ document.querySelectorAll('.cat').forEach(b => b.onclick = () => {
   document.querySelectorAll('.cat').forEach(x => x.classList.remove('on'));
   b.classList.add('on');
   CAT = b.dataset.cat;
+  fillBrands();   // a category change changes which brands are on offer
   apply();
 });
+
+// Populate the brand list from whatever is currently in view, so picking
+// "Serum" then opening the list does not offer brands with no serums.
+// Grouped case-insensitively: one entry per brand, however Amazon spelled it.
+function fillBrands() {
+  const sel = document.getElementById('brand');
+  if (!sel) return;
+
+  const pool = CAT
+    ? ALL.filter(p => (p.product_category || p.category) === CAT)
+    : ALL;
+
+  const byKey = new Map();
+  pool.forEach(p => {
+    const name = (p.brand || '').trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    const seen = byKey.get(key);
+    byKey.set(key, { name: seen ? seen.name : name, n: (seen ? seen.n : 0) + 1 });
+  });
+
+  const brands = [...byKey.values()].sort(
+    (a, b) => b.n - a.n || a.name.localeCompare(b.name)
+  );
+
+  const previous = BRAND;
+  sel.innerHTML = '<option value="">All brands</option>' +
+    brands.map(b =>
+      `<option value="${b.name.replace(/"/g, '&quot;')}">${b.name} (${b.n})</option>`
+    ).join('');
+
+  // Keep the chosen brand if it still has products in this category.
+  if (previous && brands.some(b => b.name.toLowerCase() === previous.toLowerCase())) {
+    sel.value = previous;
+  } else {
+    BRAND = '';
+    sel.value = '';
+  }
+}
+
+document.getElementById('brand').onchange = e => {
+  BRAND = e.target.value;
+  apply();
+};
 
 document.getElementById('filterToggle').onclick = () => {
   const panel = document.getElementById('filters');
@@ -1012,6 +1074,7 @@ async function load() {
   try {
     const d = await (await fetch('/api/rankings?limit=300')).json();
     ALL = d.products || [];
+    fillBrands();
     apply();
   } catch (e) {
     list.innerHTML = `<div class="empty">Could not load. ${esc(e.message)}</div>`;
