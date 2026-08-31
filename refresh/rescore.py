@@ -45,13 +45,22 @@ from data.db import get_connection, init_db
 from refresh.parallel import score_one
 
 
-def load_from_db(limit: int) -> list[dict]:
-    """Rebuild product dicts from stored rows. No network."""
+def load_from_db(limit: int, missing_themes_only: bool = False) -> list[dict]:
+    """Rebuild product dicts from stored rows. No network.
+
+    `missing_themes_only` re-scores just the products with no community
+    themes. Re-running the whole catalogue to fix a subset spends tokens on
+    products whose results would not change.
+    """
+    where = ""
+    if missing_themes_only:
+        where = "WHERE themes IS NULL OR themes IN ('', '[]') "
+
     with get_connection() as conn:
         rows = conn.execute(
             "SELECT asin, name, brand, category, product_category, price, "
             "image_url, bestseller_rank, star_rating, review_count, ingredients "
-            "FROM rankings ORDER BY score DESC LIMIT ?",
+            f"FROM rankings {where}ORDER BY score DESC LIMIT ?",
             (limit,),
         ).fetchall()
 
@@ -85,10 +94,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Re-score stored products")
     parser.add_argument("--limit", type=int, default=500)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument(
+        "--missing-themes-only", action="store_true",
+        help="only re-score products with no community themes",
+    )
     args = parser.parse_args()
 
     init_db()
-    products = load_from_db(args.limit)
+    products = load_from_db(args.limit, args.missing_themes_only)
     print(f"Re-scoring {len(products)} products from the database\n")
 
     started = time.time()
