@@ -750,30 +750,21 @@ function seeWhy(p) {
     ['📣 Brand claims', p.claim_accuracy, (p.claims || []).length, claims(p)],
     ['🔬 Ingredient research', s.efficacy, 1,
      `<div class="detail">${esc(p.expert_findings) || 'No findings recorded.'}</div>`],
-  ];
+  // A dimension nobody measured does not get a row. Showing "n/a" for
+  // "no dermatologist has written about this" still puts an empty bar on the
+  // card and invites the reader to read something into it. Nothing was
+  // measured, so there is nothing to show -- the score is computed from the
+  // dimensions that remain, and the line below says how many that was.
+  ].filter(([, v]) => typeof v === 'number');
 
   const body = rows.map(([label, v, n, html]) => {
-    // A dimension nobody measured is NOT a 50. Showing a half-full bar for
-    // "no dermatologist has written about this" invents a middling verdict
-    // out of silence -- and silence is not evidence. The row stays visible,
-    // with an empty track and "not measured", so the reader can see what we
-    // looked for and did not find.
-    const measured = typeof v === 'number';
-
-    const bar = measured
-      ? `<span class="track"><span class="fill"
-          style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>`
-      : `<span class="track"></span>`;
-
-    const value = measured
-      ? `<span class="v">${Math.round(v)}</span>`
-      : `<span class="v none">n/a</span>`;
+    const bar = `<span class="track"><span class="fill"
+        style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>`;
+    const value = `<span class="v">${Math.round(v)}</span>`;
 
     // No evidence to open -> a plain row, not a dead dropdown.
-    if (!measured || !n || !html) {
-      const why = measured ? '' :
-        `<div class="nomeasure">Nothing found — not counted in the score.</div>`;
-      return `<div class="evrow flat"><span class="k">${label}</span>${bar}${value}</div>${why}`;
+    if (!n || !html) {
+      return `<div class="evrow flat"><span class="k">${label}</span>${bar}${value}</div>`;
     }
     return `<details class="evdrop">
       <summary><span class="k">${label}</span>${bar}${value}</summary>
