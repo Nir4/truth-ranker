@@ -1035,7 +1035,8 @@ function fillBrands() {
   }
 }
 
-document.getElementById('brand').onchange = e => {
+const brandSel = document.getElementById('brand');
+if (brandSel) brandSel.onchange = e => {
   BRAND = e.target.value;
   apply();
 };

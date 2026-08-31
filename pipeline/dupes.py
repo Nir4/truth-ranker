@@ -80,6 +80,14 @@ def _same_company(a: str, b: str) -> bool:
     return False
 
 
+def _pack_count(name: str) -> int:
+    """How many units in the pack. 1 unless the name says otherwise."""
+    match = re.search(r"(\d+)\s*[- ]?pack|pack of\s*(\d+)", (name or "").lower())
+    if not match:
+        return 1
+    return int(match.group(1) or match.group(2) or 1)
+
+
 def _format_of(name: str) -> str:
     """Spray, stick, lotion...? A stick is not a dupe for a spray."""
     lowered = (name or "").lower()
@@ -370,6 +378,14 @@ def find_dupes(products: list[dict]) -> dict[str, list[dict]]:
             # This check used to run only when a size was missing, so once
             # both sizes parsed, a spray was offered as a dupe for a lotion.
             if _format_of(product["name"]) != _format_of(other["name"]):
+                continue
+
+            # Do not offer a multi-pack as the alternative to a single bottle.
+            # The Banana Boat 2-Pack at $13.97 really is cheaper per ounce
+            # than a $22 single, and it still reads as a bait-and-switch: the
+            # shopper wanted one bottle and is shown a bigger box. Comparing
+            # like with like is the point of the feature.
+            if _pack_count(other["name"]) > _pack_count(product["name"]):
                 continue
 
             ppo_a, ppo_b = price_per_oz(product), price_per_oz(other)
