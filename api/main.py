@@ -16,6 +16,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
+from pipeline.routine import check_routine
+
 from data.db import get_rankings, get_hyped, get_underrated, get_product, init_db
 
 app = FastAPI(title="Truth Ranker", description="Products ranked by evidence, not hype")
@@ -139,3 +141,26 @@ def product(asin: str) -> dict:
     if not found:
         raise HTTPException(status_code=404, detail=f"No product with ASIN {asin}")
     return found
+
+@app.post("/api/routine")
+def routine(payload: dict) -> dict:
+    """Check a set of products for documented ingredient conflicts.
+
+    Body: {"asins": ["B0...", "B0..."]}
+
+    Deterministic: no model call, no scraping. Which actives irritate when
+    stacked is a closed documented set, so this is a lookup, not a judgement.
+    """
+    asins = [a for a in (payload.get("asins") or []) if isinstance(a, str)][:12]
+    if len(asins) < 2:
+        return {"signal": "grey", "headline": "Add at least two products.",
+                "warnings": [], "notes": [], "actives_found": [], "unchecked": []}
+
+    # This app reads through data.db helpers rather than raw SQL, unlike the
+    # self-contained Vercel entry point.
+    found = [p for p in (get_product(a) for a in asins) if p]
+    if not found:
+        return {"signal": "grey", "headline": "Those products are not in the catalogue.",
+                "warnings": [], "notes": [], "actives_found": [], "unchecked": []}
+
+    return check_routine(found)

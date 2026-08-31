@@ -166,6 +166,33 @@
 
   .basis{display:block;font-size:10.5px;font-weight:400;opacity:.72;margin-top:1px}
   .v.none{color:var(--muted);font-weight:500;font-size:12px}
+
+  /* ---- routine builder ---- */
+  .rt{max-width:760px;margin:0 auto 20px;text-align:center}
+  .rtToggle{font:inherit;font-size:14px;font-weight:600;cursor:pointer;
+    background:var(--card);color:var(--ink);border:1.5px solid var(--line);
+    border-radius:999px;padding:9px 20px}
+  .rtToggle:hover{background:var(--accent-soft)}
+  .rtpanel{display:none;text-align:left;margin-top:14px;background:var(--surface);
+    border-radius:22px;padding:20px 22px;box-shadow:0 4px 20px rgba(61,44,58,.06)}
+  .rtpanel.open{display:block}
+  .rthint{font-size:13px;color:var(--muted);margin:0 0 14px}
+  .rtitem{display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:6px;
+    background:var(--card);border-radius:14px;font-size:13.5px}
+  .rtitem .x{margin-left:auto;cursor:pointer;color:var(--muted);font-weight:700;
+    border:none;background:none;font-size:16px;line-height:1}
+  .rtitem .x:hover{color:var(--ink)}
+  .signal{border-radius:18px;padding:16px 18px;margin-top:14px}
+  .signal .hl{font-family:"Fredoka",sans-serif;font-size:17px;margin-bottom:4px}
+  .signal.green{background:#e8f6ec;color:#1c5b2e}
+  .signal.amber{background:#fdf3e0;color:#7a4d09}
+  .signal.red{background:#fdeaea;color:#8c2020}
+  .signal.grey{background:var(--hair);color:var(--muted)}
+  .warn{margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)}
+  .warn .pr{font-weight:600;font-size:13px;margin-bottom:2px}
+  .warn .why{font-size:12.5px;opacity:.9}
+  .warn .do{font-size:12.5px;margin-top:4px;font-weight:600}
+  .rtnote{font-size:12.5px;color:var(--muted);margin-top:10px;padding-left:2px}
   .nomeasure{font-size:11.5px;color:var(--muted);margin:-4px 0 8px 2px;padding-left:2px}
 
   /* ---- brand selector ---- */
@@ -606,6 +633,21 @@
     <button class="bubble on" id="doCompare">Compare</button>
   </div>
   <div id="cmpout"></div>
+
+  <div class="rt">
+    <button class="rtToggle" id="rtToggle">🧴 Build my routine</button>
+    <div class="rtpanel" id="rtpanel">
+      <p class="rthint">Add the products you actually use. We check them for
+        documented ingredient conflicts &mdash; the kind that comes from
+        stacking, not from any one product.</p>
+      <div class="ac">
+        <input id="rtq" placeholder="Search a product to add&hellip;" autocomplete="off">
+        <div class="acbox" id="rtbox"></div>
+      </div>
+      <div id="rtlist"></div>
+      <div id="rtout"></div>
+    </div>
+  </div>
 
   <div class="cats" id="cats" data-build="20260831023905">
     <button class="cat on" data-cat="">All</button>
@@ -1050,6 +1092,89 @@ function fillBrands() {
     sel.value = '';
   }
 }
+
+// ---- routine builder ----
+// The site judges one product at a time, but irritation usually comes from a
+// COMBINATION. This lets someone enter what they actually use and get one
+// answer about the set.
+let ROUTINE = [];
+
+document.getElementById('rtToggle').onclick = () => {
+  const panel = document.getElementById('rtpanel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) document.getElementById('rtq').focus();
+};
+
+function drawRoutine() {
+  const list = document.getElementById('rtlist');
+  list.innerHTML = ROUTINE.map((p, i) => `<div class="rtitem">
+    <span>${esc(p.brand)} <span style="color:var(--muted)">${esc(p.name).slice(0, 46)}</span></span>
+    <button class="x" data-i="${i}" aria-label="Remove">&times;</button>
+  </div>`).join('');
+
+  list.querySelectorAll('.x').forEach(b => b.onclick = () => {
+    ROUTINE.splice(+b.dataset.i, 1);
+    drawRoutine();
+    checkRoutine();
+  });
+}
+
+async function checkRoutine() {
+  const out = document.getElementById('rtout');
+  if (ROUTINE.length < 2) {
+    out.innerHTML = ROUTINE.length
+      ? `<div class="rtnote">Add one more product to check for conflicts.</div>` : '';
+    return;
+  }
+
+  out.innerHTML = `<div class="rtnote">Checking&hellip;</div>`;
+  try {
+    const r = await fetch('/api/routine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ asins: ROUTINE.map(p => p.asin) }),
+    });
+    const d = await r.json();
+
+    const warnings = (d.warnings || []).map(w => `<div class="warn">
+      <div class="pr">${esc(w.products.join('  +  '))}</div>
+      <div class="why">${esc(w.why)}</div>
+      <div class="do">→ ${esc(w.what_to_do)}</div>
+    </div>`).join('');
+
+    // Saying what is FINE matters as much as flagging what is not --
+    // manufacturing doubt is just hype pointed backwards.
+    const notes = (d.notes || []).map(n =>
+      `<div class="rtnote">✓ ${esc(n.note)}</div>`).join('');
+
+    const unchecked = (d.unchecked || []).length
+      ? `<div class="rtnote">No ingredient list on file for
+         ${esc(d.unchecked.join(', ')).slice(0, 120)} — not checked.</div>` : '';
+
+    out.innerHTML = `<div class="signal ${esc(d.signal)}">
+        <div class="hl">${esc(d.headline)}</div>
+        ${d.actives_found && d.actives_found.length
+          ? `<div style="font-size:12.5px;opacity:.85">Actives in this routine:
+             ${esc(d.actives_found.join(', '))}</div>` : ''}
+        ${warnings}
+      </div>${notes}${unchecked}`;
+  } catch (e) {
+    out.innerHTML = `<div class="rtnote">Could not check: ${esc(e.message)}</div>`;
+  }
+}
+
+autocomplete(
+  document.getElementById('rtq'),
+  document.getElementById('rtbox'),
+  asin => {
+    const p = ALL.find(x => x.asin === asin);
+    if (!p || ROUTINE.some(x => x.asin === asin)) return;
+    ROUTINE.push(p);
+    document.getElementById('rtq').value = '';
+    drawRoutine();
+    checkRoutine();
+  }
+);
 
 const brandSel = document.getElementById('brand');
 if (brandSel) brandSel.onchange = e => {
