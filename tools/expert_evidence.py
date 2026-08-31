@@ -276,7 +276,15 @@ def expert_score(summary: dict) -> tuple[float, str]:
     """
     n = summary["unique_experts"]
     if n == 0:
-        return 50.0, "No named dermatologist mentions found -- treated as neutral."
+        # None found. Returning 50 was wrong: it looks like a measurement and
+        # gets averaged in at 45% weight, dragging every real signal toward
+        # the middle. "Nobody has written about this" is not a middling
+        # verdict, it is the absence of one.
+        #
+        # None tells the caller to leave this dimension OUT of the score and
+        # renormalise over what is actually known. Not penalised, not
+        # invented -- omitted.
+        return None, "No named dermatologist has written about this product."
 
     positive = summary["positive"] + 0.5 * summary["qualified"]
     ratio = positive / n

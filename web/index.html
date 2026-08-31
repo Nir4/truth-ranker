@@ -165,6 +165,8 @@
   .link.on { color:var(--accent); background:var(--accent-soft); }
 
   .basis{display:block;font-size:10.5px;font-weight:400;opacity:.72;margin-top:1px}
+  .v.none{color:var(--muted);font-weight:500;font-size:12px}
+  .nomeasure{font-size:11.5px;color:var(--muted);margin:-4px 0 8px 2px;padding-left:2px}
 
   /* ---- brand selector ---- */
   .brandbar{display:flex;justify-content:center;margin:2px 0 14px}
@@ -234,10 +236,19 @@
   .evdrop[open] > summary .k::after { content:' ⌄'; }
   .evrow.flat { margin-bottom:6px; opacity:.72; }
   .evbody { padding:2px 16px 16px; }
-  .evrow .k { color:var(--muted); font-weight:600; }
-  .evrow .track { display:block; height:9px; background:var(--hair); border-radius:999px; overflow:hidden; }
-  .evrow .fill { display:block; height:9px; border-radius:999px; }
-  .evrow .v { text-align:right; font-family:"Fredoka",sans-serif; font-weight:500; }
+  /* These must cover BOTH row shapes. The grid rule above already does, but
+     the bar styling was scoped to .evrow only -- so inside a dropdown the
+     track had no height or background and the bar was invisible, which is
+     every row that has evidence to open. */
+  .evrow .k, .evdrop > summary .k { color:var(--muted); font-weight:600; }
+  .evrow .track, .evdrop > summary .track {
+    display:block; height:9px; background:var(--hair);
+    border-radius:999px; overflow:hidden;
+  }
+  .evrow .fill, .evdrop > summary .fill { display:block; height:9px; border-radius:999px; }
+  .evrow .v, .evdrop > summary .v {
+    text-align:right; font-family:"Fredoka",sans-serif; font-weight:500;
+  }
 
   /* ---- recalls, moved below the fold ---- */
   .recalls-section { margin-top:48px; }
@@ -596,7 +607,7 @@
   </div>
   <div id="cmpout"></div>
 
-  <div class="cats" id="cats">
+  <div class="cats" id="cats" data-build="20260831023905">
     <button class="cat on" data-cat="">All</button>
     <button class="cat" data-cat="sunscreen">SPF</button>
     <button class="cat" data-cat="moisturizer">Moisturiser</button>
@@ -739,19 +750,33 @@ function seeWhy(p) {
     ['📣 Brand claims', p.claim_accuracy, (p.claims || []).length, claims(p)],
     ['🔬 Ingredient research', s.efficacy, 1,
      `<div class="detail">${esc(p.expert_findings) || 'No findings recorded.'}</div>`],
-  ].filter(([, v]) => typeof v === 'number');
+  ];
 
   const body = rows.map(([label, v, n, html]) => {
-    const bar = `<span class="track"><span class="fill"
-        style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>`;
-    // No evidence to show -> a plain row, not a dead dropdown.
-    if (!n || !html) {
-      return `<div class="evrow flat"><span class="k">${label}</span>${bar}
-        <span class="v">${Math.round(v)}</span></div>`;
+    // A dimension nobody measured is NOT a 50. Showing a half-full bar for
+    // "no dermatologist has written about this" invents a middling verdict
+    // out of silence -- and silence is not evidence. The row stays visible,
+    // with an empty track and "not measured", so the reader can see what we
+    // looked for and did not find.
+    const measured = typeof v === 'number';
+
+    const bar = measured
+      ? `<span class="track"><span class="fill"
+          style="width:${Math.round(v)}%;background:${colour(v)}"></span></span>`
+      : `<span class="track"></span>`;
+
+    const value = measured
+      ? `<span class="v">${Math.round(v)}</span>`
+      : `<span class="v none">n/a</span>`;
+
+    // No evidence to open -> a plain row, not a dead dropdown.
+    if (!measured || !n || !html) {
+      const why = measured ? '' :
+        `<div class="nomeasure">Nothing found — not counted in the score.</div>`;
+      return `<div class="evrow flat"><span class="k">${label}</span>${bar}${value}</div>${why}`;
     }
     return `<details class="evdrop">
-      <summary><span class="k">${label}</span>${bar}
-        <span class="v">${Math.round(v)}</span></summary>
+      <summary><span class="k">${label}</span>${bar}${value}</summary>
       <div class="evbody">${html}</div>
     </details>`;
   }).join('');

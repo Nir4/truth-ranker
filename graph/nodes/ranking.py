@@ -95,13 +95,16 @@ def _score_ingredients(facts: dict, known: bool = True) -> float:
 def _score_sentiment(reddit: dict) -> tuple[float, str]:
     """Score community sentiment. Returns (score, note).
 
-    When Reddit data is missing we return a NEUTRAL 50 and say so, rather than
-    penalising a product for being under-discussed or rewarding it for silence.
+    Returns None when there is nothing to measure, so the caller can leave
+    this dimension out and renormalise. A 50 here would look like a verdict
+    -- "people are lukewarm about it" -- when the truth is that nobody has
+    said anything. Not penalised for being under-discussed, not rewarded for
+    silence: omitted.
     """
     if not reddit["available"]:
-        return 50.0, "Reddit unavailable -- sentiment treated as neutral."
+        return None, "No community discussion available for this product."
     if reddit["comment_count"] == 0:
-        return 50.0, "No Reddit discussion found -- sentiment treated as neutral."
+        return None, "Nobody on Reddit has discussed this product."
 
     # Weight comments by how much lived detail they carry, so specific
     # experience outvotes generic enthusiasm. Reddit is the one source brands
@@ -259,12 +262,18 @@ def ranking_node(state: TruthState) -> dict:
         "efficacy": _score_efficacy(
             findings, product.get("product_category", "sunscreen")
         ),
-        "expert": expert_pts,
     }
+    # Only include the expert dimension when a dermatologist actually wrote
+    # something. The renormalisation below then divides by the weights we
+    # really have, so a product with no derm coverage is judged on the rest
+    # rather than dragged to the middle by a dimension we could not measure.
+    if expert_pts is not None:
+        subscores["expert"] = expert_pts
     # Computed and shown, but NOT part of the score -- see WEIGHTS above.
     ingredient_quality = _score_ingredients(facts, known=bool(ingredients))
     sentiment_score, sentiment_note = _score_sentiment(reddit)
-    subscores["sentiment"] = sentiment_score
+    if sentiment_score is not None:
+        subscores["sentiment"] = sentiment_score
 
     # Extract WHAT people say, not just how positive it is. A score of 25 tells
     # a reader nothing; "sticky finish, 4 mentions" tells them whether the
