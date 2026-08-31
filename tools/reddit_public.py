@@ -19,6 +19,7 @@ Reddit rate-limits by IP, so we pace ourselves rather than waiting to be told.
 """
 
 import re
+import threading
 import time
 
 # Trusted skincare communities, most useful first. The search runs per
@@ -36,6 +37,26 @@ SUBREDDITS = [
 
 MIN_COMMENT_LENGTH = 40
 _PAUSE = 1.2  # seconds between requests, to stay under Reddit's IP limits
+
+# The pause has to be PROCESS-WIDE, not per-thread. time.sleep(1.2) inside
+# four parallel workers means Reddit sees a request every 0.3s, and it
+# throttles by IP: the re-score got zero comments for 112 products and fell
+# through to a dead Apify actor 274 times. That looked like "nobody discusses
+# this product" when the truth was "we asked too fast".
+#
+# One lock, one clock. Threads queue on it rather than each keeping their own.
+_rate_lock = threading.Lock()
+_last_call = 0.0
+
+
+def _throttle() -> None:
+    """Block until _PAUSE has passed since the last request by ANY thread."""
+    global _last_call
+    with _rate_lock:
+        wait = _PAUSE - (time.time() - _last_call)
+        if wait > 0:
+            time.sleep(wait)
+        _last_call = time.time()
 
 _client = None
 
@@ -178,7 +199,7 @@ def bulk_harvest(subreddit: str, pages: int = 10, per_page: int = 100) -> int:
             data = response.get("data", {})
             posts = [c.get("data", {}) for c in data.get("children", [])]
             after = data.get("after")
-            time.sleep(_PAUSE)
+            _throttle()
 
             if not posts:
                 break
@@ -269,7 +290,7 @@ def _bank_posts(posts: list[dict], subreddit: str, source: str) -> int:
         ]
         if comments:
             banked += harvest_rag(comments, searched_for=f"r/{subreddit} {source}")
-        time.sleep(_PAUSE)
+        _throttle()
 
     return banked
 
@@ -307,7 +328,7 @@ def gather(product_name: str, brand: str, limit: int = 120) -> dict:
         posts = []
         for q in queries:
             posts += _search_subreddit(subreddit, q, limit=8)
-            time.sleep(_PAUSE)
+            _throttle()
 
         # Deduplicate threads found by both queries.
         seen_links = set()
@@ -348,7 +369,7 @@ def gather(product_name: str, brand: str, limit: int = 120) -> dict:
                         "thread_title": post.get("title", "")[:200],
                     }
                 )
-            time.sleep(_PAUSE)
+            _throttle()
 
             if len(comments) >= limit:
                 break
@@ -387,7 +408,7 @@ def gather(product_name: str, brand: str, limit: int = 120) -> dict:
                                     "permalink": f"https://reddit.com{permalink}",
                                 }
                             )
-                    time.sleep(_PAUSE)
+                    _throttle()
                 if len(comments) >= limit:
                     break
 

@@ -273,7 +273,12 @@ def gather_sentiment_raw(
 
     if reddit is None:
         # No official credentials. Try Apify before giving up.
-        if os.getenv("APIFY_TOKEN"):
+        #
+        # trudax/reddit-scraper-lite is dead -- it produced no dataset 274
+        # times in one re-score, once per product, each attempt costing a
+        # round trip to learn the same thing. Set APIFY_REDDIT=1 to try it
+        # anyway if the actor is ever revived.
+        if os.getenv("APIFY_TOKEN") and os.getenv("APIFY_REDDIT") == "1":
             result = _gather_via_apify(product_name, brand, limit)
             # Only cache real results -- caching a failure would lock in an
             # empty sentiment signal for two weeks.
