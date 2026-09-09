@@ -111,6 +111,14 @@ def harvest(comments: list[dict], searched_for: str = "") -> int:
                 "permalink": c.get("permalink", ""),
                 "harvested_at": time.time(),
                 "found_while_searching": searched_for[:120],
+                # The thread this was posted under. The ROUTER leans on this
+                # heavily: a reply saying "it's so good" is a review of
+                # whatever the thread is about, and without the title there is
+                # no way to know what "it" is. Comments recalled from the pool
+                # were arriving with no thread context, so the router
+                # correctly rejected them -- which read as "nobody discusses
+                # this product" for products with hundreds of comments.
+                "thread_title": (c.get("thread_title") or "")[:200],
                 # What the ROUTER said this comment is about, in the
                 # commenter's own words. Empty when it is about the product
                 # we were searching for.
@@ -170,6 +178,7 @@ def retrieve(brand: str, product_name: str, n_results: int = 25) -> list[dict]:
                 "score": int(meta.get("score", 0)),
                 "subreddit": meta.get("subreddit", ""),
                 "permalink": meta.get("permalink", ""),
+                "thread_title": meta.get("thread_title", ""),
                 "similarity": round(similarity, 3),
                 "from_pool": True,
             }
