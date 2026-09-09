@@ -331,8 +331,10 @@ def match_label(match: int) -> tuple[str, str]:
         return "Very close dupe", "very-close"
     if match >= DUPE_THRESHOLD:
         return "Strong dupe", "strong"
-    if match >= 70:
-        return "Similar alternative", "similar"
+    # Below 80 we say nothing. The 70-79 "Similar alternative" tier was filling
+    # cards with pairs that share a filter list and little else -- and a
+    # recommendation a reader checks and disagrees with costs more trust than
+    # showing no recommendation at all.
     return "", ""
 
 
