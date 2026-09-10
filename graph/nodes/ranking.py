@@ -280,7 +280,22 @@ def ranking_node(state: TruthState) -> dict:
     # complaint even applies to them.
     themes = {"themes": [], "overall": ""}
     researched: list[dict] = []
-    if reddit["available"] and reddit["comment_count"]:
+
+    # The POOL is consulted whether or not this run's live search found
+    # anything. It used to be gated behind `reddit["comment_count"]`, so a
+    # product whose live search came back empty skipped the pool entirely --
+    # and the pool holds 211,430 comments accumulated over every previous run.
+    #
+    # COSRX Snail Mucin is the clearest case: live search returned nothing, so
+    # it was recorded as having no community discussion, while the pool held
+    # 75 comments about it and produces three themes on demand. One of the
+    # most-discussed products in skincare, marked as undiscussed.
+    #
+    # themes_from_pool queries the vector store itself, so it is safe to call
+    # with no live comments -- it returns empty when the pool genuinely holds
+    # nothing about this product.
+    always_check_pool = True
+    if always_check_pool:
         from tools.sentiment_themes import extract_themes
 
         # Themes come from EVERY comment we have ever banked about this
