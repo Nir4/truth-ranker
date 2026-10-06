@@ -7,3 +7,4 @@ data/chroma/
 .vercel
 .env*
 .env.local
+.DS_Store
