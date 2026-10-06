@@ -1,0 +1,3194 @@
+<title>Skin Sayer — Interview Guide</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    font: 10.5pt/1.55 "Charter", "Georgia", serif;
+    color: #1d1a22; background: #fff; margin: 0;
+  }
+  h1 { font-size: 26pt; line-height: 1.12; margin: 0 0 4pt; letter-spacing: -.4pt; }
+  h2 {
+    font-size: 15pt; margin: 26pt 0 8pt; padding-bottom: 4pt;
+    border-bottom: 2px solid #e8457f; letter-spacing: -.2pt;
+    page-break-after: avoid; break-after: avoid;
+  }
+  h3 {
+    font-size: 11.5pt; margin: 16pt 0 5pt; color: #b52a5c;
+    page-break-after: avoid; break-after: avoid;
+  }
+  h4 { font-size: 10.5pt; margin: 12pt 0 4pt; page-break-after: avoid; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 17pt; }
+  li { margin-bottom: 3pt; }
+  code {
+    font-family: "SF Mono", "Menlo", monospace; font-size: 8.8pt;
+    background: #f4f1f5; padding: 1px 4px; border-radius: 3px;
+  }
+  pre {
+    font-family: "SF Mono", "Menlo", monospace; font-size: 8.2pt; line-height: 1.42;
+    background: #faf8fb; border: 1px solid #e6e0ea; border-left: 3px solid #e8457f;
+    border-radius: 4px; padding: 8pt 10pt; overflow-x: auto;
+    white-space: pre-wrap; word-wrap: break-word;
+    page-break-inside: avoid; break-inside: avoid; margin: 0 0 9pt;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 9pt; margin: 0 0 10pt;
+    page-break-inside: avoid; break-inside: avoid;
+  }
+  th {
+    text-align: left; background: #f6eef2; padding: 5pt 7pt;
+    border-bottom: 1.5px solid #d9c2cd; font-weight: 700;
+  }
+  td { padding: 4.5pt 7pt; border-bottom: 1px solid #ece7ef; vertical-align: top; }
+  tr:nth-child(even) td { background: #fbf9fb; }
+  .lede { font-size: 11.5pt; color: #5a5362; margin: 0 0 16pt; }
+  .box {
+    border-radius: 5px; padding: 9pt 12pt; margin: 0 0 11pt;
+    page-break-inside: avoid; break-inside: avoid;
+  }
+  .warn  { background: #fff4f0; border-left: 3px solid #d9480f; }
+  .good  { background: #f0faf5; border-left: 3px solid #0f9d58; }
+  .note  { background: #f3f6fd; border-left: 3px solid #3b6fd4; }
+  .say   { background: #fdf5f8; border-left: 3px solid #e8457f; }
+  .say::before {
+    content: "SAY THIS"; display: block; font: 700 7.5pt/1.3 "Helvetica", sans-serif;
+    letter-spacing: 1.1pt; color: #b52a5c; margin-bottom: 6pt;
+  }
+  .warn::before {
+    content: "DO NOT SAY"; display: block; font: 700 7.5pt/1.3 "Helvetica", sans-serif;
+    letter-spacing: 1.1pt; color: #d9480f; margin-bottom: 6pt;
+  }
+  .q {
+    font-weight: 700; margin: 13pt 0 4pt; color: #1d1a22;
+    page-break-after: avoid; break-after: avoid;
+  }
+  .q::before { content: "Q  "; color: #e8457f; font-weight: 700; }
+  .fu { font-size: 9.5pt; color: #5a5362; margin: 5pt 0 0; padding-left: 10pt;
+        border-left: 2px solid #ece7ef; }
+  .page-break { page-break-before: always; break-before: page; }
+  .toc { font-size: 10pt; column-count: 2; column-gap: 20pt; }
+  .toc div { margin-bottom: 3.5pt; break-inside: avoid; }
+  .toc b { color: #b52a5c; }
+  .k { display: inline-block; background: #1d1a22; color: #fff; font-size: 8pt;
+       padding: 1px 6px; border-radius: 3px; font-family: "Helvetica", sans-serif; }
+  .stat { font-size: 20pt; font-weight: 700; color: #b52a5c; line-height: 1; }
+  .statrow { display: flex; gap: 18pt; margin: 0 0 12pt; flex-wrap: wrap; }
+  .statrow div { flex: 1; min-width: 70pt; }
+  .statrow span { font-size: 8.5pt; color: #5a5362; display: block; margin-top: 2pt; }
+  em.src { color: #7a7280; font-size: 9pt; font-style: normal; }
+  img { max-width: 100%; border: 1px solid #e6e0ea; border-radius: 5px; }
+</style>
+
+<h1>Skin Sayer</h1>
+<p class="lede">
+  Technical interview guide — written against the running code and live
+  databases, verified 2026-10-05. Every number here was queried, not recalled.
+</p>
+
+<div class="statrow">
+  <div><span class="stat">154</span><span>products ranked</span></div>
+  <div><span class="stat">211,991</span><span>Reddit comments embedded</span></div>
+  <div><span class="stat">268</span><span>PubMed chunks</span></div>
+  <div><span class="stat">980</span><span>ingredient-cache reuses</span></div>
+  <div><span class="stat">47/47</span><span>agent eval</span></div>
+  <div><span class="stat">0.925</span><span>retrieval MRR</span></div>
+</div>
+
+<div class="box note">
+  <b>How to use this.</b> Section 1 is the one to read twice — it lists the
+  claims in your own documentation that are <i>wrong</i>, and what to say
+  instead. The fastest way to lose a technical interview is to state a number
+  you cannot defend. Sections 2–8 are the system. Section 9 is drilled Q&amp;A.
+</div>
+
+<h2>Contents</h2>
+<div class="toc">
+  <div><b>1</b> &nbsp;Verified facts &amp; claim corrections</div>
+  <div><b>2</b> &nbsp;What it is and why it exists</div>
+  <div><b>3</b> &nbsp;Architecture</div>
+  <div><b>4</b> &nbsp;The graph (LangGraph)</div>
+  <div><b>5</b> &nbsp;RAG — two stores, two jobs</div>
+  <div><b>6</b> &nbsp;The Reddit pipeline</div>
+  <div><b>7</b> &nbsp;Databases</div>
+  <div><b>8</b> &nbsp;Evaluation</div>
+  <div><b>9</b> &nbsp;Guardrails</div>
+  <div><b>10</b> Question answering</div>
+  <div><b>11</b> Failure analysis</div>
+  <div><b>12</b> Gaps — what this does NOT demonstrate</div>
+  <div><b>13</b> Interview questions, drilled</div>
+  <div><b>14</b> Every tool, dissected</div>
+  <div><b>15</b> Code walkthrough, line by line</div>
+  <div><b>16</b> The &ldquo;why?&rdquo; drill</div>
+  <div><b>17</b> API &amp; production</div>
+  <div><b>18</b> Scalability: 1 / 100 / 10,000 users</div>
+  <div><b>19</b> Testing &mdash; what exists, what doesn&rsquo;t</div>
+  <div><b>20</b> Database inspection cheat sheet</div>
+  <div><b>21</b> Role mapping &mdash; three honest buckets</div>
+  <div><b>22</b> The 25 core questions</div>
+  <div><b>23</b> Retrieval eval &mdash; and the bug it found</div>
+  <div><b>24</b> One-page cheat sheet</div>
+</div>
+
+<!-- ================================================================= -->
+<h2>1 · Verified facts &amp; claim corrections</h2>
+
+<h3>1.1 Numbers you can defend</h3>
+<table>
+  <tr><th>Claim</th><th>Verified</th><th>Source of truth</th></tr>
+  <tr><td>Products ranked</td><td><b>154</b></td><td><code>SELECT COUNT(*) FROM rankings</code></td></tr>
+  <tr><td>Reddit comments embedded</td><td><b>211,991</b></td><td>Chroma <code>reddit_comments.count()</code></td></tr>
+  <tr><td>PubMed chunks embedded</td><td><b>268</b></td><td>Chroma <code>pubmed_abstracts.count()</code></td></tr>
+  <tr><td>Threads harvested</td><td><b>10,481</b></td><td><code>harvested_threads.db → seen</code></td></tr>
+  <tr><td>Products found for free</td><td><b>1,468 mentions</b></td><td><code>discovered.db → mentions</code></td></tr>
+  <tr><td>Ingredient cache entries</td><td><b>10</b></td><td><code>memory.db</code></td></tr>
+  <tr><td>Ingredient cache <i>reuses</i></td><td><b>980</b></td><td><code>SUM(hits)</code></td></tr>
+  <tr><td>Scrape cache entries</td><td><b>601</b></td><td><code>scrape_cache.db</code></td></tr>
+  <tr><td>Chroma on disk</td><td><b>1.8 GB</b></td><td><code>du -sh data/chroma</code></td></tr>
+  <tr><td>Agent eval</td><td><b>45/45</b></td><td><code>eval/agent_eval_results.json</code></td></tr>
+  <tr><td>RAG faithfulness</td><td><b>0.96</b></td><td><code>eval/ragas_results.json</code></td></tr>
+  <tr><td>RAG answer relevancy</td><td><b>0.747</b></td><td>same</td></tr>
+  <tr><td>RAG context precision</td><td><b>0.507</b></td><td>same</td></tr>
+  <tr><td>RAG context recall</td><td><b>0.317</b></td><td>same</td></tr>
+</table>
+
+<p>Re-verify the morning of the interview:</p>
+<pre><code>cd ~/Downloads/true_products
+.venv/bin/python -c "
+import sqlite3, chromadb
+print('products', sqlite3.connect('data/truth.db').execute(
+    'select count(*) from rankings').fetchone()[0])
+print('reuses  ', sqlite3.connect('data/memory.db').execute(
+    'select sum(hits) from ingredient_memory').fetchone()[0])
+c = chromadb.PersistentClient(path='data/chroma')
+for col in c.list_collections():
+    print(col.name, c.get_collection(col.name).count())
+"</code></pre>
+
+<h3>1.2 Your own docs are stale — and they <i>understate</i> you</h3>
+<p><code>ARCHITECTURE.md</code> was written during an early run and never updated.</p>
+<table>
+  <tr><th>Doc says</th><th>Reality</th><th>Off by</th></tr>
+  <tr><td>32 products</td><td>154</td><td>~5×</td></tr>
+  <tr><td>122k comments</td><td>211,991</td><td>~1.7×</td></tr>
+  <tr><td>121 discovered products</td><td>1,468 mentions</td><td>~12×</td></tr>
+  <tr><td>8 cached ingredients, 360 reuses</td><td>10 cached, <b>980 reuses</b></td><td>~2.7×</td></tr>
+  <tr><td>36 scrape-cache entries</td><td>601</td><td>~17×</td></tr>
+  <tr><td>faithfulness 0.875</td><td>0.96</td><td>understated</td></tr>
+</table>
+<div class="say">
+  "My architecture doc is a snapshot from an earlier run — the live numbers are
+  higher. Let me give you the current ones."
+</div>
+<p>That reads as someone who checks their own claims, which is the trait being tested.</p>
+
+<h3>1.3 The reuse number is your best single statistic</h3>
+<pre><code>octocrylene       202 reuses
+avobenzone        196
+homosalate        196
+octisalate        193
+zinc oxide         97
+titanium dioxide   57
+oxybenzone         28
+octinoxate          8
+meradimate          3
+ensulizole          0
+                  ───
+                  980 total   (10 cached entries → 98:1 amortisation)</code></pre>
+<div class="say">
+  "Products change weekly; ingredients don't. Every mineral sunscreen contains
+  zinc oxide, so I cache research at the <i>ingredient</i> level rather than per
+  product. Ten entries have served 980 lookups. The cost saving is the obvious
+  part — the subtle part is <b>consistency</b>: researching zinc oxide 154
+  separate times produces 154 slightly different write-ups, which would give two
+  chemically identical products different scores for no defensible reason."
+</div>
+
+<h3>1.4 Four claims that are FALSE — never say these</h3>
+
+<h4>(a) PostgreSQL — not used anywhere</h4>
+<pre><code>grep -rn "postgres\|psycopg\|asyncpg" --include="*.py" --include="*.toml" . --exclude-dir=.venv
+# → zero matches</code></pre>
+<p>Storage is <b>5 SQLite databases + Chroma</b>. Nothing else.</p>
+<div class="say">
+  "I didn't use Postgres. This is a single-writer batch pipeline with a
+  read-only serving layer, so SQLite was right — zero operational overhead, and
+  the database file ships with the Vercel deployment as a static asset. Postgres
+  earns its place when you need concurrent writers or pgvector. I had neither."
+</div>
+<p>That is a <i>better</i> answer than having used Postgres unnecessarily.</p>
+
+<h4>(b) "47 → 25 LLM calls after batching" — unverifiable</h4>
+<p>
+  <code>ARCHITECTURE.md:99</code> states this. There is no counter, no
+  instrumentation, no commit recording before/after. What <i>is</i> verifiable:
+  <b>22 <code>ChatOpenAI(...)</code> call sites across 17 files.</b>
+</p>
+<div class="warn">
+  "I cut it from 47 to 25 calls." &nbsp;→&nbsp; The follow-up is "how did you
+  measure that?" and you have no answer.
+</div>
+<div class="say">
+  "There are 22 distinct LLM call sites. I reduced per-product calls by batching
+  — the comment router and shill detector judge up to 60 comments in one call
+  instead of one call each. I didn't instrument the exact before/after, so I'd
+  rather not quote a precise number."
+</div>
+
+<h4>(c) RAGAS — pinned in <code>pyproject.toml</code>, never imported</h4>
+<p>
+  <code>eval/ragas_eval.py</code> reimplements the four metrics by hand. The
+  docstring explains why: RAGAS 0.2–0.4 all import
+  <code>langchain_community.chat_models.vertexai</code>, a module path removed
+  in langchain-community v1.
+</p>
+<div class="say">
+  "I use RAGAS-<i>style</i> metrics, not the RAGAS library. Every version I
+  tried imported a LangChain module that no longer exists, and I wasn't going to
+  downgrade my whole stack for an eval dependency. They're LLM-as-judge scores
+  with public definitions, so I implemented the four directly in
+  <code>score_row</code>."
+</div>
+
+<h4>(d) No test suite, no CI, no Docker</h4>
+<p>
+  No pytest, no <code>conftest.py</code>, no <code>.github/workflows</code>, no
+  Dockerfile. The four <code>scripts/test_*.py</code> files are manual API
+  probes — they hit live endpoints and print results, with no assertions.
+</p>
+<div class="say">
+  "I have no unit-test suite, and that's a real gap. What I have instead is
+  <code>eval/agent_eval.py</code> — 45 assertions over the deterministic
+  components, where correctness is actually checkable. It works as a regression
+  suite and it encodes two production bugs as permanent cases. But it isn't
+  pytest, it doesn't run in CI, and the LLM nodes aren't covered."
+</div>
+<p><b>Own this.</b> Claiming tests you don't have is the most checkable lie available.</p>
+
+<h3>1.5 Two documentation discrepancies to pre-empt</h3>
+
+<h4>"14 agents"</h4>
+<p>
+  Defensible only if "agent" means "an LLM call that makes a judgement". Most
+  are single structured-output calls, not tool-calling loops.
+  <b>Exactly one true agent exists</b> — <code>dermatology.py</code>, built with
+  <code>create_agent</code> and bound to 3 tools.
+</p>
+<div class="say">
+  "One tool-calling agent — the dermatology researcher. The other LLM calls are
+  structured-output classifiers: they make a judgement and return a Pydantic
+  object, but they don't choose tools. I'd describe it as 'one agent inside a
+  graph of LLM-backed nodes', not multi-agent."
+</div>
+<p>That precision earns credit. Calling 14 classifiers "14 agents" loses it.</p>
+
+<h4>Two API files — know which is live</h4>
+<table>
+  <tr><th>File</th><th>Status</th></tr>
+  <tr><td><code>api/main.py</code></td><td>Local dev — imports <code>data.db</code>, full project</td></tr>
+  <tr><td><code>api_vercel/index.py</code></td><td><b>PRODUCTION</b> — raw SQL, minimal imports</td></tr>
+</table>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>2 · What it is and why it exists</h2>
+
+<p><b>The thesis, in one line:</b> marketing makes people buy a product — does it actually work?</p>
+
+<p>For every product, three questions:</p>
+<ol>
+  <li><b>Does it do what it says?</b> Marketing claim → is there research supporting it?</li>
+  <li><b>Are the ingredients as good as implied?</b> INCI facts → filters, irritants, restricted ingredients.</li>
+  <li><b>What do real users say?</b> Reddit — less sponsored than Amazon, still weighted for astroturf.</li>
+</ol>
+
+<p>Then the finding:</p>
+<pre><code>hype gap  =  what Amazon rank implies  −  what the evidence supports</code></pre>
+
+<p>A real row from <code>truth.db</code>:</p>
+<pre><code>Neutrogena Ultra Sheer SPF 70
+  Amazon rank      #4
+  evidence score   53.8
+  hype gap        +43.2      ← overhyped</code></pre>
+
+<div class="box note">
+  <b>Amazon rank never adds points.</b> Popularity is not evidence of quality.
+  Rank exists <i>only</i> to compute the gap. This is a design rule, not an
+  implementation detail — if rank contributed to the score, the comparison would
+  be circular.
+</div>
+
+<h3>Rules the system will not break</h3>
+<ul>
+  <li><b>No research ≠ bad.</b> If nothing has been studied, say "not studied". Absence of evidence is not evidence of absence — manufacturing doubt is hype pointed backwards.</li>
+  <li><b>Safety claims come only from openFDA.</b> Never from Reddit, never from a low rating, never inferred from an ingredient.</li>
+  <li><b>Every claim traces to a source.</b> A PMID, a recall number, or the ingredient list.</li>
+  <li><b>Skin-type mismatch is not a product failure.</b> "For dry skin" + oily-skinned complainer = not counted against the product.</li>
+  <li><b>Revenue never touches ranking order.</b></li>
+</ul>
+
+<!-- ================================================================= -->
+<h2>3 · Architecture</h2>
+
+<pre><code>WEEKLY BATCH JOB (slow, writes)                 THE WEBSITE (instant, reads)
+─────────────────────────────                   ───────────────────────────
+Firecrawl → Amazon best-sellers                 FastAPI on Vercel
+    ↓  rank, price, image, title                    ↓
+openFDA drug label → INCI                       api_vercel/index.py
+Open Beauty Facts → INCI (fallback)                 ↓  raw SQL, read-only
+    ↓                                           truth.db  (154 rows)
+LangGraph: orchestrator → router                    ↓
+          → dermatology (1 agent, 3 tools)      JSON → single-page frontend
+          → safety veto (openFDA)
+          → ranking → confidence
+    ↓
+truth.db  ◄── the ONLY thing the site reads
+
+SEPARATE, AHEAD OF DEMAND
+─────────────────────────
+6 subreddits × 5 listings → 10,481 threads → 211,991 comments → Chroma</code></pre>
+
+<div class="box good">
+  <b>The one rule that defines the system</b> (<code>data/db.py:8</code>):
+  <br><br>
+  <code>the weekly job WRITES here.&nbsp; the website only READS here.</code>
+  <br><br>
+  Enforced three ways: (1) <code>api/main.py</code>'s docstring forbids
+  importing <code>graph</code>; (2) <code>api_vercel/index.py</code> physically
+  cannot — it has almost no project imports; (3) Vercel's filesystem is
+  read-only, so writes are impossible.
+</div>
+
+<p>
+  <b>One deliberate exception:</b> <code>/api/recalls</code> hits openFDA live.
+  The reason is in the code — a week-old "no recalls" for a product recalled
+  yesterday is the worst failure this system could ship. Caching is an
+  optimisation, and optimisations don't get to touch the safety veto.
+</p>
+
+<h3>Why the caches are tiered by volatility</h3>
+<table>
+  <tr><th>Data</th><th>TTL</th><th>Why</th></tr>
+  <tr><td>Ingredients</td><td>90 days</td><td>Reformulation is a rare event</td></tr>
+  <tr><td>Reddit</td><td>14 days</td><td>Comments accumulate over weeks</td></tr>
+  <tr><td>Product detail</td><td>7 days</td><td>Price moves; images and claims don't</td></tr>
+  <tr><td>Best-seller rank</td><td><b>never cached</b></td><td>It's the hype signal, moves weekly, cheapest call we make</td></tr>
+  <tr><td>Recalls</td><td><b>never cached</b></td><td>See above — this is the veto</td></tr>
+</table>
+<div class="say">
+  "Everything expensive is cached; the cheap volatile thing is refreshed every
+  run. And the safety check is never cached at all, because serving a stale
+  'no recalls' is the one failure I'm not willing to ship."
+</div>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>4 · The graph (LangGraph)</h2>
+
+<h3>4.1 What a StateGraph actually is</h3>
+<p>
+  <b>Simple version:</b> a flowchart where each box is a Python function, and
+  they all read and write one shared dictionary.
+</p>
+<p>
+  <b>Technical version:</b> a directed graph of <i>nodes</i> (functions
+  <code>state → partial state</code>) and <i>edges</i> (what runs next). Each
+  node returns only the keys it changed; LangGraph merges that into the shared
+  state. Edges are either fixed (<code>add_edge</code>) or computed by a
+  routing function (<code>add_conditional_edges</code>).
+</p>
+
+<pre><code>                       START
+                         ↓
+                   orchestrator          ← LLM: parse query → category
+                         ↓
+            route_to_expert()            ← conditional edge: DICT LOOKUP, no LLM
+          ┌──────────────┼──────────────┐
+    dermatology      nutrition        food
+   (the one agent)    (stub)         (stub)
+          └──────────────┼──────────────┘
+                         ↓
+                      safety             ← openFDA. ALWAYS runs. No LLM.
+                         ↓
+                 safety_veto()           ← conditional edge
+                ┌────────┴────────┐
+          flag_avoid            rank      ← arithmetic
+                │                 ↓
+                │            confidence   ← LLM, with deterministic shortcuts
+                └────────┬────────┘
+                        END</code></pre>
+
+<h3>4.2 Why this is a graph and not a chain</h3>
+<p>Three structures a linear pipeline cannot express:</p>
+<ol>
+  <li><b>A bounded reflection loop</b> inside <code>dermatology</code> — an auditor re-runs the researcher when citations are missing. That's a cycle.</li>
+  <li><b>Conditional routing</b> — category selects a branch.</li>
+  <li><b>A veto</b> — a recall diverts to <code>flag_avoid</code>, skipping scoring entirely.</li>
+</ol>
+<div class="say">
+  "I used LangGraph because the control flow has a cycle in it. The dermatology
+  node loops — an auditor checks the analysis, and if claims are uncited it
+  re-runs the researcher with those specific gaps named. A chain can't express
+  that. It also gives me a typed shared state and conditional edges, so the
+  safety veto is a property of the graph structure rather than an <code>if</code>
+  somebody can forget."
+</div>
+
+<h3>4.3 The state</h3>
+<pre><code>class TruthState(TypedDict, total=False):
+    product: Product            # input
+    user_query: str
+
+    category: str               # orchestrator writes
+    filters: dict
+
+    expert_findings: str        # dermatology writes
+    sources: list[dict]
+    evidence: Annotated[list[Evidence], operator.add]   # ← see below
+
+    is_safe: bool               # safety writes
+    safety_notes: str
+
+    score: float                # ranking writes
+    subscores: dict
+    hype_gap: float
+    verdict: str
+    themes: list[dict]
+    skin_types: list[dict]
+
+    confidence: Literal["strong", "mixed", "insufficient"]</code></pre>
+
+<div class="box note">
+  <b>The one line worth knowing cold:</b>
+  <code>Annotated[list[Evidence], operator.add]</code>
+  <br><br>
+  Normally a node writing a key <i>overwrites</i> it. The annotation says
+  "when multiple nodes write here, <b>concatenate</b>". Evidence accumulates
+  across dermatology and safety instead of the second clobbering the first.
+  This is LangGraph's <i>reducer</i> mechanism, and it's the most likely
+  state-related interview question.
+</div>
+
+<h3>4.4 The router is a dict — on purpose</h3>
+<pre><code>BRANCHES = {"skincare": "dermatology", "supplement": "nutrition", "food": "food"}
+DEFAULT_BRANCH = "dermatology"
+
+def route_to_expert(state: TruthState) -> str:
+    category = (state.get("category") or "").lower().strip()
+    return BRANCHES.get(category, DEFAULT_BRANCH)</code></pre>
+<div class="say">
+  "The orchestrator <i>plans</i> — it reads an ambiguous request and extracts a
+  category. The router <i>dispatches</i> — category to branch. That's mechanical,
+  so it's a dict. A model that can hallucinate a route is strictly worse than a
+  dict that cannot, and if both made the same decision I'd have two sources of
+  truth and one of them would be wrong."
+</div>
+
+<h3>4.5 The reflection loop — the agentic part</h3>
+<pre><code>for pass_number in range(MAX_REFLECTIONS):        # MAX_REFLECTIONS = 2
+    reflection = _reflect(product["name"], findings)
+    if reflection.is_sufficient or not reflection.follow_up_queries:
+        break                                     # early exit
+
+    follow_up = f"""Your analysis has gaps. Close them.
+GAPS: {chr(10).join('- ' + g for g in reflection.gaps)}
+Run these searches and revise: {', '.join(reflection.follow_up_queries[:3])}
+Return the COMPLETE revised analysis, not just the new part."""
+
+    result = agent.invoke({"messages": [...prior..., follow_up]})
+    findings = result["messages"][-1].content</code></pre>
+
+<p>The auditor is forced into a schema so the loop condition can't be fuzzy prose:</p>
+<pre><code>class Reflection(BaseModel):
+    is_sufficient: bool
+    gaps: list[str]              # specific uncited claims
+    follow_up_queries: list[str] # PubMed searches that would close them</code></pre>
+
+<div class="box note">
+  <b>How infinite loops are prevented — three independent ways:</b>
+  <ol style="margin-bottom:0">
+    <li><b>A hard cap.</b> <code>range(MAX_REFLECTIONS)</code> — at most 2 extra passes, always.</li>
+    <li><b>An early exit.</b> <code>is_sufficient</code> or no follow-up queries → break.</li>
+    <li><b>"No evidence" counts as complete.</b> The auditor is told explicitly that <i>"there is insufficient evidence" is a complete answer, NOT a gap</i> — otherwise it would loop forever hunting papers that were never written.</li>
+  </ol>
+</div>
+<div class="say">
+  "Unbounded research is fine for one interactive question and fatal across 154
+  products — it makes the job's runtime unpredictable. So it's capped at two,
+  and it exits early when the auditor is satisfied. The subtle bug I had to fix
+  was the auditor treating 'nobody has studied this' as a gap, which made it
+  loop until the cap every time on niche products."
+</div>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>5 · RAG — two stores, two jobs</h2>
+
+<h3>5.1 What RAG is, and why not just ask the model</h3>
+<p>
+  <b>RAG</b> (Retrieval-Augmented Generation): instead of relying on what a
+  model memorised in training, you <i>retrieve</i> relevant documents first and
+  paste them into the prompt, so the answer is grounded in text you control.
+</p>
+<p>Three reasons a plain LLM call is not good enough here — each fatal alone:</p>
+<ol>
+  <li><b>No receipt.</b> The core rule is <i>every claim traces to a source</i>. A model answering from memory produces a fluent claim with no PMID behind it. In <code>rag/store.py</code> the citation metadata travels <i>with</i> the chunk — that's what makes grounding enforceable rather than aspirational.</li>
+  <li><b>It doesn't know this product.</b> Trained before the formulation existed, and brands reformulate. The INCI list in front of it beats its memory of what the product "probably" contains.</li>
+  <li><b>It doesn't fit.</b> "Oxybenzone absorption" alone returns ~128 PubMed papers. 211,991 Reddit comments certainly don't fit.</li>
+</ol>
+
+<h3>5.2 Store 1 — PubMed (268 chunks)</h3>
+
+<h4>Chunking: by abstract SECTION, not by abstract</h4>
+<p>A labelled medical abstract looks like this:</p>
+<pre><code>BACKGROUND:  Sunscreen use is widespread...
+METHODS:     24 volunteers applied 2mg/cm² four times daily...
+RESULTS:     Oxybenzone plasma levels reached 258 ng/mL...   ← the answer
+CONCLUSIONS: Absorption exceeds the FDA threshold...</code></pre>
+<pre><code>def _split_abstract(abstract: str) -> list[str]:
+    return [line.strip() for line in abstract.split("\n") if line.strip()]</code></pre>
+<div class="say">
+  "I chunk by section rather than by abstract. 'Does it absorb into blood' is
+  answered by the RESULTS section specifically — retrieving that beats
+  retrieving the whole paper and hoping the model reads the right paragraph.
+  It's semantic chunking on a structure the source already provides, so I get
+  it for free instead of guessing at a character count."
+</div>
+<p><em class="src">Interview theory, not implemented: fixed-size chunking with overlap (e.g. 512 tokens, 50 overlap) is the generic default. I didn't need it because abstracts are pre-segmented. Overlap exists to stop a sentence being split mid-idea; section boundaries are already idea boundaries.</em></p>
+
+<h4>Deterministic IDs make ingest idempotent</h4>
+<pre><code>ids.append(f"{paper['pmid']}::{i}")       # pmid + section index
+collection.upsert(ids=ids, ...)           # upsert, not add</code></pre>
+<p>Re-running the weekly job updates rather than duplicating. <code>add</code> would have crashed on a repeat.</p>
+
+<h4>Retrieval is re-ranked by STUDY QUALITY, not similarity</h4>
+<pre><code>hits.sort(key=lambda h: (h["evidence_strength"], h["similarity"]), reverse=True)</code></pre>
+<table>
+  <tr><th>Study design</th><th>Weight</th></tr>
+  <tr><td>Meta-analysis / Systematic review</td><td>5</td></tr>
+  <tr><td>Randomised controlled trial / Phase III</td><td>4</td></tr>
+  <tr><td>Clinical trial (Phase I–II)</td><td>3</td></tr>
+  <tr><td>Observational study / Review</td><td>2</td></tr>
+  <tr><td>Case report / Journal article</td><td>1</td></tr>
+</table>
+<p><b>Real retrieval, run live:</b></p>
+<pre><code>Q: "Does oxybenzone absorb into the bloodstream from sunscreen use?"
+  [PMID 31058986]  sim=0.666  strength=4   ← ranked FIRST
+  [PMID 33706185]  sim=0.603  strength=4
+  [PMID 31961417]  sim=0.597  strength=4
+
+Q: "Does aluminium in antiperspirant cause breast cancer?"
+  [PMID 37354712]  sim=0.734  strength=5   ← ranked first despite LOWER sim
+  [PMID 39795956]  sim=0.772  strength=2        than the 0.772 hit below it
+  [PMID 38173070]  sim=0.755  strength=2</code></pre>
+<div class="say">
+  "That second example is the whole point. Pure cosine would put the 0.772 hit
+  on top — a strength-2 review. The re-rank puts a strength-5 meta-analysis
+  first. In a medical context, how well the wording matched is a worse signal
+  than what kind of study it was."
+</div>
+
+<h3>5.3 Store 2 — Reddit (211,991 comments)</h3>
+<p>Same library, same embedding model, <b>completely different job.</b></p>
+<table>
+  <tr><th></th><th>PubMed RAG</th><th>Reddit RAG</th></tr>
+  <tr><td>Query is</td><td>a question</td><td><b>a name</b></td></tr>
+  <tr><td>You want</td><td>the answer</td><td>the neighbourhood</td></tr>
+  <tr><td>Returns</td><td>5</td><td>~120</td></tr>
+  <tr><td>Its output is</td><td><b>used directly</b></td><td><b>only a proposal</b></td></tr>
+  <tr><td>Min similarity</td><td>none</td><td>0.35</td></tr>
+  <tr><td>Expiry</td><td>never</td><td>120 days</td></tr>
+</table>
+
+<div class="box warn" style="background:#fff4f0">
+  <b>The contradiction an interviewer will find — have the answer ready.</b><br><br>
+  <code>tools/reddit.py</code> opens with an argument <i>against</i> vector
+  search on Reddit:<br>
+  <i>"Semantic search for 'is this sunscreen good' retrieves the comments that
+  most sound like that sentence, quietly dropping the dissenting minority...
+  Reddit is the one gameable source. Ranking comments by similarity to 'this
+  product is great' is exactly the attack surface."</i><br><br>
+  Then <code>rag/comments.py</code> does vector search on Reddit anyway.
+</div>
+
+<div class="say">
+  "They're two different jobs and I kept them apart deliberately.
+  <b>Scoring</b> sentiment must not use semantic retrieval — searching for
+  something positive-shaped returns positive-shaped comments and silently drops
+  the dissent, which biases the score and is trivially gameable by anyone
+  astroturfing. <b>Finding candidates</b> in a 212k pool is a genuine retrieval
+  problem. So retrieval only proposes: everything it returns goes through
+  relevance filters, and the score is computed over what survives, ranked by
+  specificity and upvotes — never by similarity to the query. One line in the
+  docstring: <i>semantic search decides what to look at; it never decides what
+  is true.</i>"
+</div>
+
+<h4>Why embeddings beat brand-string matching</h4>
+<p>Keying on the brand name missed everything that didn't spell it out:</p>
+<pre><code>"the elta clear one"      →  EltaMD UV Clear
+"TJ's spf"                →  Trader Joe's
+"that korean rice sunscreen"  →  Beauty of Joseon</code></pre>
+
+<h4>Multi-query: SEVEN searches, not one</h4>
+<pre><code>_add(retrieve(brand, product_name, n_results=30))   # 1. direct
+_add(retrieve(brand, "",           n_results=30))   # 2. brand alone
+for concern in get_category(category)["common_concerns"]:
+    _add(retrieve(brand, concern,  n_results=12))   # 3-7. concern-led</code></pre>
+<p>For sunscreen the concerns are <code>['white cast', 'pilling', 'greasy', 'stings eyes', 'breakouts']</code>.</p>
+<div class="say">
+  "One embedding query only finds comments phrased like that query. Query 1
+  catches 'the Neutrogena Clear Face is my holy grail'. Query 2 catches 'the
+  neutrogena one broke me out'. But the concern queries catch <i>'leaves a grey
+  cast and pills under my foundation'</i> — which names no brand and no product,
+  and is what most of Reddit actually looks like. Queries 1 and 2 both miss it."
+</div>
+
+<h3>5.4 A threading bug worth telling</h3>
+<pre><code>_client_lock = threading.Lock()
+_collection = None
+
+def get_collection():
+    global _collection
+    if _collection is not None:
+        return _collection
+    with _client_lock:
+        if _collection is None:          # another thread may have won the race
+            client = chromadb.PersistentClient(path=str(DB_PATH))
+            _collection = client.get_or_create_collection(...)
+    return _collection</code></pre>
+<div class="say">
+  "Chroma's PersistentClient keeps process-wide state, and constructing it from
+  four workers at once corrupted it. It surfaced as <i>three different errors
+  from one cause</i> — a 'could not connect to tenant' failure, a KeyError on
+  the store path, and an AttributeError inside the Rust bindings. I chased them
+  as three bugs before realising. One client behind a lock, double-checked
+  inside, fixed all three. Over a thousand products that's the difference
+  between a few retries and hundreds of lost rows."
+</div>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>6 · The Reddit pipeline, end to end</h2>
+
+<h3>6.1 Harvest ahead of demand — the key design choice</h3>
+<p>
+  <code>refresh/harvest.py</code> does <b>not</b> search per product. It opens 6
+  subreddits × 5 listing/window combinations (<code>hot/all</code>,
+  <code>new/all</code>, <code>top/year</code>, <code>top/month</code>,
+  <code>top/all</code>), following Reddit's <code>after</code> cursor for 10
+  pages each, and banks every comment ≥60 characters regardless of what it's about.
+</p>
+<pre><code>searched one product   →   6 comments  →  "white cast (2 people)"
+pulled from the pool   →  47 comments  →  "white cast (14), pills (9), stings (5)"</code></pre>
+<div class="say">
+  "Per-product search is starving — you get maybe six comments. So I harvest
+  ahead of demand: by the time a product's turn comes, the pool already holds
+  comments about it gathered while searching for forty other things. Fourteen
+  people independently reporting white cast is a property of the product. Two is
+  a coincidence."
+</div>
+<p>IDs are SHA1 content hashes, so re-scraping a thread is a no-op rather than a duplicate.</p>
+
+<h3>6.2 The filter chain — retrieval proposes, filters dispose</h3>
+<pre><code>~120 candidates (7 embedding queries, ≥0.35 similarity, &lt;120 days old)
+        ↓
+   comment_router     "is this about OUR product — and if not, whose?"
+        ↓
+   comment_matcher    strict: same brand ≠ same product
+        ↓
+   shill_detect       weight by specificity (does not delete)
+        ↓
+   ~47 approved
+        ├─→ SCORE:   sort by weight × upvotes → top 12 → one number
+        ├─→ THEMES:  count ALL 47 → repeats only → top 5
+        └─→ SKIN TYPES: grouped, including rescued comments</code></pre>
+
+<h4>The router replaced a hardcoded brand list</h4>
+<p>
+  The old version kept <code>KNOWN_BRANDS</code>. It didn't contain "biossance",
+  so a comment praising biossance inside a Supergoop thread counted as
+  <b>Supergoop sentiment</b>. Maintaining a list of every skincare brand on
+  earth is not a plan — new ones appear weekly and the misses are silent.
+</p>
+<p>So an agent answers two questions per comment:</p>
+<pre><code>thread: "Supergoop Unseen -- thoughts?"
+comment: "its so good, helped my skin"
+    → about Supergoop. Names nothing; the THREAD supplies the subject.
+
+comment: "I loveeee the biossance sunscreen, on my second tube"
+    → NOT Supergoop. About biossance. Bank it there.</code></pre>
+<div class="say">
+  "The second answer is the valuable half. A comment about another product is
+  still real evidence — just about something else — and I found it for free.
+  That's where <code>discovered.db</code> comes from: 1,468 mentions of products
+  the community discusses that Amazon's best-seller list never surfaced."
+</div>
+
+<h4>Shill detection rewards specificity instead of guessing intent</h4>
+<pre><code>"Great sunscreen, highly recommend, love the finish!"      → weight 0.4
+"pills under my foundation after about 4 hours,
+ and it stings if I sweat"                                 → weight 1.0</code></pre>
+<div class="say">
+  "I down-weight, I never accuse. You cannot know whether a specific person was
+  paid, enthusiastic real customers exist, and publishing 'this user is a shill'
+  would be defamatory and frequently wrong. What I <i>can</i> observe is that
+  paid copy almost never names a failure mode — the point of paid copy is to
+  sell. So I reward concrete lived detail. It's more robust than detection
+  because it doesn't require inferring anyone's intent."
+</div>
+
+<h3>6.3 The correction I had to make about my own system</h3>
+<div class="box warn" style="background:#fff8f0;border-left-color:#d9901f">
+  I initially described the score as "computed over all survivors, not the top
+  matches." Reading the code: it reads all 47 to <i>count</i> and <i>weight</i>,
+  but only the <b>top 12 by weight × upvotes</b> reach the scoring model.
+  It <i>is</i> a top-k.
+</div>
+<p>The point survives, but state it precisely:</p>
+<table>
+  <tr><th></th><th>Ranked by</th><th>Gameable?</th></tr>
+  <tr><td>The naive version</td><td>similarity to the query</td><td><b>Yes</b> — write comments that sound like it</td></tr>
+  <tr><td>What the code does</td><td><code>weight × upvotes</code></td><td><b>No</b> — specificity + community agreement</td></tr>
+</table>
+<div class="say">
+  "The twelve shown to the scorer are selected by how much lived detail they
+  carry and how many people upvoted them — never by resemblance to a search
+  phrase. Similarity is used to <i>find</i> candidates and then discarded
+  entirely."
+</div>
+
+<h3>6.4 Two honesty behaviours in the scorer</h3>
+<pre><code>if reddit["comment_count"] == 0:
+    return None, "Nobody on Reddit has discussed this product."
+    # ↑ None, NOT 50 — the caller drops the dimension and renormalises
+
+if reddit["comment_count"] < 5:
+    score = 50 + (score - 50) * 0.5     # damp toward neutral
+    note += " Few comments, so this signal is damped toward neutral."</code></pre>
+<div class="say">
+  "Returning 50 would read as 'people are lukewarm about it' when the truth is
+  'nobody said anything'. Those are completely different and must not look the
+  same. So the dimension is omitted and the remaining weights renormalise — the
+  product is neither penalised for being under-discussed nor rewarded for
+  silence. And four people saying it's amazing gets damped from 90 to 70,
+  because you don't get a confident score off four people."
+</div>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>7 · Databases</h2>
+
+<h3>7.1 Six SQLite databases + Chroma. No Postgres.</h3>
+<table>
+  <tr><th>Database</th><th>Purpose</th><th>Live scale</th></tr>
+  <tr><td><code>truth.db</code></td><td><b>Serving table.</b> 34 columns, 3 indexes. The site reads only this.</td><td>154 rows</td></tr>
+  <tr><td><code>memory.db</code></td><td>Research keyed by <i>ingredient</i>, not product</td><td>10 rows, <b>980 hits</b></td></tr>
+  <tr><td><code>scrape_cache.db</code></td><td>Tiered TTLs (90d / 14d / 7d)</td><td>601 entries</td></tr>
+  <tr><td><code>harvested_threads.db</code></td><td>Which threads are banked, so a 20-hour harvest resumes</td><td>10,481</td></tr>
+  <tr><td><code>discovered.db</code></td><td>Products the community discusses that Amazon doesn't rank</td><td>1,468 mentions</td></tr>
+  <tr><td><code>comment_pool.db</code></td><td>Legacy brand-keyed pool — superseded, effectively dead</td><td>—</td></tr>
+  <tr><td><b>Chroma</b></td><td>2 collections: <code>pubmed_abstracts</code>, <code>reddit_comments</code></td><td>268 / 211,991</td></tr>
+</table>
+<div class="say">
+  "Six databases because each has one job, and the separation is deliberate: a
+  scrape cache that goes stale must never be able to corrupt the serving table.
+  They're separate files, so that's structurally impossible rather than a
+  convention."
+</div>
+
+<h3>7.2 Why a vector DB <i>and</i> a relational one</h3>
+<table>
+  <tr><th></th><th>SQLite</th><th>Chroma</th></tr>
+  <tr><td>Answers</td><td>"which rows match exactly?"</td><td>"which text means something similar?"</td></tr>
+  <tr><td>Query</td><td><code>WHERE price &lt; 20</code></td><td><code>query_texts=["CeraVe"]</code></td></tr>
+  <tr><td>Index</td><td>B-tree</td><td>HNSW over cosine distance</td></tr>
+  <tr><td>Used for</td><td>serving the site</td><td>retrieval during the batch job</td></tr>
+</table>
+<div class="say">
+  "They answer different questions. SQL can tell me every sunscreen under $20;
+  it cannot tell me which comments are <i>about</i> a product when the writer
+  said 'the elta clear one'. Chroma can't efficiently do 'price &lt; 20 AND
+  category = sunscreen ORDER BY score'. So the vector store runs during the
+  batch job to find evidence, and the result is written to SQLite as plain
+  columns the site filters with normal SQL."
+</div>
+
+<h3>7.3 The migration bug that produced zero rows</h3>
+<pre><code>def init_db() -> None:
+    with get_connection() as conn:
+        conn.executescript(SCHEMA)
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(rankings)")}
+        for column, sql_type in expected.items():
+            if column not in existing:
+                conn.execute(f"ALTER TABLE rankings ADD COLUMN {column} {sql_type}")
+                print(f"  [db] added missing column: {column}")</code></pre>
+<div class="say">
+  "<code>CREATE TABLE IF NOT EXISTS</code> does <i>not</i> add columns to an
+  existing table. I added a column to the schema, and every database created
+  before that change kept its old shape — so every INSERT failed with 'no such
+  column'. A 31-minute run over 20 products produced zero rows and the job
+  reported success. The fix is a hand-rolled migration: create, then reconcile
+  actual columns against expected ones. It's what a migration framework would do,
+  minus the framework."
+</div>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>8 · Evaluation</h2>
+
+<h3>8.1 Agent eval — 45/45, with no LLM judging anything</h3>
+<table>
+  <tr><th>Dimension</th><th>Measurable?</th><th>Result</th></tr>
+  <tr><td>Outcome</td><td>Yes — known-correct answers exist</td><td><b>31/31</b></td></tr>
+  <tr><td>Tool use</td><td>Yes — calls typed, results structured</td><td><b>7/7</b></td></tr>
+  <tr><td>Trajectory</td><td><i>Partially</i> — graph path is determined; the agent's internal tool order is not</td><td><b>7/7</b></td></tr>
+  <tr><td>Planning</td><td><b>No — not scored</b></td><td>reported as unscorable</td></tr>
+</table>
+<div class="say">
+  "The planning row is the one I'd point at. With one live expert branch there's
+  too little for a plan to get wrong for a number to mean anything, so the suite
+  prints that instead of a fake metric. I'd rather report three honest
+  dimensions than four where one is decorative."
+</div>
+
+<h4>Ground truth is real, not judged</h4>
+<p>There are exactly 17 FDA-approved UV filters and zinc oxide is a mineral one. No model is consulted:</p>
+<pre><code>{"name": "handles descriptor-prefixed filters",
+ "run": lambda: analyse_ingredients_raw(
+     ["Non-Nano Uncoated Zinc Oxide 25%", "Beeswax"])["filter_type"],
+ "expect": "mineral"}
+
+{"name": "does NOT infer skin type from a complaint",
+ "run": lambda: detect_skin_type("this is greasy"),
+ "expect": ""}        # ← a texture report is not a skin-type declaration</code></pre>
+
+<h4>Two production bugs are permanent test cases</h4>
+<pre><code>{"name": "openFDA treats 'no matches' as empty, not an error",
+ "run": lambda: check_recalls_raw("zzzznotarealbrand"),
+ "expect": []}        # openFDA returns HTTP 404 for "nothing found"
+
+{"name": "openFDA survives reserved characters in a brand",
+ "run": lambda: isinstance(check_recalls_raw("Supergoop!"), list),
+ "expect": True}      # "!" broke Lucene query syntax</code></pre>
+<div class="say">
+  "Those two are the ones I'd highlight. They're not hypothetical — both bit me
+  in development. openFDA returns 404 for 'no matches', which my code treated as
+  an error, so every clean product looked like a failed check. And the '!' in
+  'Supergoop!' is a reserved Lucene character that broke the query. Encoding
+  real bugs as permanent cases is what turns an eval suite into a regression net."
+</div>
+
+<h4>The trajectory check is a structural invariant</h4>
+<pre><code>("no path skips safety",
+ not any(t in ("rank", "confidence")
+         for src, t in edges if src != "safety" and src != "rank"))</code></pre>
+<p>It introspects the <i>compiled</i> graph's edge set. The safety veto cannot be bypassed by a refactor without this failing.</p>
+
+<h3>8.2 RAG eval — 30 questions, four metrics</h3>
+<table>
+  <tr><th>Metric</th><th>Score</th><th>What it measures</th></tr>
+  <tr><td><b>Faithfulness</b></td><td><b>0.96</b></td><td>Is every claim in the answer supported by the retrieved context?</td></tr>
+  <tr><td>Answer relevancy</td><td>0.747</td><td>Does the answer address the question asked?</td></tr>
+  <tr><td>Context precision</td><td>0.507</td><td>Of what we retrieved, how much was useful?</td></tr>
+  <tr><td>Context recall</td><td>0.317</td><td>Did we retrieve what was needed?</td></tr>
+</table>
+
+<h4>The gold set is built to be hard</h4>
+<p>It deliberately includes questions where the honest answer is <b>no</b>:</p>
+<ul>
+  <li>Parabens → cancer? Traces to a 2004 study with no control group.</li>
+  <li>SLS → carcinogen? A 1990s hoax.</li>
+  <li>Aluminium → breast cancer? Reviews looked and didn't find it.</li>
+  <li>Hyaluronic acid "deeply rejuvenates"? No — surface hydration only.</li>
+</ul>
+<p>And ones where the answer is <i>"partially"</i> or <i>"unresolved"</i> — those catch a model that likes to be decisive.</p>
+
+<h4>Four real scored rows, run live</h4>
+<pre><code>Q: Does oxybenzone absorb into the bloodstream?
+A: "Yes... can be detected in human plasma following application."
+   faithfulness 1.0   relevancy 1.0   precision 1.0   recall 0.5
+
+Q: Does aluminium in antiperspirant cause breast cancer?
+A: "...does not provide definitive evidence... While some studies suggest
+    potential concerns... the overall consensus is no causal link."
+   faithfulness 1.0   relevancy 1.0   precision 0.8   recall 0.0
+
+Q: Does azelaic acid treat rosacea?
+A: "Yes, particularly papulopustular rosacea... 15% gel significantly
+    reduces inflammatory lesion counts."
+   faithfulness 1.0   relevancy 1.0   precision 1.0   recall 1.0
+
+Q: Are silicones such as dimethicone comedogenic?
+A: "The provided research passages do not specifically address this.
+    Therefore, I cannot provide an answer."
+   faithfulness 1.0   relevancy 0.2   ← SAME ANSWER, OPPOSITE VERDICTS</code></pre>
+
+<div class="box note">
+  <b>The tension you should name out loud.</b> The silicones row scores
+  <b>1.0 faithful</b> and <b>0.2 relevant</b> on one answer. One metric calls it
+  ideal; the other calls it failure. They trade against each other.
+</div>
+<div class="say">
+  "Faithfulness is 0.96 and relevancy is 0.747, and the gap isn't a bug — it's a
+  choice. When my corpus doesn't cover something, the model says so. That's
+  perfectly faithful and scores 0.2 on relevancy. I could push relevancy to 0.95
+  overnight by letting it answer from training data when retrieval comes up
+  empty — and I'd be shipping uncited health claims on a shopping site. That's
+  the trade I declined. The honest summary is: <b>grounding is strong, coverage
+  is uneven</b>, and the fix is more corpus, not different prompts."
+</div>
+<p>
+  Note the judge prompt scores <i>"the context does not answer this"</i> as
+  <b>1.0 faithful</b> — the "no research ≠ bad" rule encoded into the metric.
+</p>
+<p>
+  <em class="src">Also worth knowing: the aluminium row scores recall 0.0 with a good answer, because the ground truth says "reviews found no link" while the strongest retrieved chunk said "better to avoid Al-containing antiperspirants". The context genuinely didn't contain the ground truth. That's correct measurement, not a broken retriever.</em>
+</p>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>9 · Guardrails</h2>
+
+<p>Two layers, both <b>deterministic</b> — regex and string checks, never an LLM judging an LLM.</p>
+<div class="say">
+  "A guardrail you have to trust a model to enforce is not a guardrail, it's a
+  suggestion. If a model can be argued past it, it isn't a boundary."
+</div>
+
+<table>
+  <tr><th>Layer</th><th>Catches</th><th>Example</th></tr>
+  <tr><td><b>Input</b></td><td>Prompt injection</td><td><code>ignore all previous instructions</code></td></tr>
+  <tr><td></td><td>Medical advice</td><td><code>is this safe while pregnant</code></td></tr>
+  <tr><td></td><td>Off-domain</td><td><code>what laptop should I buy</code></td></tr>
+  <tr><td></td><td>Overlong input</td><td>&gt;500 chars — the usual vehicle for a buried injection</td></tr>
+  <tr><td><b>Output</b></td><td>Unsupportable safety claims</td><td><code>is completely safe</code>, <code>no health risk</code></td></tr>
+  <tr><td></td><td>Advice, not synthesis</td><td><code>you should stop using</code></td></tr>
+  <tr><td></td><td>Ungrounded assertion</td><td>claims <code>contains/absorbs/causes</code> with zero evidence recorded</td></tr>
+</table>
+
+<pre><code>def check_verdict(verdict: str, evidence: list[dict]) -> tuple[bool, list[str]]:
+    asserts_fact = re.search(r"\b(contains|absorbs|blocks|causes|prevents)\b", lowered)
+    if asserts_fact and not evidence:
+        problems.append(f"Verdict asserts {asserts_fact.group(0)!r} "
+                        "but no evidence was recorded.")
+    return (not problems), problems</code></pre>
+<div class="say">
+  "It doesn't auto-rewrite — that would hide the failure. It surfaces the problem
+  so the <i>prompt that produced it</i> gets fixed. An output guardrail that
+  silently patches bad output means you never learn your prompt is broken."
+</div>
+
+<h3>Safety is a veto, not a weight</h3>
+<pre><code>WEIGHTS = {"expert": 0.45, "sentiment": 0.35, "efficacy": 0.20}
+# Safety is NOT here. An unsafe product does not get to average its way back up.</code></pre>
+<p>And a failed check is never reported as safe:</p>
+<pre><code>except RuntimeError as exc:
+    return {"is_safe": True,          # let it through rather than falsely flagging
+            "safety_notes": f"Safety status UNKNOWN -- could not reach openFDA ({exc}). "
+                            "This is not a clean safety record; it is a failed check."}</code></pre>
+<div class="say">
+  "Treating a network outage as a clean bill of health is the worst bug this
+  system could have. So a failed check says 'unknown', in those words, rather
+  than 'no recalls found'."
+</div>
+
+<!-- ================================================================= -->
+<h2>10 · Question answering (built last)</h2>
+
+<p>
+  <code>/api/ask</code> turns a shopper's question into an answer assembled
+  <b>entirely from stored columns</b>. No LLM on the request path.
+</p>
+<pre><code>"what makes CeraVe great?"              → specific:    one product's evidence
+"best sunscreen non greasy on makeup"   → comparative: ranked, filtered catalogue
+"what laptop should i buy"              → declined:    off-domain</code></pre>
+
+<div class="say">
+  "An LLM call there would break the read-only rule, add latency per keystroke,
+  and — worst — answer from training data rather than my evidence. A model asked
+  'is this sunscreen good' will happily agree with the marketing, which is the
+  exact failure the site exists to expose. So every sentence is assembled from a
+  column the pipeline already computed, and the UI prints which column under each
+  line."
+</div>
+
+<h3>Why the parser is regex, not a model</h3>
+<p>
+  The vocabulary is <b>closed</b> — six skin types, five concerns, five
+  categories. That's what regex is for. A model that can invent a seventh skin
+  type is strictly worse than a dict that cannot.
+</p>
+
+<h3>Three deliberate honesty behaviours</h3>
+<ul>
+  <li><b>Untagged products show for everyone.</b> Silence is not exclusion — defaulting them to "normal skin" would invent a claim the brand never made and hide 81 products from every filter.</li>
+  <li><b>Themes with one mention are dropped.</b> One person is a story.</li>
+  <li><b>Missing evidence is stated.</b> <i>"Nobody with oily skin has reported on this; the brand markets it for dry."</i></li>
+</ul>
+
+<h3>The shared-logic refactor, and the test that enforces it</h3>
+<p>
+  The logic was initially copy-pasted into <code>api_vercel/index.py</code>,
+  because <code>.vercelignore</code> excluded <code>tools/</code> and
+  <code>pipeline/</code> wholesale. 18 modules in <code>tools/</code> genuinely
+  are heavy (LangChain, Chroma, OpenAI, PRAW) — but the serving code isn't.
+</p>
+<p>
+  Fix: a <code>serving/</code> package holding only pure-stdlib modules, which
+  both API entry points import. 318 lines of duplication removed. And because a
+  rule nothing checks is a comment, the eval suite enforces it:
+</p>
+<pre><code>{"name": "serving package stays dependency-free (Vercel-deployable)",
+ "run": lambda: _serving_is_pure(),      # AST-walks every import in serving/
+ "expect": True}
+
+{"name": "both API layers share one answer implementation",
+ "run": lambda: (api_vercel.index.answer_question is serving.answer_question),
+ "expect": True}</code></pre>
+<div class="say">
+  "Two copies of the same filter rules is a bug waiting to happen — you fix
+  'greasy' in one place and the deployed site keeps the old behaviour with
+  nothing failing to tell you. So I extracted a package that's pure stdlib by
+  contract, and wrote a test that AST-walks its imports. If someone adds
+  <code>from tools...</code> for convenience, the eval fails here instead of the
+  Vercel build failing at deploy time."
+</div>
+
+<img src="ask_screenshot.png" alt="The question feature running in a browser">
+<p style="font-size:9pt;color:#5a5362;margin-top:4pt">
+  Verified in a real browser via <code>scripts/browser_check.py</code> —
+  Playwright drives the page, asserts the answer card renders for four question
+  shapes, and <b>fails on any console error</b>. Note the source attribution
+  under every line.
+</p>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>11 · Failure analysis — bugs that actually happened</h2>
+
+<table>
+  <tr><th>#</th><th>Bug</th><th>Root cause</th><th>Why it was invisible</th></tr>
+  <tr>
+    <td>1</td><td>Three unrelated Chroma errors</td>
+    <td><code>PersistentClient</code> built from 4 threads</td>
+    <td>Three <i>different</i> exceptions from one cause — looked like three bugs</td>
+  </tr>
+  <tr>
+    <td>2</td><td>"Nobody discusses this product" for products with hundreds of comments</td>
+    <td>Pooled comments banked without <code>thread_title</code></td>
+    <td><b>Every component worked correctly.</b> The router needs the title to resolve "it", so it rightly rejected them</td>
+  </tr>
+  <tr>
+    <td>3</td><td>Biossance praise counted as Supergoop sentiment</td>
+    <td>Hardcoded <code>KNOWN_BRANDS</code> list missing entries</td>
+    <td>Silent — no error, just wrong attribution averaged into a score</td>
+  </tr>
+  <tr>
+    <td>4</td><td>31-minute run produced zero rows</td>
+    <td><code>CREATE TABLE IF NOT EXISTS</code> doesn't add columns</td>
+    <td>Job reported success</td>
+  </tr>
+  <tr>
+    <td>5</td><td>Every clean product looked like a failed safety check</td>
+    <td>openFDA returns HTTP 404 for "no matches"</td>
+    <td>404 looks like an error, is actually a valid empty result</td>
+  </tr>
+  <tr>
+    <td>6</td><td>3 of 4 products lost their ingredients</td>
+    <td>Rate limiting</td>
+    <td>A rate-limited lookup is indistinguishable from "genuinely not found"</td>
+  </tr>
+  <tr>
+    <td>7</td><td>Skin-type filter accepted clicks and did nothing</td>
+    <td>Backfill passed <code>[]</code> where marketing claims go</td>
+    <td>Empty list is a valid value — 85% of rows silently untagged</td>
+  </tr>
+</table>
+
+<h3>The one to lead with: bug #2</h3>
+<div class="say">
+  "My favourite bug is one where every component worked correctly and the output
+  was still completely wrong. Comments recalled from the pool were missing their
+  thread title. The router needs it — a reply saying 'it's so good' under a post
+  titled 'Supergoop Unseen — thoughts?' is a review of Supergoop; without the
+  title there's no way to know what 'it' refers to. So the router correctly
+  rejected them, and the site displayed 'nobody discusses this product' for
+  products with hundreds of comments. Nothing errored. Every piece behaved
+  exactly as designed. One missing metadata field, and correct components
+  produced a confidently false answer."
+</div>
+
+<h3>Bug #7 — found during this audit, and it's a good "what next"</h3>
+<pre><code>types = marketed_for(name or "", [])   # ← claims thrown away</code></pre>
+<p>
+  The live pipeline passes claims correctly; only the backfill didn't. Fixing one
+  line took tagging coverage from <b>23 → 73 products</b> (15% → 47%). The
+  Neutrogena row had <i>"Non-comedogenic sunscreen: free of oil, oxybenzone, and
+  PABA, in a non-greasy lotion"</i> sitting in its <code>claims</code> column —
+  <code>non-comedogenic</code> was already a pattern in the matcher and never
+  reached it.
+</p>
+
+<h3>Ten potential failure modes — NOT observed</h3>
+<ol>
+  <li>Chroma collection corruption with no backup — the 1.8GB store is not replicated.</li>
+  <li>A brand renaming itself breaks <code>memory.db</code> keys silently.</li>
+  <li>Amazon best-seller node IDs rotate; a stale URL returns zero products and the run "succeeds".</li>
+  <li>OpenAI model deprecation — <code>gpt-4o-mini</code> is hardcoded in 17 files.</li>
+  <li>Embedding model change would silently invalidate 212k vectors (no version stored).</li>
+  <li>A single product with a 10k-ingredient list could blow the context window.</li>
+  <li>Reddit changing its JSON schema breaks harvesting with no schema validation.</li>
+  <li>The 120-day comment TTL could empty the pool for a niche product between runs.</li>
+  <li>No deduplication between <code>truth.db</code> and <code>discovered.db</code> — the same product could appear twice under different ASINs.</li>
+  <li>The reflection loop's 2-pass cap could truncate genuinely complex research.</li>
+</ol>
+
+<!-- ================================================================= -->
+<h2>12 · Gaps — what this project does NOT demonstrate</h2>
+
+<div class="box warn" style="background:#fff8f0;border-left-color:#d9901f">
+  Be first to name these. An interviewer finding an overclaim is far worse than
+  you volunteering a gap.
+</div>
+
+<table>
+  <tr><th>Not demonstrated</th><th>What to say</th></tr>
+  <tr><td>Unit tests / pytest / CI</td><td>"No test suite. I have 45 deterministic eval assertions instead, which cover the checkable parts but aren't the same thing and don't run in CI."</td></tr>
+  <tr><td>Containers / Docker</td><td>"Deployed as a Vercel Python function, not a container. I haven't containerised this."</td></tr>
+  <tr><td>GPU optimisation</td><td>"Not applicable — I call hosted APIs, I don't serve models. No experience to claim here."</td></tr>
+  <tr><td>Distributed systems</td><td>"Single-process with a 4-worker thread pool. The concurrency bug I hit was real but local, not distributed."</td></tr>
+  <tr><td>Model serving / fine-tuning</td><td>"I integrate models, I don't serve or train them."</td></tr>
+  <tr><td>Horizontal scaling</td><td>"Never needed — it's a weekly batch job and a static read. I can describe how I'd scale it, but I haven't."</td></tr>
+  <tr><td>Monitoring / alerting</td><td>"LangSmith tracing when a key is set. No metrics, no alerts, no dashboards."</td></tr>
+  <tr><td>Postgres / pgvector</td><td>"Didn't use it. SQLite was right for a single-writer batch pipeline."</td></tr>
+</table>
+
+<h3>What IS a strong, honest match</h3>
+<table>
+  <tr><th>Requirement</th><th>Evidence in this project</th></tr>
+  <tr><td><b>Evaluation pipelines</b></td><td>Two suites. 45 deterministic agent assertions + 30-question RAG eval with four metrics, hand-implemented. Encodes real bugs as regression cases.</td></tr>
+  <tr><td><b>Model integration</b></td><td>22 LLM call sites, structured outputs via Pydantic, one tool-calling agent, bounded reflection.</td></tr>
+  <tr><td><b>Data pipelines</b></td><td>6 sources → 6 databases + 2 vector collections. Tiered caching by volatility, resumable 20-hour harvest.</td></tr>
+  <tr><td><b>Production-facing AI</b></td><td>Deployed and live. Read/write separation enforced architecturally, not by convention.</td></tr>
+  <tr><td><b>Failure analysis</b></td><td>Seven real bugs with root causes; two encoded as permanent tests.</td></tr>
+  <tr><td><b>Observability</b></td><td>LangSmith with per-run metadata (brand, ASIN, rank) so a bad verdict maps to its exact trace.</td></tr>
+  <tr><td><b>Interpretability</b></td><td>Every claim carries a PMID or recall number. The Q&amp;A UI prints the source column under each sentence.</td></tr>
+</table>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>13 · Interview questions, drilled</h2>
+
+<h3>13.1 The core technical set</h3>
+
+<p class="q">What is a StateGraph, and why not a plain Python pipeline?</p>
+<p>
+  A graph of functions sharing a typed state dict, with edges that can be
+  conditional. I needed it for three things a chain can't do: a <b>cycle</b>
+  (the reflection loop re-runs the researcher when citations are missing),
+  <b>conditional routing</b> (category → expert branch), and a <b>veto</b> (a
+  recall diverts to <code>flag_avoid</code>, skipping scoring entirely). The
+  veto being a graph edge rather than an <code>if</code> is what lets me
+  <i>test</i> that no path skips safety — my eval introspects the compiled edge
+  set.
+</p>
+<p class="fu"><b>Follow-up:</b> "Why not CrewAI?" → "CrewAI models a crew of role-playing agents collaborating. I have one real agent and a lot of deterministic machinery. I wanted explicit control flow I could draw and test, not emergent delegation. CrewAI would have made my strongest property — that the safety gate can't be bypassed — impossible to assert."</p>
+
+<p class="q">How do you prevent hallucination?</p>
+<p>Four layers, and only the first is prompting:</p>
+<ol>
+  <li><b>Retrieval</b> — the model answers from chunks I supply, with the citation attached to each chunk as metadata.</li>
+  <li><b>An auditor</b> — a second model reads the output and flags any claim without a PMID, then the researcher re-runs with those gaps named.</li>
+  <li><b>A deterministic output guardrail</b> — regex rejects "is completely safe", "no health risk", and any factual assertion with zero evidence recorded.</li>
+  <li><b>Measurement</b> — faithfulness 0.96 over 30 questions, where the judge treats "the context doesn't answer this" as perfectly faithful.</li>
+</ol>
+<p class="fu"><b>Follow-up:</b> "What's left?" → "The 0.04. Typically a date or percentage the model knows from training leaking into an otherwise grounded answer. And my auditor is itself an LLM — I'd want a deterministic citation-presence check as a backstop."</p>
+
+<p class="q">How do you stop irrelevant Reddit comments?</p>
+<p>
+  Three filters after retrieval. A <b>router</b> asks which product each comment
+  is about — and if it's a different one, names it, which is where 1,468
+  discovered mentions come from. A <b>matcher</b> is strict about the common
+  failure: same brand, different formula. "Neutrogena Hydro Boost" tells you
+  nothing about "Neutrogena Ultra Sheer", and that's the most common way wrong
+  sentiment enters a score invisibly. Then <b>weighting</b> by specificity.
+</p>
+<p class="fu"><b>Follow-up:</b> "Why not just a similarity threshold?" → "I have one, at 0.35, but it only establishes 'this is in the neighbourhood'. Similarity can't distinguish 'I love this' from 'better than this' — one is a review, the other is praise for a rival. That needs judgement."</p>
+
+<p class="q">Why two vector stores instead of one with metadata filtering?</p>
+<p>
+  Because they're used differently, not just filtered differently. PubMed
+  retrieval is re-ranked by study design and its output goes straight into a
+  prompt. Reddit retrieval returns ~120 candidates that are only <i>proposals</i>
+  — they go through three filters and the score is computed over survivors. They
+  also have different TTLs (never vs. 120 days) and different similarity floors.
+  One collection with a <code>source</code> filter would work mechanically, but
+  it would hide that these are two different algorithms.
+</p>
+<p class="fu"><b>Follow-up:</b> "Would you merge them now?" → "No. If anything the separation should be stronger — the Reddit store should probably be sharded by subreddit, since 212k vectors in one HNSW index is where query latency starts mattering."</p>
+
+<p class="q">Your relevancy score is only 0.747. Why?</p>
+<p>
+  Because I chose it. When my corpus doesn't cover a question, the model says
+  "the passages don't address this" — perfectly faithful, scores 0.2 on
+  relevancy. One answer, two opposite verdicts. I could push relevancy to 0.95
+  by letting it answer unsourced, and ship fabricated health claims on a shopping
+  site. The honest read is grounding is strong, coverage is uneven — and the fix
+  is corpus breadth, not prompt engineering.
+</p>
+<p class="fu"><b>Follow-up:</b> "How would you fix coverage?" → "<code>CORE_RESEARCH</code> is eight sunscreen topics warming the corpus, against a gold set spanning retinoids, acids and rosacea. Widening that list is the highest-leverage change and it doesn't touch retrieval code. I'd also add per-question recall logging so I know which topics are thin rather than inferring it."</p>
+
+<p class="q">What was the hardest bug?</p>
+<p>Use bug #2 from §11 — the missing <code>thread_title</code>. It's the best story because every component was behaving correctly.</p>
+<p class="fu"><b>Follow-up:</b> "How would you catch that class of bug earlier?" → "It was invisible because 'zero relevant comments' is a <i>valid</i> state — niche products genuinely have none. What I'd add is a distribution check: if the router's rejection rate jumps above some threshold across the whole catalogue, that's a pipeline bug, not a property of the products. I was monitoring per-product outcomes when I should have been monitoring the aggregate."</p>
+
+<p class="q">What is deterministic vs. LLM-controlled, and why?</p>
+<table>
+  <tr><th>Deterministic</th><th>Why</th></tr>
+  <tr><td>Router</td><td>Dict lookup. A model that can hallucinate a route is worse than a dict that cannot.</td></tr>
+  <tr><td>Safety gate</td><td>One REST call. This is the veto; it must never depend on model discretion.</td></tr>
+  <tr><td>UV filter identification</td><td>17 FDA-approved filters — a closed set with one right answer per molecule.</td></tr>
+  <tr><td>Score arithmetic</td><td>Same inputs, same answer, instantly, free.</td></tr>
+  <tr><td>Guardrails</td><td>A guardrail a model can argue past is not a guardrail.</td></tr>
+  <tr><td>Question parsing</td><td>Closed vocabulary — six skin types, five concerns.</td></tr>
+</table>
+<p><b>The principle:</b> <i>models for judgement, lookup tables for facts.</i></p>
+
+<p class="q">How would you scale this to 100,000 products?</p>
+<p><b>Say what exists first:</b> single process, 4-worker pool, ~90s per product, SQLite, one Chroma instance.</p>
+<p><b>Then the bottlenecks in order:</b></p>
+<ol>
+  <li><b>LLM rate limits</b> — already the binding constraint. 22 call sites × 100k products. Needs a queue with backpressure, not a thread pool. Currently handled with <code>time.sleep(20)</code> between products, which is honest but crude.</li>
+  <li><b>SQLite's single writer</b> — fine for one batch job, fatal for parallel workers. This is where Postgres actually earns its place.</li>
+  <li><b>Chroma at 212k → tens of millions</b> — HNSW index no longer fits comfortably in memory. Managed store or sharding.</li>
+  <li><b>The serving side barely changes</b> — it's already a static read, and the whole architecture is designed so page loads never touch any of the above.</li>
+</ol>
+<p class="fu"><b>Follow-up:</b> "What would you do first?" → "Instrument. I don't currently measure per-node latency or token counts, so I'd be optimising from intuition. LangSmith gives me traces but I'm not aggregating them."</p>
+
+<p class="q">What would you change today?</p>
+<ol>
+  <li><b>A real test suite.</b> The eval covers deterministic parts; the LLM nodes have no tests at all.</li>
+  <li><b>Instrument cost and latency per node</b> — so claims like "47→25 calls" are measured, not asserted.</li>
+  <li><b>Widen the research corpus</b> — the clear cause of 0.317 recall.</li>
+  <li><b>A deterministic citation check</b> alongside the LLM auditor — belt and braces on the thing that matters most.</li>
+  <li><b>Pin the embedding model version</b> in Chroma metadata, so a model change doesn't silently invalidate 212k vectors.</li>
+</ol>
+
+<p class="q">What did you personally own?</p>
+<p>
+  All of it — it's a solo project. Which cuts both ways: no code review, so the
+  design decisions are mine and so are the gaps. The parts I'd most want
+  reviewed are the scoring weights (0.45/0.35/0.20 is judgement, not derived)
+  and the decision to treat Amazon reviews as a labelled fallback at 0.4×
+  weight, which I went back and forth on.
+</p>
+
+<h3>13.2 Rapid-fire — Python &amp; software engineering</h3>
+
+<p class="q">Why <code>TypedDict</code> for state rather than a Pydantic model or a dataclass?</p>
+<p>LangGraph's merge semantics work on dicts — a node returns a partial dict and the framework merges it. <code>TypedDict</code> gives static type checking with zero runtime cost and stays a plain dict. A Pydantic model would validate on every node transition, which I don't need since nodes are my own code, and would break the partial-return pattern.</p>
+<p class="fu"><b>Follow-up:</b> "Where <i>do</i> you use Pydantic?" → "At every model boundary — <code>Reflection</code>, <code>QueryPlan</code>, <code>RoutedComment</code>, <code>ConfidenceCall</code>. That's where validation earns its keep, because the input is model output I don't control. Internal state is my own code; external output is not."</p>
+
+<p class="q">What does <code>total=False</code> do on your TypedDict?</p>
+<p>Makes every key optional. Essential here — nodes fill fields progressively, so a state mid-graph legitimately lacks <code>score</code> and <code>confidence</code>. Without it every node would have to construct a complete state.</p>
+
+<p class="q">Why <code>global</code> in <code>get_collection()</code>? Isn't that a smell?</p>
+<p>It's module-level memoisation of a resource that must be a singleton per process. The alternatives are a class with a classmethod (same thing, more ceremony) or <code>functools.lru_cache</code> — which would work but hides that this is a deliberate singleton and makes the locking harder to see. Here the <code>global</code> plus explicit lock makes the concurrency contract visible.</p>
+
+<p class="q">You catch bare <code>Exception</code> in several places. Defend that.</p>
+<p>Every instance is at a boundary where failure must not kill a 20-hour run, and each one is annotated. <code>refresh/run.py</code>: one bad product must not end the batch. <code>rag/comments.py</code>: a scrape failure degrades sentiment to unknown rather than crashing. They're all paired with a <code># noqa: BLE001</code> and a comment saying why. Where I <i>don't</i> do it is the safety path — openFDA failure raises <code>RuntimeError</code> deliberately, because silently swallowing it would mean a product with an unknown safety status looking clean.</p>
+
+<p class="q">Why lazy imports inside functions?</p>
+<p>Two reasons. Import cost — <code>api/main.py</code> only pays for <code>tools.recall_feed</code> when <code>/api/recalls</code> is hit. And circular-dependency avoidance: <code>ranking.py</code> imports from <code>graph.nodes.theme_research</code>, which imports <code>rag.store</code>. Hoisting those to module level creates cycles.</p>
+
+<p class="q">How do you handle secrets?</p>
+<p><code>python-dotenv</code> loads <code>.env</code>, which is in both <code>.gitignore</code> and <code>.vercelignore</code>. <code>load_dotenv()</code> is called before any <code>os.getenv</code> — in <code>refresh/run.py</code> the ordering is explicit with a comment, because importing a module that reads env at import time before loading the file silently yields <code>None</code>.</p>
+
+<h3>13.3 Rapid-fire — embeddings &amp; vectors</h3>
+
+<p class="q">What <i>is</i> an embedding, concretely?</p>
+<p>A fixed-length list of floats representing text, positioned so that similar meanings land near each other. <code>text-embedding-3-small</code> produces 1,536 dimensions. "The elta clear one" and "EltaMD UV Clear" end up close despite sharing almost no characters — that's the entire reason I use it instead of string matching.</p>
+
+<p class="q">Why <code>text-embedding-3-small</code> and not <code>-large</code>?</p>
+<p>Cost, at 212,000 comments. Small is 1,536 dimensions against large's 3,072 — roughly 5× cheaper and half the storage. The retrieval task here is "is this comment about this product", which is coarse. I'd reconsider for the research corpus, where distinguishing nuanced claims matters more and the volume is 268 chunks rather than 212k.</p>
+<p class="fu"><b>Follow-up:</b> "How would you know if that was wrong?" → "I'd need retrieval metrics I don't currently have — Recall@K against a labelled set of comment/product pairs. That's an honest gap: I evaluate the RAG end-to-end but never retrieval in isolation."</p>
+
+<p class="q">What is HNSW?</p>
+<p>Hierarchical Navigable Small World — the approximate-nearest-neighbour index Chroma uses. A multi-layer graph where upper layers are sparse for long jumps and lower layers dense for precision. Approximate, so it trades a small amount of recall for enormous speed; exact search over 212k vectors would mean 212k distance computations per query.</p>
+
+<p class="q">You set <code>hnsw:space: cosine</code> at creation. What if you wanted to change it?</p>
+<p>You can't — it's fixed at collection creation and changing it requires rebuilding. At 212k comments that's a full re-embed. It's the kind of parameter worth getting right up front, and a reason to store the embedding model version in metadata too, which I don't currently do.</p>
+
+<p class="q">What's Recall@K and MRR, and why don't you report them?</p>
+<p><b>Recall@K:</b> of all genuinely relevant documents, what fraction appear in the top K. <b>MRR</b> (Mean Reciprocal Rank): the average of 1/rank of the first relevant result — rewards putting the right answer first.</p>
+<p>I don't report either because both need a labelled set: "for this query, these are the relevant documents." I never built one. I evaluate the RAG end-to-end via context precision and recall, which are LLM-judged proxies. <b>That's a real gap</b> — a labelled retrieval set would let me tune top-k and the similarity threshold empirically instead of by feel.</p>
+
+<h3>13.4 Rapid-fire — the agent</h3>
+
+<p class="q">What happens if a tool raises inside the agent loop?</p>
+<p>LangChain catches it and returns the error as the tool result, so the model sees it and can adapt — often by retrying with different arguments. That's why my tools raise informative errors rather than returning <code>None</code>: the message becomes the model's input. The exception is openFDA, which is deliberately outside the agent entirely.</p>
+
+<p class="q">How do you make agent behaviour deterministic?</p>
+<p>Three ways. <code>temperature=0</code> everywhere. Structured outputs, so the shape can't vary even when wording does. And the big one — <b>keeping most decisions out of the model</b>: routing is a dict, filter identification is a set, scoring is arithmetic, guardrails are regex. The genuinely non-deterministic surface is small.</p>
+<p class="fu"><b>Follow-up:</b> "Is temperature 0 actually deterministic?" → "No. It makes sampling greedy but doesn't guarantee identical output — floating-point non-determinism in batched GPU inference means the same prompt can produce different tokens. For anything that must be reproducible I don't rely on the model at all. That's partly why the ingredient cache matters: it makes the research step reproducible by not re-running it."</p>
+
+<p class="q">Difference between an agent and a workflow?</p>
+<p>A workflow has a path fixed in advance by the author. An agent decides its own path at runtime. My system is mostly workflow with one agentic node — and that's the design, not a limitation. The research step genuinely varies per product; routing to the dermatology branch does not.</p>
+
+<p class="q">Difference between orchestration and tool calling?</p>
+<p>Orchestration is deciding which <i>component</i> runs next — my graph edges do that, mostly deterministically. Tool calling is a model deciding which <i>function</i> to invoke within a node. I separated them deliberately: the orchestrator identifies a category but does <b>not</b> choose the branch; a dict does. If both made the same decision I'd have two sources of truth and one would be wrong.</p>
+
+<p class="q">Where's the human in the loop?</p>
+<p>Nowhere at runtime — it's a batch job writing to a database. The human loop is at <i>development</i> time: I read verdicts, find the bad ones, trace them in LangSmith, fix the prompt. For a production system making consequential claims I'd want review before publish, at minimum on low-confidence verdicts. <b>Not implemented.</b></p>
+
+<h3>13.5 Rapid-fire — evaluation</h3>
+
+<p class="q">Define faithfulness mathematically.</p>
+<p>Of the claims in the answer, the fraction entailed by the retrieved context. Formally: |claims supported by context| / |claims in answer|. In practice an LLM judge decomposes the answer and checks each claim, because automatic claim decomposition and entailment are themselves hard problems.</p>
+
+<p class="q">Your context precision is 0.507. Isn't that bad?</p>
+<p>It means roughly half of what I retrieve is useful for the question. The cause is a fixed <code>n_results=5</code> with no relevance floor on the research side, so thin-coverage questions pad with marginal chunks. Two fixes: a similarity threshold like the Reddit side has, or a reranker model. I'd try the threshold first — it's free. But note precision and recall trade off: raising the threshold would push recall below 0.317.</p>
+
+<p class="q">Why is context recall only 0.317?</p>
+<p>Coverage, not retrieval quality. <code>CORE_RESEARCH</code> warms the corpus with eight sunscreen topics while the gold set spans retinoids, acids, ceramides and rosacea. Several questions have little or no corresponding content — silicones and comedogenicity returns 0.0 precision and 0.0 recall, meaning nothing relevant came back at all. And one row is <i>correct</i> measurement: on aluminium, my ground truth says "reviews found no link" while the strongest retrieved chunk said "better to avoid". The context genuinely didn't contain the ground truth.</p>
+
+<p class="q">Could your agent eval pass trivially?</p>
+<p>Fair challenge, and partly yes — several cases test a lookup table against itself, which is close to tautological. What saves it: the guardrail cases test real regex against real adversarial strings; the tool cases make live API calls and encode two bugs that actually broke production; and the trajectory check introspects the compiled graph, so a refactor that broke the safety invariant would fail it. The weakest cases are the filter-identification ones. The strongest is the one asserting no graph path skips safety.</p>
+
+<p class="q">How do you know your eval isn't overfit to your own system?</p>
+<p>I don't, fully. The gold set is questions my pipeline actually asks, written from published literature — which makes it realistic but also self-selected. An honest improvement would be sourcing questions from real user queries once I have them, and having a second person write ground truths. <b>Single-author ground truth is a genuine methodological weakness</b> and I'd rather name it than defend it.</p>
+
+<h3>13.6 Rapid-fire — data &amp; pipelines</h3>
+
+<p class="q">What happens if Amazon changes its page structure?</p>
+<p>Firecrawl returns nothing and the job falls back to Apify. If both fail, <code>load_live</code> returns an empty list and prints the recovery command. The real risk isn't a hard failure — it's a <i>partial</i> one where the selector still matches but returns garbage. I don't validate scraped output against a schema, which is a gap.</p>
+
+<p class="q">Why Firecrawl primary and Apify fallback, when Apify came first?</p>
+<p>Apify hit a monthly hard limit mid-run and silently zeroed the data. The job completed, reported success, and produced nothing. Anything with a failure mode that looks like success does not belong on the critical path, so it got demoted to fallback and the keyless option was promoted.</p>
+
+<p class="q">How does the 20-hour harvest resume?</p>
+<p><code>harvested_threads.db</code> stores every permalink already banked — 10,481 rows. Before processing a thread the harvester checks membership. The check is read-only and separate from the marking step, so a crash mid-thread re-processes that thread rather than skipping it, and the content-hash IDs make the re-write a no-op.</p>
+
+<p class="q">You bank every comment over 60 characters. Isn't that wasteful?</p>
+<p>Deliberately so. Storage and embedding at <code>-small</code> are cheap; the expensive thing is a scrape I have to repeat. A comment about a product I haven't ranked yet is worthless today and valuable the moment that product enters the catalogue — which is exactly what the 1,468 discovered mentions are. Filtering at ingest would mean guessing now what I'll need later.</p>
+
+<h3>13.7 Rapid-fire — the uncomfortable ones</h3>
+
+<p class="q">This is a solo project with no users. Why should I believe it works?</p>
+<p>You shouldn't take my word for it — that's why there are numbers. 45 deterministic assertions over components with known-correct answers, a RAG eval on 30 questions, and a browser test that drives the real page and fails on any console error. I can run all three in front of you. What I <i>can't</i> claim is that users find the verdicts useful, because there aren't enough users to say.</p>
+
+<p class="q">Isn't a 0.45 weight on "expert mentions" arbitrary?</p>
+<p>Yes. It's judgement ordered by how hard each signal is to fake, not derived from data. I'd want to validate against held-out human preference and I haven't. The thing I'd defend is the <i>structure</i> rather than the constants — safety as a veto rather than a weight, rank excluded entirely, and missing dimensions dropped rather than defaulted.</p>
+
+<p class="q">You scrape Reddit and Amazon. Is that allowed?</p>
+<p>Reddit's public JSON endpoints with throttling, which is the documented interface. Amazon via Firecrawl, which is a grey area — their ToS restricts scraping, and a commercial version would need the Product Advertising API. Worth being straight about: it's fine for a personal research project and would need changing before it was a business.</p>
+
+<p class="q">What's the weakest part of this system?</p>
+<p>Three candidates, and I'd pick the second. (1) Context recall at 0.317 — but I know the cause and the fix. (2) <b>No test suite</b>, so every refactor is checked by eval assertions that cover maybe a third of the code. (3) Scoring weights are unvalidated judgement. The second is weakest because it's the one that will bite someone <i>else</i> maintaining this.</p>
+
+<p class="q">If you started over, what would you do differently?</p>
+<p>Instrument from day one. Every number I'd want to quote — cost per product, latency per node, LLM calls before and after batching — I either don't have or can't defend, because I added caching and batching without measuring the before. The ingredient cache is the exception, and only because <code>hits</code> happened to be in the schema. That's why I can say "980 reuses" with confidence and can't say "47 to 25 calls" at all.</p>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>14 · Every tool, dissected</h2>
+
+<h3>14.1 First: "tool" means two different things here</h3>
+<p>
+  An interviewer will use the word loosely. Be precise, because the distinction
+  is load-bearing in this codebase.
+</p>
+<table>
+  <tr><th></th><th>Agent-callable tool</th><th>Pipeline function</th></tr>
+  <tr><td>Decorated with</td><td><code>@tool</code> (LangChain)</td><td>nothing — plain Python</td></tr>
+  <tr><td>Who decides to call it</td><td><b>the model</b></td><td><b>my code</b></td></tr>
+  <tr><td>Arguments come from</td><td>model output, validated against the signature</td><td>the caller</td></tr>
+  <tr><td>Count here</td><td><b>7 defined, 3 actually bound</b></td><td>~30 modules</td></tr>
+</table>
+
+<div class="say">
+  "Seven functions carry the <code>@tool</code> decorator, but only three are
+  bound to the agent. The other four are decorated so they <i>could</i> be
+  exposed, and are currently called deterministically by nodes instead. If
+  someone asks how many tools my agent has, the answer is three — and I'd
+  rather say that than inflate it, because a tool the model never sees isn't a
+  tool, it's a function."
+</div>
+
+<h3>14.2 The 7 <code>@tool</code> functions</h3>
+<table>
+  <tr><th>Tool</th><th>Module</th><th>Bound to agent?</th><th>Returns</th></tr>
+  <tr><td><code>analyse_ingredients</code></td><td><code>tools/ingredient.py:156</code></td><td><b>YES</b></td><td>Filter type, flagged, irritants</td></tr>
+  <tr><td><code>search_research</code></td><td><code>tools/pubmed.py:176</code></td><td><b>YES</b></td><td>Abstracts + PMIDs, design-weighted</td></tr>
+  <tr><td><code>check_ingredient_fear</code></td><td><code>tools/fear_check.py:111</code></td><td><b>YES</b></td><td>A common fear, to test against evidence</td></tr>
+  <tr><td><code>check_fda_recalls</code></td><td><code>tools/openfda.py:92</code></td><td>no — node calls it</td><td>Recalls with enforcement numbers</td></tr>
+  <tr><td><code>reddit_sentiment</code></td><td><code>tools/reddit.py:352</code></td><td>no — node calls it</td><td>Comments, astroturf-weighted</td></tr>
+  <tr><td><code>lookup_fda_ingredients</code></td><td><code>tools/fda_ingredients.py:298</code></td><td>no — resolver calls it</td><td>INCI from the drug-label filing</td></tr>
+  <tr><td><code>lookup_openbeautyfacts</code></td><td><code>tools/openbeautyfacts.py:120</code></td><td>no — resolver calls it</td><td>INCI for non-drug cosmetics</td></tr>
+</table>
+
+<div class="box note">
+  <b>Why the safety tool is deliberately NOT given to the agent.</b>
+  <code>check_fda_recalls</code> is decorated, but the safety node calls
+  <code>check_recalls_raw()</code> directly. If it were a tool, the model would
+  decide <i>whether</i> to check for recalls. It must run for every product,
+  every time, with no discretion. Making it a graph node rather than a tool is
+  what turns "the model usually checks" into "the check cannot be skipped".
+</div>
+
+<h3>14.3 How tool-calling actually works</h3>
+<pre><code>def _build_agent():
+    model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    return create_agent(
+        model=model,
+        tools=[analyse_ingredients, search_research, check_ingredient_fear],
+        system_prompt=SYSTEM_PROMPT,
+    )</code></pre>
+
+<p>What happens under that one call, step by step:</p>
+<ol>
+  <li><b>Schema generation.</b> LangChain reads each function's signature and docstring and converts them to JSON Schema. <code>search_research(query: str)</code> becomes <code>{"name": "search_research", "parameters": {"query": {"type": "string"}}}</code>.</li>
+  <li><b>The schemas are sent with every request</b> in the <code>tools</code> field. That is literally how the model "knows which tools exist" — they are in the prompt payload, not trained in.</li>
+  <li><b>The model emits a tool call</b> — structured JSON, not prose: <code>{"name": "search_research", "arguments": {"query": "zinc oxide broad spectrum"}}</code>.</li>
+  <li><b>LangChain validates and dispatches</b> — argument names and types are checked against the signature before the Python function runs.</li>
+  <li><b>The result is appended as a tool message</b> and the model is called again, now seeing the output.</li>
+  <li><b>Loop until no tool call is emitted</b>, then the final message is the answer.</li>
+</ol>
+
+<div class="say">
+  "The docstring is not documentation — it's the specification the model reads
+  to decide when to call the function. That's why mine say things like
+  <i>'Use this for any claim about whether an ingredient works, is absorbed, or
+  is harmful. Every such claim must cite a PMID returned by this tool.'</i> That
+  sentence is doing prompt-engineering work, not explaining to a human."
+</div>
+
+<h3>14.4 Tool 1 — <code>analyse_ingredients</code></h3>
+<p><b>The design decision that matters most here is what it refuses to do.</b></p>
+<pre><code>"""INCI (ingredient list) analysis -- pure local logic, no network calls.
+
+This is deliberately OUR OWN CODE and never an external API.
+
+Commercial ingredient APIs sell you a "safety score" or a "comedogenicity
+rating". Those are somebody's *opinion* dressed up as data -- and comedogenicity
+ratings in particular come mostly from 1970s rabbit-ear studies that correlate
+poorly with human skin. If we piped those into our ranking we'd be reselling a
+black box while telling users we rank by what's actually true.
+
+So we only extract things that are OBJECTIVELY CHECKABLE from the label:
+  - is this filter mineral or chemical?  (a fact about the molecule)
+  - is oxybenzone present?               (a fact about the list)
+  - is fragrance present?                (a fact about the list)
+
+Interpretation -- "is that bad?" -- is left to the research tools."""</code></pre>
+
+<div class="say">
+  "I could have bought an ingredient-safety API in an afternoon. I didn't,
+  because a 'safety score' is somebody's opinion with a number on it — and
+  comedogenicity ratings in particular trace to 1970s rabbit-ear studies that
+  correlate poorly with human skin. Piping that in would mean reselling a black
+  box while telling users I rank by what's true. So this module only extracts
+  facts from the label. Whether a fact is <i>bad</i> is answered by PubMed, with
+  a citation."
+</div>
+
+<h4>The closed sets</h4>
+<pre><code>MINERAL_FILTERS = {"zinc oxide", "titanium dioxide"}
+
+CHEMICAL_FILTERS = {
+    "avobenzone", "oxybenzone", "octinoxate", "octisalate", "octocrylene",
+    "homosalate", "ensulizole", "meradimate", "padimate o",
+    "sulisobenzone", "trolamine salicylate",
+}</code></pre>
+<p>
+  <b>This is why it is not an agent.</b> The FDA approves exactly 17 UV filters.
+  It is a closed set with one correct answer per molecule. A model could
+  hallucinate an eighteenth; a <code>set</code> cannot.
+</p>
+
+<h4>Flagged ingredients state a fact, never a judgement</h4>
+<pre><code>FLAGGED_INGREDIENTS = {
+    "homosalate": (
+        "The EU restricted homosalate to 7.34% in face products in 2022 over "
+        "endocrine concerns; the US still permits up to 15%."
+    ),
+    "oxybenzone": (
+        "Banned in Hawaii and Key West over coral-reef concerns; the FDA's "
+        "2019-2020 MUsT studies found it absorbs into the bloodstream above "
+        "the threshold at which further safety testing is required."
+    ),
+}</code></pre>
+<div class="say">
+  "Every value is a dated, attributable regulatory fact — not 'this is
+  dangerous'. 'The EU capped it at 7.34% in 2022, the US allows 15%' is
+  checkable and lets the reader decide. 'Homosalate is harmful' is a claim I
+  cannot support and shouldn't make."
+</div>
+
+<h4>The normaliser, and the bug inside it</h4>
+<pre><code>def _normalise(ingredient: str) -> str:
+    cleaned = ingredient.lower().strip()
+
+    # Drop parenthetical notes: "titanium dioxide (nano)" -> "titanium dioxide"
+    if "(" in cleaned:
+        cleaned = cleaned.split("(")[0]
+
+    # Drop a trailing concentration: "avobenzone 3%" -> "avobenzone".
+    # Note the number comes BEFORE the % sign, so splitting on "%" alone
+    # leaves "avobenzone 3" and nothing matches.
+    cleaned = re.sub(r"\s*[\d.]+\s*%?\s*$", "", cleaned)
+
+    return cleaned.strip(" .,*")</code></pre>
+<p>Line by line:</p>
+<ul>
+  <li><code>.lower().strip()</code> — labels are inconsistently cased.</li>
+  <li><code>split("(")[0]</code> — <code>"Titanium Dioxide (nano)"</code> must match <code>"titanium dioxide"</code>. The nano/non-nano distinction is real but belongs in research, not identification.</li>
+  <li><code>re.sub(r"\s*[\d.]+\s*%?\s*$", "", ...)</code> — <b>the bug worth telling.</b> The obvious fix is <code>split("%")[0]</code>, which turns <code>"avobenzone 3%"</code> into <code>"avobenzone 3"</code> — and that matches nothing. The number precedes the percent sign, so the digits must be stripped too. Silent failure: every concentration-bearing label returned <code>filter_type: unknown</code>.</li>
+  <li><code>.strip(" .,*")</code> — labels end with asterisks and commas.</li>
+</ul>
+
+<h3>14.5 Tool 2 — <code>search_research</code> (PubMed)</h3>
+<pre><code>EVIDENCE_RANK = {
+    "Meta-Analysis": 5,          "Systematic Review": 5,
+    "Randomized Controlled Trial": 4,  "Clinical Trial, Phase III": 4,
+    "Clinical Trial, Phase II": 3,     "Clinical Trial, Phase I": 3,
+    "Clinical Trial": 3,
+    "Observational Study": 2,    "Review": 2,
+    "Case Reports": 1,           "Journal Article": 1,
+}
+
+pub_types = [p.text for p in article.findall(".//PublicationType") if p.text]
+strength = max((EVIDENCE_RANK.get(pt, 0) for pt in pub_types), default=0)</code></pre>
+<p>
+  <code>max(...)</code> because PubMed tags a paper with several types at once —
+  a meta-analysis is also a "Journal Article". Taking the max gives the paper
+  credit for its strongest classification. <code>default=0</code> handles types
+  not in the table, which sort last.
+</p>
+
+<pre><code>if not abstract:
+    continue  # no abstract -> nothing to ground a claim in, so skip it</code></pre>
+<div class="say">
+  "A paper with no abstract is useless to me, however relevant its title. There
+  is no text to retrieve, nothing to put in a prompt, and nothing to ground a
+  claim in. Indexing it would mean a citation pointing at something the model
+  never actually read."
+</div>
+
+<h3>14.6 Tool 4 — <code>check_fda_recalls</code>: the safety gate</h3>
+<p>Three defensive decisions in forty lines. All three came from real failures.</p>
+
+<h4>(a) Sanitising the query — the Supergoop! bug</h4>
+<pre><code>def _sanitise(brand: str) -> str:
+    """Strip characters that break openFDA's Lucene query syntax.
+
+    "Supergoop!" returns HTTP 400 because `!` is a reserved operator. A crash
+    here means NO RECALL CHECK RAN, so this must never be left to chance.
+    """
+    for char in '!:()[]{}^"~*?\\/&|+-':
+        brand = brand.replace(char, " ")
+    return " ".join(brand.split())</code></pre>
+<div class="say">
+  "openFDA's search is Lucene-backed, so <code>!</code> is a reserved operator.
+  'Supergoop!' returned a 400 and the safety check silently didn't run. The
+  danger isn't the crash — it's that a failed safety check and a clean safety
+  check look identical downstream unless you're careful. That's now a permanent
+  eval case."
+</div>
+
+<h4>(b) 404 means "nothing found", not "error"</h4>
+<pre><code>if response.status_code == 404:
+    return []  # no matches -- the good case
+
+response.raise_for_status()</code></pre>
+<div class="say">
+  "openFDA returns 404 when a search has no matches. For me that's the <i>good</i>
+  outcome — no recall on record. Treating it as an error made every clean
+  product look like a failed check. It reads as an API design quirk, but it's
+  exactly the kind of thing you only learn by using the API rather than reading
+  about it."
+</div>
+
+<h4>(c) A network failure must never read as "safe"</h4>
+<pre><code>try:
+    response = requests.get(ENFORCEMENT_URL, params=params, timeout=15)
+except requests.RequestException as exc:
+    # A network failure is NOT the same as "no recall". Say so loudly --
+    # silently returning "safe" here would be the worst bug in the system.
+    raise RuntimeError(f"openFDA request failed for {brand!r}: {exc}") from exc</code></pre>
+<p>And the node that catches it refuses to lie:</p>
+<pre><code>except RuntimeError as exc:
+    return {
+        "is_safe": True,          # let it through rather than falsely flagging it
+        "safety_notes": (
+            f"Safety status UNKNOWN -- could not reach openFDA ({exc}). "
+            "This is not a clean safety record; it is a failed check."
+        ),
+    }</code></pre>
+<div class="say">
+  "Note it still returns <code>is_safe: True</code> — I won't falsely flag a
+  product because my network failed, since that would be defamatory to a brand
+  that did nothing wrong. But the note says, in those words, <i>'this is not a
+  clean safety record; it is a failed check.'</i> The distinction between
+  'checked and clean' and 'could not check' is the entire point, and it's
+  visible to the reader rather than buried."
+</div>
+
+<h4>(d) Attribution in the output phrasing</h4>
+<pre><code>lines.append(
+    f"The FDA recorded a recall ({r.get('recall_number')}, {classification}: "
+    f"{meaning}) for {r.get('recalling_firm')} on ..."
+)</code></pre>
+<div class="say">
+  "'<i>The FDA recorded a recall</i>' — not 'this product is unsafe'. I attribute
+  the claim to the body that made it. That's both more honest and the reason I'm
+  able to say it at all; it's a reportable fact with an enforcement number
+  attached, not my opinion."
+</div>
+
+<h3>MAKE SURE YOU UNDERSTAND THESE 5</h3>
+<ol>
+  <li>How many tools does the dermatology agent actually have, and how does the model know they exist?</li>
+  <li>Why is the safety check a node rather than a tool?</li>
+  <li>Why does <code>strength</code> use <code>max()</code> over publication types?</li>
+  <li>What does HTTP 404 mean from openFDA, and why did it cause a bug?</li>
+  <li>Why does a failed safety check return <code>is_safe: True</code>?</li>
+</ol>
+
+<h3>INTERVIEW CHECK</h3>
+<ol>
+  <li>"How does an LLM know what tools it has?"</li>
+  <li>"What happens if the model passes a wrong argument type?"</li>
+  <li>"Why not let the agent decide whether to check for recalls?"</li>
+  <li>"Why write your own ingredient analysis instead of using an API?"</li>
+</ol>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>15 · Code walkthrough, line by line</h2>
+
+<p>
+  The blocks most likely to be opened in an interview. Read the code, then the
+  annotation under it.
+</p>
+
+<h3>15.1 The graph assembly — <code>graph/build.py</code></h3>
+<pre><code>builder = StateGraph(TruthState)
+
+builder.add_node("orchestrator", orchestrator_node)
+builder.add_node("dermatology", dermatology_node)
+builder.add_node("safety", safety_node)
+builder.add_node("rank", ranking_node)
+builder.add_node("confidence", confidence_node)
+builder.add_node("flag_avoid", flag_avoid_node)
+
+builder.add_edge(START, "orchestrator")
+
+builder.add_conditional_edges(
+    "orchestrator",
+    route_to_expert,                                     # ← returns a STRING
+    {"dermatology": "dermatology",                       # ← string → node name
+     "nutrition": "nutrition", "food": "food"},
+)
+
+builder.add_edge("dermatology", "safety")                # every branch
+builder.add_edge("nutrition", "safety")                  # converges on
+builder.add_edge("food", "safety")                       # safety
+
+builder.add_conditional_edges(
+    "safety", safety_veto, {"rank": "rank", "flag_avoid": "flag_avoid"}
+)
+
+builder.add_edge("rank", "confidence")
+builder.add_edge("confidence", END)
+builder.add_edge("flag_avoid", END)                      # flagged skips scoring
+
+return builder.compile()</code></pre>
+<ul>
+  <li><code>StateGraph(TruthState)</code> — the TypedDict is the schema every node reads and writes.</li>
+  <li><code>add_conditional_edges(source, fn, mapping)</code> — <code>fn</code> returns a string; the mapping turns it into a node. The indirection means routing logic is a testable pure function, not buried in graph wiring.</li>
+  <li><b>The three <code>add_edge(branch, "safety")</code> lines are the architecture.</b> There is no path from any expert to <code>rank</code>. Safety is unavoidable by construction.</li>
+  <li><code>add_edge("flag_avoid", END)</code> — a recalled product never reaches scoring. It cannot average its way back up.</li>
+  <li><code>.compile()</code> — validates the graph (unreachable nodes, missing targets) and returns a runnable. <code>graph = build_graph()</code> at module import; it's stateless and safe to reuse.</li>
+</ul>
+<div class="say">
+  "If I had to defend one design choice, it's those three convergent edges. The
+  safety veto isn't an <code>if</code> somebody might forget to write — it's a
+  property of the graph's shape, and my eval asserts it by introspecting the
+  compiled edge set."
+</div>
+
+<h3>15.2 The reducer — <code>graph/state.py</code></h3>
+<pre><code>from typing import Annotated
+import operator
+
+evidence: Annotated[list[Evidence], operator.add]</code></pre>
+<p><b>What it does:</b></p>
+<pre><code># WITHOUT the annotation (default behaviour — last write wins):
+dermatology returns {"evidence": [A, B]}   → state["evidence"] == [A, B]
+safety      returns {"evidence": [C]}      → state["evidence"] == [C]      ✗ lost
+
+# WITH Annotated[..., operator.add]:
+dermatology returns {"evidence": [A, B]}   → state["evidence"] == [A, B]
+safety      returns {"evidence": [C]}      → state["evidence"] == [A, B, C] ✓</code></pre>
+<div class="say">
+  "That's LangGraph's reducer mechanism. By default a node writing a key
+  overwrites it; the annotation says 'when several nodes write here,
+  concatenate'. Evidence has to accumulate — the ingredient facts from
+  dermatology and the recall records from safety both belong in the same list,
+  and without this the second node would silently clobber the first."
+</div>
+
+<h3>15.3 The reflection loop — <code>dermatology.py:190</code></h3>
+<pre><code>for pass_number in range(MAX_REFLECTIONS):           # ① hard cap = 2
+    reflection = _reflect(product["name"], findings)  # ② audit
+    if reflection.is_sufficient or not reflection.follow_up_queries:
+        break                                          # ③ early exit
+
+    print(f"  [derm] gap found, research pass {pass_number + 2}: {reflection.gaps}")
+
+    follow_up = f"""Your analysis has gaps. Close them.
+
+GAPS: {chr(10).join('- ' + g for g in reflection.gaps)}
+
+Run these searches and revise: {', '.join(reflection.follow_up_queries[:3])}
+
+Return the COMPLETE revised analysis, not just the new part.
+If a gap cannot be closed because the research does not exist, say so explicitly."""
+
+    result = agent.invoke({"messages": [                # ④ full prior context
+        {"role": "user", "content": prompt},
+        {"role": "assistant", "content": findings},
+        {"role": "user", "content": follow_up},
+    ]})
+    findings = result["messages"][-1].content</code></pre>
+<ol>
+  <li><b>Hard cap.</b> <code>range(2)</code>. Not a <code>while</code> with a counter — the bound is structural.</li>
+  <li><b>The auditor returns a Pydantic model</b>, so the loop condition is a boolean field, never parsed prose.</li>
+  <li><b>Two exit conditions.</b> Satisfied, <i>or</i> it has no concrete searches to suggest. The second matters: an auditor that says "needs more work" without saying what would loop pointlessly.</li>
+  <li><b>The prior analysis is replayed as an assistant message</b>, so the model revises rather than restarting. <code>"Return the COMPLETE revised analysis"</code> exists because without it the model returned only the new paragraph and the original was lost.</li>
+</ol>
+<div class="box note">
+  <b>The line that prevents the infinite loop</b> is in the auditor's system prompt, not the Python:
+  <br><br>
+  <code>"Note that 'there is insufficient evidence' is a complete answer, NOT a gap."</code>
+  <br><br>
+  Without it, niche products looped to the cap every single time — the auditor
+  kept demanding citations for research that was never published.
+</div>
+
+<h3>15.4 The Chroma singleton — <code>rag/comments.py:60</code></h3>
+<pre><code>_client_lock = threading.Lock()
+_collection = None
+
+def get_collection():
+    global _collection
+    if _collection is not None:          # ① fast path, no lock
+        return _collection
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is required to embed comments.")
+
+    with _client_lock:                   # ② only contended on first call
+        if _collection is None:          # ③ re-check inside the lock
+            DB_PATH.mkdir(parents=True, exist_ok=True)
+            client = chromadb.PersistentClient(path=str(DB_PATH))
+            _collection = client.get_or_create_collection(
+                name=COLLECTION,
+                embedding_function=embedding_functions.OpenAIEmbeddingFunction(
+                    api_key=api_key, model_name="text-embedding-3-small"
+                ),
+                metadata={"hnsw:space": "cosine"},   # ④
+            )
+    return _collection</code></pre>
+<p>This is <b>double-checked locking</b>. Each line earns its place:</p>
+<ol>
+  <li>The common case is "already built" — taking a lock on every retrieval would serialise four workers for no reason.</li>
+  <li>The lock only matters during the first call.</li>
+  <li><b>The re-check is the whole point.</b> Two threads can both pass check ①, then queue at the lock. Without ③, the second would build a second client and overwrite the first — which is the corruption.</li>
+  <li><code>hnsw:space: cosine</code> — cosine distance, set at creation. <b>It cannot be changed later without rebuilding the collection.</b></li>
+</ol>
+<div class="say">
+  "Chroma's PersistentClient keeps process-wide state, and four workers
+  constructing it concurrently corrupted it. It surfaced as three <i>different</i>
+  exceptions from one cause — a tenant connection failure, a KeyError on the
+  store path, and an AttributeError inside the Rust bindings. I chased them as
+  three separate bugs before I saw the pattern. Classic double-checked locking
+  fixed all three."
+</div>
+
+<h3>15.5 Why cosine and not Euclidean</h3>
+<p>
+  <b>Cosine</b> measures the <i>angle</i> between vectors — direction only,
+  magnitude ignored. <b>Euclidean</b> measures straight-line distance, so
+  magnitude counts.
+</p>
+<p>
+  For text embeddings, magnitude correlates with <b>length</b>, not meaning. A
+  40-word comment and a 400-word comment making the same point have similar
+  <i>direction</i> but very different <i>magnitude</i>. Under Euclidean, the long
+  one looks far away. Under cosine, they match.
+</p>
+<div class="say">
+  "My comments range from 60 characters to several paragraphs. I want 'this is
+  about white cast' to match regardless of how much the person wrote. Cosine
+  gives me that. And OpenAI's embeddings are near-normalised anyway, so the two
+  metrics rank almost identically — but cosine states the intent, and it's the
+  one that stays correct if that ever changes."
+</div>
+
+<h3>15.6 The multi-query retrieval — <code>rag/comment_themes.py</code></h3>
+<pre><code>def gather_all_comments(brand, product_name, category="sunscreen") -> list[dict]:
+    seen: set[str] = set()
+    candidates: list[dict] = []
+
+    def _add(results: list[dict]) -> None:
+        for r in results:
+            key = r["text"][:200]              # ① dedupe on content prefix
+            if key not in seen:
+                seen.add(key)
+                candidates.append(r)
+
+    _add(retrieve(brand, product_name, n_results=PER_QUERY))   # ② direct
+    _add(retrieve(brand, "", n_results=PER_QUERY))             # ③ brand alone
+
+    for concern in get_category(category)["common_concerns"]:  # ④ concern-led
+        if len(candidates) >= MAX_CANDIDATES:                  # ⑤ cost bound
+            break
+        _add(retrieve(brand, concern, n_results=12))
+
+    return candidates[:MAX_CANDIDATES]</code></pre>
+<ol>
+  <li>The same comment is returned by several queries, so dedupe on the first 200 characters. Not the full text — minor scrape differences in trailing whitespace would defeat exact matching.</li>
+  <li>Catches <i>"the Neutrogena Clear Face is my holy grail"</i>.</li>
+  <li>Catches <i>"the neutrogena one broke me out"</i> — query ② misses it, because the long product name dilutes the embedding.</li>
+  <li><b>The clever one.</b> Catches <i>"leaves a grey cast and pills under my foundation"</i> — no brand, no product name. Queries ② and ③ both miss it. This is what most of Reddit looks like.</li>
+  <li><code>MAX_CANDIDATES = 120</code> bounds cost: every candidate eventually costs a share of an agent call.</li>
+</ol>
+
+<h3>15.7 Renormalising the score — <code>ranking.py</code></h3>
+<pre><code>WEIGHTS = {"expert": 0.45, "sentiment": 0.35, "efficacy": 0.20}
+
+subscores = {"efficacy": _score_efficacy(findings, category)}
+
+if expert_pts is not None:
+    subscores["expert"] = expert_pts          # only if a derm actually wrote
+
+sentiment_score, sentiment_note = _score_sentiment(reddit)
+if sentiment_score is not None:
+    subscores["sentiment"] = sentiment_score  # only if anyone discussed it
+
+usable = {k: w for k, w in WEIGHTS.items() if k in subscores}</code></pre>
+<p>Worked example — a product nobody has discussed and no dermatologist mentioned:</p>
+<pre><code>subscores = {"efficacy": 70}
+usable    = {"efficacy": 0.20}
+score     = (70 × 0.20) / 0.20 = 70       ← judged on what we measured
+
+# The naive alternative (filling gaps with 50):
+score = 70×0.20 + 50×0.35 + 50×0.45 = 54  ← dragged to the middle by
+                                             two dimensions we never measured</code></pre>
+<div class="say">
+  "A missing dimension is dropped and the remaining weights renormalise.
+  Defaulting to 50 would mean 'nobody discussed it' silently pulls a good
+  product toward average — penalising obscurity, which is the opposite of what
+  the site is for. The product is judged on the evidence that exists, and the
+  confidence tier tells the reader how much that was."
+</div>
+
+<h3>15.8 The output guardrail — <code>guardrails.py</code></h3>
+<pre><code>UNSUPPORTABLE_CLAIMS = [
+    r"\bis\s+(completely\s+|totally\s+|perfectly\s+)?safe\b",
+    r"\b(is|are)\s+(proven|guaranteed)\s+safe\b",
+    r"\bno\s+(health\s+)?risk\b",
+    r"\bcauses\s+cancer\b",                      # never assert; attribute or omit
+    r"\bwill\s+(cure|prevent|treat)\b",
+    r"\byou\s+should\s+(stop|avoid)\s+using\b",  # advice, not synthesis
+]
+
+def check_verdict(verdict: str, evidence: list[dict]) -> tuple[bool, list[str]]:
+    problems = []
+    lowered = verdict.lower()
+
+    for pattern in UNSUPPORTABLE_CLAIMS:
+        match = re.search(pattern, lowered)
+        if match:
+            problems.append(
+                f"Unsupportable claim: {match.group(0)!r}. "
+                "State what was looked for and not found instead."
+            )
+
+    asserts_fact = re.search(r"\b(contains|absorbs|blocks|causes|prevents)\b", lowered)
+    if asserts_fact and not evidence:
+        problems.append(
+            f"Verdict asserts {asserts_fact.group(0)!r} but no evidence was recorded."
+        )
+
+    return (not problems), problems</code></pre>
+<p>Two different checks:</p>
+<ul>
+  <li><b>Pattern-based</b> — catches specific unsupportable phrasings. Note <code>causes cancer</code> is banned in <i>both</i> directions: asserting harm without attribution is fear-mongering, which is hype pointed backwards.</li>
+  <li><b>Structural</b> — a verdict using a factual verb with an empty evidence list is ungrounded <i>by construction</i>, regardless of wording. This catches hallucinations the pattern list never anticipated.</li>
+</ul>
+<div class="say">
+  "The second check is the one I'd defend hardest. It doesn't care what the
+  sentence says — it asks whether the pipeline <i>recorded</i> evidence. If the
+  verdict asserts 'contains' and the evidence list is empty, something is wrong
+  no matter how plausible it reads. That generalises past any blocklist."
+</div>
+<p>
+  And it returns problems rather than rewriting:
+  <i>"We do not auto-rewrite -- that hides the failure. We surface it so the
+  problem gets fixed in the prompt that produced it."</i>
+</p>
+
+<h3>15.9 The cache — <code>data/cache.py</code></h3>
+<pre><code>TTL_DAYS = {"ingredients": 90, "reddit": 14, "detail": 7}
+
+def get(kind: str, identifier: str):
+    key = f"{kind}::{identifier}".lower()
+    ttl = TTL_DAYS.get(kind, 7) * 86400
+
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT payload, fetched_at FROM scrape_cache WHERE key = ?", (key,)
+        ).fetchone()
+
+        if not row:
+            return None
+
+        payload, fetched_at = row
+        if time.time() - fetched_at > ttl:
+            conn.execute("DELETE FROM scrape_cache WHERE key = ?", (key,))  # ①
+            return None
+
+        conn.execute("UPDATE scrape_cache SET hits = hits + 1 WHERE key = ?", (key,))  # ②
+        return json.loads(payload)</code></pre>
+<ol>
+  <li><b>Stale entries are deleted on read</b>, not just ignored — lazy expiry, so the table doesn't grow unboundedly with dead rows and there's no sweeper process.</li>
+  <li><b><code>hits</code> is what produced the "980 reuses" number.</b> Instrumentation built into the cache rather than bolted on, which is why that figure is defensible and "47→25 LLM calls" isn't.</li>
+</ol>
+<div class="say">
+  "The TTLs are tiered by how fast each thing actually changes — ingredients 90
+  days because reformulation is rare, Reddit 14 because comments accumulate
+  slowly, detail 7 because price moves. And best-seller rank is deliberately
+  never cached: it's the hype signal, it moves weekly, and it's the cheapest
+  call I make. Everything expensive is cached; the cheap volatile thing is
+  always fresh."
+</div>
+
+<h3>MAKE SURE YOU UNDERSTAND THESE 5</h3>
+<ol>
+  <li>Why is the re-check inside the lock necessary in <code>get_collection()</code>?</li>
+  <li>What does <code>Annotated[list[Evidence], operator.add]</code> change?</li>
+  <li>Why does <code>_normalise</code> use a regex instead of <code>split("%")</code>?</li>
+  <li>What happens to the score when sentiment is unavailable, and why not default to 50?</li>
+  <li>Which guardrail check catches a hallucination the blocklist never anticipated?</li>
+</ol>
+
+<h3>INTERVIEW CHECK</h3>
+<ol>
+  <li>"Walk me through what happens when two threads call <code>get_collection()</code> simultaneously."</li>
+  <li>"How do you guarantee the safety node can't be skipped?"</li>
+  <li>"Why cosine distance rather than Euclidean?"</li>
+  <li>"Your reflection loop — what stops it running forever?"</li>
+</ol>
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>16 · The "why?" drill</h2>
+
+<p>
+  Interviewers chain <i>why</i> three or four deep. Each answer below gives
+  <b>what the repo does</b> first, then the reasoning you can defend.
+  Where a motivation is inferred rather than documented, it says so.
+</p>
+
+<p class="q">Why LangGraph?</p>
+<p>
+  <b>Repo:</b> <code>graph/build.py</code> compiles a <code>StateGraph</code>
+  with 2 conditional edges and a cycle inside <code>dermatology</code>.
+  <br><b>Why:</b> three things a chain can't express — a loop, conditional
+  routing, and a veto that skips downstream nodes. And because the graph is a
+  data structure, I can <i>assert</i> on its shape: my eval introspects the
+  compiled edge set to prove no path skips safety.
+</p>
+
+<p class="q">Why an agent at all, rather than a fixed sequence of calls?</p>
+<p>
+  <b>Repo:</b> only <code>dermatology</code> is agentic. Everything else is
+  deterministic.
+  <br><b>Why:</b> the research path genuinely varies per product. A mineral
+  sunscreen with no flagged ingredients needs one ingredient call and one
+  efficacy search. One containing oxybenzone and fragrance needs fear-checks and
+  absorption research. I don't know in advance which, so letting the model
+  choose is correct. Everything with one right answer is a lookup.
+</p>
+
+<p class="q">Why not CrewAI or AutoGen?</p>
+<p>
+  <b>Why:</b> those model a crew of role-playing agents that delegate to each
+  other. I have one real agent and a lot of deterministic machinery, and I
+  wanted explicit control flow I could draw and test. Emergent delegation would
+  make my strongest property — the unskippable safety gate — impossible to
+  assert.
+  <br><em class="src">Defensible engineering rationale, not a documented decision.</em>
+</p>
+
+<p class="q">Why Chroma rather than Pinecone, Weaviate, FAISS, or pgvector?</p>
+<p>
+  <b>Repo:</b> <code>chromadb.PersistentClient</code>, local disk, 1.8GB, two collections.
+</p>
+<ul>
+  <li><b>vs Pinecone</b> — hosted, costs money, needs network on every retrieval. This is a batch job on one machine; nothing needs a distributed index.</li>
+  <li><b>vs FAISS</b> — faster, but it stores vectors only. I'd have to manage metadata separately, and metadata travelling with the chunk is what makes citations enforceable. That's the property I care most about.</li>
+  <li><b>vs pgvector</b> — would mean running Postgres I don't otherwise need. Reasonable if I were already on Postgres; I'm not.</li>
+  <li><b>vs Weaviate</b> — more capable, far heavier to operate.</li>
+</ul>
+<div class="say">
+  "Chroma persists to a local directory, needs no server, and keeps metadata
+  with each chunk. For a single-machine batch job those are exactly the right
+  trade-offs. If this needed concurrent writers or horizontal scale, Chroma
+  would be the first thing I'd replace — probably with pgvector, since by then
+  I'd need Postgres anyway."
+</div>
+
+<p class="q">Why SQLite and not Postgres?</p>
+<p>
+  <b>Repo:</b> six SQLite files. No Postgres anywhere.
+  <br><b>Why:</b> one writer (the weekly job), many readers (the site), no
+  concurrent writes, and the database is small enough to <i>ship as a deployment
+  artifact</i>. The Vercel function opens <code>truth.db</code> read-only; there
+  is no connection string, no pool, no credential, nothing to go down. Postgres
+  earns its place at concurrent writers or pgvector. I had neither.
+</p>
+
+<p class="q">Why six databases instead of one with six tables?</p>
+<p>
+  <b>Why:</b> different lifecycles and different blast radii. <code>truth.db</code>
+  is the serving artifact that ships to production — it must never be corrupted
+  by a scrape cache that went stale, and that's structurally impossible when
+  they're separate files. <code>harvested_threads.db</code> is a resume log for a
+  20-hour job. <code>scrape_cache.db</code> is disposable; deleting it costs money
+  but loses nothing. Separate files also mean <code>.vercelignore</code> can ship
+  exactly one and exclude the rest.
+</p>
+
+<p class="q">Why RAG instead of fine-tuning?</p>
+<p>
+  <b>Why:</b> three reasons, and the first is decisive.
+</p>
+<ol>
+  <li><b>Citations.</b> A fine-tuned model produces fluent claims with no PMID. My core rule is every claim traces to a source — fine-tuning destroys that by construction.</li>
+  <li><b>Freshness.</b> New papers and recalls appear weekly. Re-running ingest is minutes; re-training is not.</li>
+  <li><b>Volume.</b> 268 chunks is nowhere near enough to fine-tune on, and 212k Reddit comments would teach style, not facts.</li>
+</ol>
+
+<p class="q">Why not just put everything in the prompt?</p>
+<p>
+  <b>Why:</b> "oxybenzone absorption" alone returns ~128 PubMed papers.
+  211,991 Reddit comments is far past any context window, and even where it fits,
+  attention degrades over long contexts — the model reads the start and end more
+  reliably than the middle. Retrieval also lets me <b>re-rank by study quality</b>,
+  which stuffing cannot.
+</p>
+
+<p class="q">Why chunk by section rather than fixed size?</p>
+<p>
+  <b>Repo:</b> <code>_split_abstract</code> splits on newlines, because
+  <code>fetch_abstracts</code> joins labelled sections that way.
+  <br><b>Why:</b> the source is already segmented into BACKGROUND / METHODS /
+  RESULTS / CONCLUSIONS. "Does it absorb into blood" is answered by RESULTS
+  specifically. Fixed-size chunking would cut across those boundaries
+  arbitrarily. Semantic chunking is better when you can get it — here the source
+  hands it to me free.
+</p>
+<p class="fu"><b>Follow-up — "what about overlap?"</b> → "Overlap exists to stop a sentence being split mid-idea. Section boundaries <i>are</i> idea boundaries, so there's nothing to repair. If I were chunking full-text papers rather than abstracts I'd use fixed-size with overlap, probably 512 tokens and 50 overlap."</p>
+
+<p class="q">Why top-k = 5 for research and ~120 candidates for Reddit?</p>
+<p>
+  <b>Why:</b> different jobs. For research, 5 abstract sections is roughly what
+  a model can hold and reason over without the prompt becoming a haystack; the
+  re-rank means those 5 are the strongest designs, not just the closest wording.
+  For Reddit, I'm not reading candidates — I'm <i>filtering</i> them, and recall
+  matters more than precision because the filters downstream are strict. 120 is
+  a cost ceiling: every candidate eventually costs a share of an agent call.
+</p>
+
+<p class="q">Why a 0.35 similarity threshold on comments but none on research?</p>
+<p>
+  <b>Why:</b> the research corpus is curated — everything in it is a PubMed
+  abstract on a topic I chose, so a weak match is still a real paper. The
+  comment pool is 212k unfiltered Reddit comments, most about something else
+  entirely. Below ~0.35 a comment is almost certainly unrelated, and passing it
+  to the relevance agent wastes a call.
+  <br><em class="src">0.35 was chosen empirically, not derived.</em>
+</p>
+
+<p class="q">Why re-rank by study design instead of trusting similarity?</p>
+<p>
+  <b>Repo:</b> <code>hits.sort(key=lambda h: (h["evidence_strength"], h["similarity"]), reverse=True)</code>
+  <br><b>Why:</b> similarity measures wording overlap, which is a poor proxy for
+  reliability in medicine. A case report using the question's exact words can
+  outrank a meta-analysis that phrases it differently. Live example from my own
+  corpus: on the aluminium question, a strength-2 review scored 0.772 and a
+  strength-5 meta-analysis scored 0.734. Pure cosine puts the weaker paper
+  first. The re-rank fixes it.
+</p>
+
+<p class="q">Why cache by ingredient and not by product?</p>
+<p>
+  <b>Repo:</b> <code>memory.db</code>, keyed <code>"efficacy::zinc oxide"</code>.
+  10 entries, 980 hits.
+  <br><b>Why:</b> products change weekly; ingredients don't. But the cost saving
+  is the <i>obvious</i> half. The subtle half is <b>consistency</b>: researching
+  zinc oxide 154 separate times produces 154 slightly different write-ups, which
+  would give two chemically identical products different scores for no
+  defensible reason. The cache makes the system deterministic where the domain is.
+</p>
+
+<p class="q">Why is the safety check never cached?</p>
+<p>
+  <b>Why:</b> a recall can be issued any day. Serving a week-old "no recalls" for
+  a product recalled yesterday is the worst failure this system could ship.
+  Caching is an optimisation, and optimisations don't get to touch the veto.
+</p>
+
+<p class="q">Why LLM-as-judge for RAG metrics, when you avoided LLMs elsewhere?</p>
+<p>
+  <b>Why:</b> because faithfulness has no deterministic definition. "Is every
+  claim in this answer supported by this context" requires reading both and
+  reasoning about entailment. There's no lookup table for that.
+  <br>Note what I <i>did</i> keep deterministic: the 45 agent-eval cases have
+  known-correct answers — 17 FDA filters, zinc oxide is mineral — so no model
+  judges those. I use LLM-as-judge only where ground truth genuinely requires
+  judgement.
+</p>
+<p class="fu"><b>Follow-up — "what can go wrong with LLM-as-judge?"</b> → "Four things. It's <b>self-consistent</b> — the same model family judging its own output shares blind spots. It's <b>position-biased</b> in pairwise comparisons. It's <b>verbosity-biased</b>, rating longer answers higher. And it's <b>non-deterministic</b> even at temperature 0. I mitigate by using it only where no ground truth exists, pinning temperature 0, and backing it with 45 deterministic assertions. What I haven't done is validate judge scores against human labels — that's the honest gap."</p>
+
+<p class="q">Why those scoring weights — 0.45 / 0.35 / 0.20?</p>
+<p>
+  <b>Why:</b> ordered by how hard each signal is to fake. A named dermatologist
+  stakes their reputation (hardest). Reddit at scale is the least-sponsored large
+  signal. Research is weighted lowest because it <i>separates products least</i> —
+  most sunscreens share the same 4–5 FDA filters, so efficacy is nearly constant
+  across the catalogue.
+  <br><em class="src">This is judgement, not derived from data. If pushed: I'd want to validate against held-out human preference, which I haven't done.</em>
+</p>
+
+<p class="q">Why is Amazon rank never part of the score?</p>
+<p>
+  <b>Why:</b> it would make the hype gap circular. The gap is
+  <code>rank − evidence</code>; if rank fed into evidence, I'd be comparing a
+  number against itself. Beyond the arithmetic, popularity isn't evidence of
+  quality — treating it as such is the exact error the site exists to correct.
+</p>
+
+<p class="q">Why no LLM on the <code>/api/ask</code> request path?</p>
+<p>
+  <b>Why:</b> it would break the read-only rule, add latency per request, cost
+  money per search — and worst, answer from training data rather than my
+  evidence. A model asked "is this sunscreen good" will happily agree with the
+  marketing, which is precisely the failure the site exists to expose. Every
+  sentence is assembled from a stored column, and the UI prints which column
+  under each line.
+</p>
+
+<p class="q">Why regex for question parsing instead of a model?</p>
+<p>
+  <b>Why:</b> the vocabulary is closed — six skin types, five concerns, five
+  categories. A model that can invent a seventh skin type is strictly worse than
+  a dict that cannot. It's also free, instant, and testable with known-correct
+  answers, which is why 11 of my 45 eval cases cover it.
+</p>
+<p class="fu"><b>Follow-up — "when would you switch?"</b> → "When questions stop being filter-shaped. 'Why does my sunscreen pill over moisturiser' isn't a filter query — it's asking about an interaction. That needs retrieval and generation. The current parser handles filter-shaped questions well and I'd keep it as a fast path."</p>
+
+<p class="q">Why not Elasticsearch?</p>
+<p>
+  <b>Why:</b> ES is excellent at keyword and faceted search, and I'd need it if
+  users searched by exact phrase. But my hardest retrieval problem is matching
+  <i>"the elta clear one"</i> to EltaMD UV Clear — that's semantic, and BM25
+  scores it near zero. ES does have vector search now, but running it for one
+  batch job is operational weight I don't need.
+</p>
+
+<p class="q">Why not multi-agent?</p>
+<p>
+  <b>Why:</b> most of my pipeline has one right answer — 17 UV filters, one
+  REST call for recalls, fixed score arithmetic. Multi-agent adds coordination
+  overhead and non-determinism to problems that are already solved. The one
+  place genuinely needing agency is open-ended research, and that's exactly
+  where I put the one agent.
+</p>
+
+<p class="q">Why bound the reflection loop at 2?</p>
+<p>
+  <b>Why:</b> runtime predictability. Unbounded reflection is fine for one
+  interactive question; across 154 products it makes the job's duration a
+  function of how obscure the catalogue happens to be. Two passes closed most
+  real gaps in practice, and the auditor exits early when satisfied.
+  <br><em class="src">2 was chosen empirically, not derived. I did not measure marginal gain at 3.</em>
+</p>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>17 · API &amp; production</h2>
+
+<h3>17.1 Two entry points — know which is live</h3>
+<table>
+  <tr><th></th><th><code>api/main.py</code></th><th><code>api_vercel/index.py</code></th></tr>
+  <tr><td>Role</td><td>local development</td><td><b>PRODUCTION</b></td></tr>
+  <tr><td>Imports</td><td><code>data.db</code>, <code>pipeline.*</code> — the project</td><td><code>serving</code> only</td></tr>
+  <tr><td>DB access</td><td>helper functions</td><td>raw SQL, <code>mode=ro</code></td></tr>
+  <tr><td>Why</td><td>convenience</td><td>250MB function limit</td></tr>
+</table>
+
+<pre><code>{
+  "version": 2,
+  "builds": [{ "src": "api_vercel/index.py", "use": "@vercel/python" }],
+  "routes": [{ "src": "/(.*)", "dest": "api_vercel/index.py" }]
+}</code></pre>
+
+<h3>17.2 The endpoints</h3>
+<table>
+  <tr><th>Route</th><th>Method</th><th>Returns</th><th>Touches network?</th></tr>
+  <tr><td><code>/</code></td><td>GET</td><td>the single-page frontend</td><td>no</td></tr>
+  <tr><td><code>/api/rankings</code></td><td>GET</td><td>products by score desc</td><td>no</td></tr>
+  <tr><td><code>/api/hyped</code></td><td>GET</td><td><code>hype_gap &gt;= min_gap</code></td><td>no</td></tr>
+  <tr><td><code>/api/underrated</code></td><td>GET</td><td><code>hype_gap &lt;= max_gap</code></td><td>no</td></tr>
+  <tr><td><code>/api/product/{asin}</code></td><td>GET</td><td>one full row, 404 if absent</td><td>no</td></tr>
+  <tr><td><code>/api/ask</code></td><td>GET</td><td><b>question → answer</b></td><td>no</td></tr>
+  <tr><td><code>/api/compare</code></td><td>GET</td><td>weighted cosine across 5 facets</td><td>no</td></tr>
+  <tr><td><code>/api/similar/{asin}</code></td><td>GET</td><td>nearest products by formula</td><td>no</td></tr>
+  <tr><td><code>/api/routine</code></td><td>POST</td><td>ingredient-conflict check</td><td>no</td></tr>
+  <tr><td><code>/api/recalls</code></td><td>GET</td><td>recent FDA recalls</td><td><b>YES — deliberate</b></td></tr>
+  <tr><td><code>/api/news</code></td><td>GET</td><td>headlines, <code>verified: false</code></td><td>yes</td></tr>
+</table>
+
+<div class="box note">
+  <b>Ten of eleven routes are a SELECT.</b> The exception is
+  <code>/api/recalls</code>, and the reason is in the code: a week-old "no
+  recalls" for a product recalled yesterday is the worst thing this system could
+  serve.
+</div>
+
+<h3>17.3 One request, end to end</h3>
+<pre><code>Browser: user types "best mineral sunscreen for sensitive skin under $25", Enter
+   │
+   ├─ JS: askQuestion() → fetch("/api/ask?q=" + encodeURIComponent(q))
+   │
+   ▼
+Vercel routes ALL paths to api_vercel/index.py (one function)
+   │
+   ├─ FastAPI parses the query string; `q` is typed str, `limit` int
+   │
+   ├─ _rows("SELECT * FROM rankings")        ← sqlite3, mode=ro
+   │     └─ JSON columns decoded, is_safe cast to bool
+   │
+   ├─ answer_question(q, products, limit)    ← serving/, pure stdlib
+   │     ├─ parse(q, brands)     → {intent, brand, category, skin_types, avoid, …}
+   │     ├─ on_domain(q, parsed) → False ⇒ decline, return early
+   │     └─ answer_comparative(products, parsed)
+   │           ├─ narrow "category = sunscreen"      154 → 60
+   │           ├─ narrow "suitable for sensitive"     60 → 31
+   │           ├─ narrow "mineral filters only"       31 → 18
+   │           ├─ narrow "under $25"                  18 → 13
+   │           ├─ narrow "no FDA recall"              13 → 12
+   │           └─ sort by score desc, slice to limit
+   │
+   ├─ FastAPI serialises the dict to JSON
+   │
+   ▼
+Browser: renderAnswer(data)
+   ├─ md() escapes &lt; &gt; &amp; THEN applies **bold**   ← XSS boundary
+   ├─ each bullet prints its source column
+   └─ render(data.products) fills the grid below</code></pre>
+
+<h3>17.4 How this differs from calling an LLM in a notebook</h3>
+<table>
+  <tr><th>Notebook</th><th>This</th></tr>
+  <tr><td>One user, you</td><td>Any number, concurrently</td></tr>
+  <tr><td>Crash = you see a traceback</td><td>Crash = a user sees a broken page; <code>_rows</code> returns <code>[]</code> rather than 500</td></tr>
+  <tr><td>Inputs are trusted</td><td>Length-capped, domain-checked, injection-screened, HTML-escaped</td></tr>
+  <tr><td>Latency doesn't matter</td><td>Every page load; hence precompute</td></tr>
+  <tr><td>Rerun to fix</td><td>Separation of write-path and read-path so a bad scrape can't break serving</td></tr>
+  <tr><td>Non-determinism is fine</td><td>Two users asking the same thing must get the same answer — hence no LLM on the request path</td></tr>
+</table>
+
+<h3>17.5 Error handling, by example</h3>
+<pre><code>def _rows(sql: str, params: tuple = ()) -> list[dict]:
+    if not DB_PATH.exists():
+        return []                       # ① missing DB → empty, not 500
+
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)   # ② read-only
+    conn.row_factory = sqlite3.Row
+    try:
+        raw = conn.execute(sql, params).fetchall()
+    finally:
+        conn.close()                    # ③ always closed
+
+    for row in raw:
+        d = dict(row)
+        for field in _JSON_FIELDS:
+            try:
+                d[field] = json.loads(d[field]) if d.get(field) else empty
+            except (json.JSONDecodeError, TypeError):
+                d[field] = empty        # ④ one bad row ≠ broken response
+    return out</code></pre>
+<ol>
+  <li>A missing database returns an empty catalogue, not a 500. The page renders with "no products" rather than an error screen.</li>
+  <li><code>mode=ro</code> in the URI — the serving layer <i>cannot</i> write, enforced by SQLite rather than by convention.</li>
+  <li><code>finally</code> — connections close even on a malformed query.</li>
+  <li>Malformed JSON in one column degrades that field to empty rather than failing the whole request.</li>
+</ol>
+<p>The frontend mirrors this:</p>
+<pre><code>} catch (e) {
+    // A failed question must not clear the catalogue -- fall back to
+    // substring filtering so the page stays useful.
+    answerBox.className = 'answer';
+    apply();
+}</code></pre>
+
+<h3>17.6 Security — what exists</h3>
+<table>
+  <tr><th>Threat</th><th>Mitigation</th><th>Where</th></tr>
+  <tr><td>SQL injection</td><td>Parameterised queries throughout; no f-string SQL</td><td><code>_rows(sql, params)</code></td></tr>
+  <tr><td>XSS from Reddit text</td><td>Escape <code>&amp; &lt; &gt;</code> <i>before</i> applying markdown</td><td><code>md()</code></td></tr>
+  <tr><td>Prompt injection</td><td>8 regex patterns, rejected pre-LLM</td><td><code>guardrails.check_input</code></td></tr>
+  <tr><td>Oversized input</td><td>500 chars (pipeline), 300 (ask)</td><td>both layers</td></tr>
+  <tr><td>Accidental writes from serving</td><td><code>mode=ro</code> + read-only filesystem</td><td>SQLite + Vercel</td></tr>
+  <tr><td>Secrets in the repo</td><td><code>.env</code> in <code>.gitignore</code> and <code>.vercelignore</code></td><td>—</td></tr>
+</table>
+<p><b>Not implemented:</b> authentication, rate limiting, CORS restriction, CSP headers. It's a public read-only site with no user data, so the exposure is low — but say "not implemented", not "not needed".</p>
+
+<div class="say">
+  "The XSS one is worth noting because the ordering matters. <code>md()</code>
+  escapes angle brackets <i>first</i>, then applies bold. Reverse those and you
+  reintroduce the hole. And this text originates from Reddit — it's
+  user-generated content from an untrusted source that passes through my
+  database and into innerHTML, so it's a real path, not a theoretical one."
+</div>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>18 · Scalability: 1 / 100 / 10,000 users</h2>
+
+<div class="box note">
+  <b>The architecture's single best property for this question:</b> read and
+  write are completely separated. User load touches only the read path, and the
+  read path is a SQLite SELECT over 154 rows. Growth in <i>users</i> and growth
+  in <i>catalogue</i> are therefore entirely different problems.
+</div>
+
+<h3>18.1 User load</h3>
+<table>
+  <tr><th>Users</th><th>What happens</th><th>Bottleneck</th></tr>
+  <tr><td><b>1</b></td><td>SELECT over 154 rows, &lt;10ms. Zero LLM calls.</td><td>none</td></tr>
+  <tr><td><b>100 concurrent</b></td><td>Vercel runs multiple function instances; each opens its own read-only SQLite handle. SQLite allows unlimited concurrent <i>readers</i>.</td><td>cold starts (~1s), not the DB</td></tr>
+  <tr><td><b>10,000 concurrent</b></td><td><code>/api/ask</code> currently does <code>SELECT *</code> over the whole table <i>per request</i> and filters in Python. At 154 rows that's fine; it's the first thing to break.</td><td><b>full-table scan per request</b></td></tr>
+</table>
+
+<p><b>The honest weakness, and the fix:</b></p>
+<pre><code># TODAY — reads all 154 rows, filters in Python
+products = _rows("SELECT * FROM rankings")
+return answer_question(q, products, limit)
+
+# FIX 1 — push filters into SQL, use the existing idx_score
+SELECT * FROM rankings
+WHERE product_category = ? AND price &lt;= ? AND is_safe = 1
+ORDER BY score DESC LIMIT ?
+
+# FIX 2 — cache the catalogue in module scope; it changes weekly, not per request
+# FIX 3 — CDN-cache /api/rankings with a 1-hour TTL. The data is a weekly
+#         snapshot; serving it from the edge is free and correct.</code></pre>
+<div class="say">
+  "At 154 products reading the whole table per request is genuinely fine, and I'd
+  rather have the filter logic in one testable Python function than split across
+  SQL and code. But I know exactly where it breaks and what the fix is: push the
+  predicates into SQL against the <code>idx_score</code> index I already have,
+  and cache the catalogue in module scope since it only changes weekly."
+</div>
+
+<h3>18.2 Catalogue load — the harder problem</h3>
+<table>
+  <tr><th>Products</th><th>Runtime</th><th>Binding constraint</th></tr>
+  <tr><td>154 (today)</td><td>~4 hours</td><td>LLM rate limits</td></tr>
+  <tr><td>1,000</td><td>~25 hours</td><td>LLM rate limits</td></tr>
+  <tr><td>100,000</td><td>unworkable as built</td><td>everything</td></tr>
+</table>
+
+<p><b>Bottlenecks in the order they bite:</b></p>
+<ol>
+  <li><b>LLM rate limits — already binding.</b> ~15 calls per product against 200k tokens/minute. Currently handled with <code>time.sleep(20)</code> between products plus exponential backoff on 429. That's honest but crude. <b>Fix:</b> a proper queue with backpressure, so workers pull when capacity exists rather than sleeping on a fixed schedule.</li>
+  <li><b>SQLite's single writer.</b> Fine for one batch job, fatal for parallel workers — concurrent writes hit <code>database is locked</code>. <b>This is where Postgres actually earns its place.</b></li>
+  <li><b>Chroma at scale.</b> 212k vectors is comfortable. Tens of millions means the HNSW index no longer fits in memory and query latency degrades. <b>Fix:</b> a managed store, or shard by subreddit.</li>
+  <li><b>Embedding cost.</b> 212k comments at <code>text-embedding-3-small</code> is cheap; 100M isn't. <b>Fix:</b> embed only comments that pass a cheap pre-filter.</li>
+  <li><b>The serving side barely changes</b> — still a static read.</li>
+</ol>
+
+<h3>18.3 What exists vs. what I'd add</h3>
+<table>
+  <tr><th>Technique</th><th>Status</th><th>Detail</th></tr>
+  <tr><td>Caching</td><td><b>exists</b></td><td>Tiered TTLs; 980 ingredient-cache hits</td></tr>
+  <tr><td>Batching</td><td><b>exists</b></td><td>Router and shill-detector judge 60 comments per call</td></tr>
+  <tr><td>Concurrency</td><td><b>exists</b></td><td>4-worker pool; drove the Chroma locking fix</td></tr>
+  <tr><td>Retry/backoff</td><td><b>exists</b></td><td><code>_retry_on_rate_limit</code>, 4 attempts, 20s×n</td></tr>
+  <tr><td>Resumability</td><td><b>exists</b></td><td><code>harvested_threads.db</code> — 10,481 threads, resumes</td></tr>
+  <tr><td>Graceful degradation</td><td><b>exists</b></td><td>One failed product doesn't kill the run</td></tr>
+  <tr><td>Stateless serving</td><td><b>exists</b></td><td>No session state; trivially horizontal</td></tr>
+  <tr><td>Queue with backpressure</td><td><i>would add</i></td><td>Replace <code>sleep(20)</code></td></tr>
+  <tr><td>Connection pooling</td><td><i>N/A today</i></td><td>Needed only with Postgres</td></tr>
+  <tr><td>Horizontal workers</td><td><i>would add</i></td><td>Blocked on the SQLite writer first</td></tr>
+  <tr><td>Load balancing</td><td><i>Vercel handles it</i></td><td>Not something I built</td></tr>
+</table>
+
+<div class="say">
+  "If you asked what I'd do first, it wouldn't be any of those — it'd be
+  <b>instrument</b>. I don't currently measure per-node latency or token counts,
+  so I'd be optimising from intuition. LangSmith gives me traces but I'm not
+  aggregating them into metrics. That's the honest first step."
+</div>
+
+<!-- ================================================================= -->
+<h2>19 · Testing — what exists, what doesn't</h2>
+
+<div class="box warn" style="background:#fff8f0;border-left-color:#d9901f">
+  <b>There is no unit test suite.</b> No pytest, no <code>conftest.py</code>, no
+  <code>tests/</code>, no CI. Say this before you're asked.
+</div>
+
+<h3>19.1 What actually exists</h3>
+<table>
+  <tr><th>Artifact</th><th>Kind</th><th>Coverage</th></tr>
+  <tr><td><code>eval/agent_eval.py</code></td><td>Assertion suite, no LLM judging</td><td><b>45 cases</b> over deterministic components</td></tr>
+  <tr><td><code>eval/ragas_eval.py</code></td><td>LLM-as-judge</td><td>30 questions × 4 metrics</td></tr>
+  <tr><td><code>scripts/browser_check.py</code></td><td><b>End-to-end</b>, real Chromium</td><td>4 question shapes + console errors</td></tr>
+  <tr><td><code>scripts/test_*.py</code> (×4)</td><td><b>Manual probes, NOT tests</b></td><td>No assertions; hit live APIs</td></tr>
+</table>
+
+<div class="say">
+  "<code>agent_eval.py</code> functions as a regression suite even though it
+  isn't pytest. It asserts known-correct answers — there are 17 FDA-approved UV
+  filters, zinc oxide is a mineral one — so no model judges it. And it encodes
+  two production bugs as permanent cases: openFDA's 404-means-empty, and the
+  <code>!</code> in 'Supergoop!' breaking Lucene. Those can't regress silently
+  again."
+</div>
+
+<h3>19.2 What the browser test covers that nothing else can</h3>
+<pre><code>page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+page.on("pageerror", lambda e: errors.append(str(e)))
+...
+if errors:
+    failures.append(f"{len(errors)} console error(s)")   # ANY error fails the run</code></pre>
+<p>
+  It caught two real bugs the API tests couldn't: four HTTP 400s from a
+  malformed <code>image_url</code>, and "CeraVe CeraVe …" duplicated in a
+  heading. <i>"The JSON looked right" is not the same as "the user saw an answer."</i>
+</p>
+
+<h3>19.3 The architectural test</h3>
+<pre><code>def _serving_is_pure() -> bool:
+    """Does serving/ import anything it is not allowed to?
+
+    THIS TEST IS THE WHOLE POINT OF THE PACKAGE... A rule nothing checks is a
+    comment, so this checks it."""
+    for path in (ROOT / "serving").glob("*.py"):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            ...
+            if head in _FORBIDDEN_IN_SERVING:   # langchain, chromadb, tools, …
+                return False
+    return True</code></pre>
+<div class="say">
+  "That one walks the AST of every file in <code>serving/</code> and fails if
+  anything imports LangChain, Chroma, or the project packages. The package only
+  works as a shared module while it stays deployable — one convenience import
+  and the Vercel build breaks, and that failure would surface at deploy time
+  rather than in my eval. So I made it fail here instead."
+</div>
+
+<h3>19.4 What is NOT tested</h3>
+<table>
+  <tr><th>Untested</th><th>Why it matters</th></tr>
+  <tr><td>Every LLM node</td><td>Orchestrator, dermatology, themes, confidence — no assertions at all</td></tr>
+  <tr><td>The reflection loop</td><td>No test that it exits, or that gaps are passed through correctly</td></tr>
+  <tr><td>Chroma ingest/retrieve</td><td>No fixture collection; retrieval is never asserted on known input</td></tr>
+  <tr><td>DB migration</td><td>The bug that produced zero rows has no regression test</td></tr>
+  <tr><td>Scrapers</td><td>No recorded fixtures — a schema change breaks silently</td></tr>
+  <tr><td>Concurrency</td><td>The Chroma locking fix has no test proving it holds</td></tr>
+  <tr><td>End-to-end graph</td><td>No test runs one product through and asserts the shape of the output</td></tr>
+</table>
+
+<h3>19.5 What I'd add, in priority order</h3>
+<ol>
+  <li><b>Golden-file test for one full product.</b> Mock every external call with recorded fixtures, run the graph, assert the output shape and that every claim carries a citation. Highest value — it covers the whole pipeline.</li>
+  <li><b>Retrieval regression.</b> A small fixed Chroma collection and assertions that known queries return known PMIDs in a known order. Would catch a re-rank regression instantly.</li>
+  <li><b>Recorded scraper fixtures.</b> Snapshot real openFDA/Reddit responses; replay them in tests so a schema change fails loudly.</li>
+  <li><b>Migration test.</b> Build an old-schema DB, run <code>init_db()</code>, assert every expected column exists. Directly tests the zero-rows bug.</li>
+  <li><b>Concurrency test.</b> Hammer <code>get_collection()</code> from 10 threads, assert one instance.</li>
+  <li><b>CI.</b> Run agent_eval + browser_check on every push. All the pieces exist; nothing wires them up.</li>
+</ol>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>20 · Database inspection cheat sheet</h2>
+
+<p>Run these before the interview so you can open your own system if asked.</p>
+
+<h3>20.1 The serving table</h3>
+<pre><code>sqlite3 data/truth.db
+
+.tables
+.schema rankings
+.mode column
+.headers on
+
+SELECT COUNT(*) FROM rankings;                              -- 154
+
+SELECT brand, score, hype_gap, bestseller_rank
+FROM rankings ORDER BY hype_gap DESC LIMIT 5;               -- most overhyped
+
+SELECT brand, score, bestseller_rank
+FROM rankings ORDER BY hype_gap ASC LIMIT 5;                -- hidden gems
+
+SELECT product_category, COUNT(*), ROUND(AVG(score),1)
+FROM rankings GROUP BY product_category;
+
+SELECT confidence, COUNT(*) FROM rankings GROUP BY confidence;
+
+.indices rankings                                           -- idx_score, idx_hype, idx_category
+EXPLAIN QUERY PLAN SELECT * FROM rankings ORDER BY score DESC LIMIT 10;</code></pre>
+
+<h3>20.2 The ingredient cache — your best statistic</h3>
+<pre><code>sqlite3 data/memory.db "
+SELECT ingredient, kind, hits,
+       LENGTH(findings) AS chars,
+       datetime(created_at,'unixepoch') AS cached
+FROM ingredient_memory ORDER BY hits DESC;"
+
+sqlite3 data/memory.db "SELECT SUM(hits) FROM ingredient_memory;"   -- 980</code></pre>
+
+<h3>20.3 The scrape cache</h3>
+<pre><code>sqlite3 data/scrape_cache.db "
+SELECT kind, COUNT(*) AS entries, SUM(hits) AS reuses
+FROM scrape_cache GROUP BY kind;"
+
+-- detail 297/400 · expert 159/143 · ingredients 64/16 · reddit 80/59</code></pre>
+
+<h3>20.4 Chroma — the vector stores</h3>
+<pre><code>.venv/bin/python -c "
+import chromadb
+client = chromadb.PersistentClient(path='data/chroma')
+
+for col in client.list_collections():
+    c = client.get_collection(col.name)
+    print(f'{col.name:20s} {c.count():>7,} items   {c.metadata}')
+"</code></pre>
+
+<p><b>Peek at actual stored records, with metadata:</b></p>
+<pre><code>.venv/bin/python -c "
+import chromadb
+client = chromadb.PersistentClient(path='data/chroma')
+col = client.get_collection('pubmed_abstracts')
+peek = col.peek(limit=2)
+for doc, meta, _id in zip(peek['documents'], peek['metadatas'], peek['ids']):
+    print('ID      :', _id)              # pmid::section_index
+    print('META    :', meta)             # pmid, journal, year, evidence_strength
+    print('TEXT    :', doc[:220])
+    print()
+"</code></pre>
+
+<p><b>Run a live retrieval — the best demo if screen-sharing:</b></p>
+<pre><code>.venv/bin/python -c "
+from dotenv import load_dotenv; load_dotenv()
+from rag.store import retrieve
+for h in retrieve('Does oxybenzone absorb into the bloodstream?', n_results=5):
+    print(f\"[PMID {h['pmid']}] sim={h['similarity']:.3f} \"
+          f\"strength={h['evidence_strength']}  {h['title'][:60]}\")
+"</code></pre>
+<div class="say">
+  "If they let me share a screen, I'd run that. It shows retrieval working on
+  real data, and the output demonstrates the re-rank — a strength-4 trial
+  sitting above a higher-similarity weaker paper."
+</div>
+
+<h3>20.5 Everything at once</h3>
+<pre><code>.venv/bin/python -c "
+import sqlite3, chromadb
+for db, q in [('truth.db','select count(*) from rankings'),
+              ('memory.db','select sum(hits) from ingredient_memory'),
+              ('scrape_cache.db','select count(*) from scrape_cache'),
+              ('harvested_threads.db','select count(*) from seen'),
+              ('discovered.db','select count(*) from mentions')]:
+    print(f'{db:24s}', sqlite3.connect(f'data/{db}').execute(q).fetchone()[0])
+c = chromadb.PersistentClient(path='data/chroma')
+for col in c.list_collections():
+    print(f'{col.name:24s}', c.get_collection(col.name).count())
+"</code></pre>
+
+<h3>20.6 Run the evals live</h3>
+<pre><code>uv run python -m eval.agent_eval        # 45/45, ~30s, no API cost for most cases
+uv run python -m scripts.browser_check  # real Chromium, ~15s
+uv run python -m eval.ragas_eval        # 30 questions × 5 LLM calls — SLOW, costs money</code></pre>
+<div class="box note">
+  Don't run <code>ragas_eval</code> live in an interview — it's 150 LLM calls
+  and several minutes. Show <code>eval/ragas_results.json</code> instead.
+</div>
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>21 · Role mapping — three honest buckets</h2>
+
+<div class="box warn" style="background:#fff8f0;border-left-color:#d9901f">
+  Be first to name the third bucket. An interviewer discovering an overclaim is
+  far worse than you volunteering a gap — and volunteering it is the behaviour
+  the project itself is built around.
+</div>
+
+<h3>21.1 STRONG DIRECT MATCH</h3>
+
+<table>
+  <tr><th>Requirement</th><th>Implementation</th><th>File</th></tr>
+  <tr>
+    <td><b>Evaluation pipelines</b></td>
+    <td>Two suites. 45 deterministic assertions with no LLM judging; 30-question RAG eval across four metrics, hand-implemented.</td>
+    <td><code>eval/agent_eval.py</code><br><code>eval/ragas_eval.py</code></td>
+  </tr>
+  <tr>
+    <td><b>Model integration</b></td>
+    <td>22 call sites. Structured outputs via Pydantic, one tool-calling agent with 3 bound tools, bounded reflection loop.</td>
+    <td><code>graph/nodes/*.py</code></td>
+  </tr>
+  <tr>
+    <td><b>Data pipelines</b></td>
+    <td>6 external sources → 6 SQLite DBs + 2 vector collections. Tiered caching, resumable 20-hour harvest.</td>
+    <td><code>refresh/</code>, <code>tools/</code></td>
+  </tr>
+  <tr>
+    <td><b>Production-facing AI</b></td>
+    <td>Deployed and live. Write-path/read-path separation enforced three ways, not by convention.</td>
+    <td><code>api_vercel/index.py</code></td>
+  </tr>
+  <tr>
+    <td><b>Failure analysis</b></td>
+    <td>Seven real bugs with root causes; two encoded as permanent regression cases.</td>
+    <td>§11</td>
+  </tr>
+  <tr>
+    <td><b>Benchmarking</b></td>
+    <td>Four RAG metrics on a gold set deliberately containing questions whose honest answer is "no".</td>
+    <td><code>eval/ragas_eval.py</code></td>
+  </tr>
+  <tr>
+    <td><b>Interpretability</b></td>
+    <td>Every claim carries a PMID or recall number. The Q&amp;A UI prints the source column under each sentence.</td>
+    <td><code>serving/answer.py</code></td>
+  </tr>
+  <tr>
+    <td><b>Testable / maintainable</b></td>
+    <td>An AST test enforces an architectural constraint; a graph-introspection test proves safety can't be bypassed.</td>
+    <td><code>eval/agent_eval.py</code></td>
+  </tr>
+</table>
+
+<h4>How to say the two strongest ones</h4>
+<div class="say">
+  <b>Evaluation pipelines.</b> "I built two, deliberately split by what's
+  actually knowable. Where ground truth exists — there are 17 FDA-approved UV
+  filters, zinc oxide is a mineral one — I assert it directly and no model
+  judges anything: 45 cases, all passing. Where ground truth requires judgement,
+  like 'is every claim in this answer supported by the retrieved context', I use
+  LLM-as-judge across four metrics on 30 questions. The gold set deliberately
+  includes questions where the honest answer is 'no', because a RAG that only
+  scores well on softballs hasn't been tested. And my eval reports that
+  <i>planning</i> is unscorable in this system rather than inventing a number
+  for it."
+</div>
+
+<div class="say">
+  <b>Failure analysis.</b> "My favourite is a bug where every component worked
+  correctly and the output was still completely wrong. Comments recalled from
+  the pool were missing their thread title. The router needs it — a reply saying
+  'it's so good' under a post titled 'Supergoop Unseen — thoughts?' is a review
+  of Supergoop; without the title there's no way to know what 'it' means. So the
+  router correctly rejected them, and the site displayed 'nobody discusses this
+  product' for products with hundreds of comments. Nothing errored. One missing
+  metadata field, and correct components produced a confidently false answer.
+  What I'd add to catch that class earlier is an aggregate check — if the
+  router's rejection rate jumps across the whole catalogue, that's a pipeline
+  bug, not a property of the products. I was watching per-product outcomes when
+  I should have been watching the distribution."
+</div>
+
+<h3>21.2 PARTIAL / TRANSFERABLE</h3>
+
+<table>
+  <tr><th>Requirement</th><th>What I have</th><th>What's missing</th></tr>
+  <tr>
+    <td><b>Observability / monitoring</b></td>
+    <td>LangSmith tracing with per-run metadata (brand, ASIN, rank) so a bad verdict maps to its exact trace</td>
+    <td>No metrics, no alerts, no dashboards, no aggregation. Tracing ≠ monitoring.</td>
+  </tr>
+  <tr>
+    <td><b>Testing</b></td>
+    <td>45 assertions + a real-browser E2E test</td>
+    <td>No pytest, no CI, no coverage. LLM nodes untested.</td>
+  </tr>
+  <tr>
+    <td><b>Performance optimisation</b></td>
+    <td>Caching (980 reuses), batching, a real concurrency bug found and fixed</td>
+    <td>Never profiled. No latency or token instrumentation — which is why I won't quote "47→25".</td>
+  </tr>
+  <tr>
+    <td><b>APIs</b></td>
+    <td>11 FastAPI endpoints, typed params, graceful degradation, parameterised SQL</td>
+    <td>No auth, rate limiting, versioning, or OpenAPI contract testing.</td>
+  </tr>
+  <tr>
+    <td><b>Concurrency</b></td>
+    <td>4-worker pool; the Chroma double-checked-locking bug is a genuine war story</td>
+    <td>Single process. Not distributed.</td>
+  </tr>
+  <tr>
+    <td><b>System integration</b></td>
+    <td>6 external APIs, each with its own failure mode handled (404-as-empty, Lucene escaping, rate limits)</td>
+    <td>No message bus, no service mesh, no inter-service contracts.</td>
+  </tr>
+  <tr>
+    <td><b>Lifecycle management</b></td>
+    <td>Tiered TTLs, resumable jobs, hand-rolled schema migration</td>
+    <td>No model versioning, no rollback, no A/B capability.</td>
+  </tr>
+</table>
+
+<div class="say">
+  <b>On observability.</b> "I have tracing, not monitoring, and the distinction
+  matters. LangSmith records every step of every run as a tree I can click
+  through, tagged with brand and ASIN so I can filter to a specific bad verdict
+  and open the exact run behind it. That's excellent for debugging one thing.
+  What I don't have is aggregation — no p95 latency, no cost-per-product trend,
+  no alert when the router's rejection rate spikes. That last one would have
+  caught my worst bug weeks earlier."
+</div>
+
+<h3>21.3 NOT DEMONSTRATED — say so plainly</h3>
+
+<table>
+  <tr><th>Requirement</th><th>The honest line</th></tr>
+  <tr><td><b>Containers / Docker</b></td><td>"Deployed as a Vercel Python function, not a container. I haven't containerised this."</td></tr>
+  <tr><td><b>CI/CD</b></td><td>"No pipeline. I run evals manually. The pieces exist; nothing wires them up."</td></tr>
+  <tr><td><b>GPU optimisation</b></td><td>"Not applicable — I call hosted APIs, I don't serve models. No experience to claim."</td></tr>
+  <tr><td><b>Model serving / inference services</b></td><td>"I integrate models, I don't serve them. No vLLM, no Triton, no quantisation."</td></tr>
+  <tr><td><b>Distributed systems</b></td><td>"Single process with a thread pool. My concurrency bug was real but local."</td></tr>
+  <tr><td><b>Edge environments</b></td><td>"Nothing here runs at the edge beyond Vercel's CDN serving a static page."</td></tr>
+  <tr><td><b>Fine-tuning / training</b></td><td>"Deliberately avoided — fine-tuning would destroy citation traceability, which is the product."</td></tr>
+  <tr><td><b>Horizontal scaling</b></td><td>"Never needed it. I can describe where it would break and what I'd change, but I haven't done it."</td></tr>
+</table>
+
+<div class="say">
+  <b>The framing that turns this into a strength.</b> "This project is a batch
+  research pipeline with a static serving layer, so several of those never came
+  up honestly. What it does demonstrate is the part I'd argue matters most for
+  applied AI: knowing which decisions a model should make and which it
+  shouldn't. My router is a dict, my safety gate is one REST call, my UV-filter
+  identification is a closed set, and my guardrails are regex — because a
+  guardrail a model can argue past isn't a guardrail. The LLMs are in exactly
+  the three places where the answer genuinely requires judgement."
+</div>
+
+<h3>21.4 If asked "what from your other work covers the gaps?"</h3>
+<p>
+  Prepare one concrete example for each of: containers, CI/CD, and anything
+  GPU/serving-related. If you have none, say that directly and offer what you'd
+  do rather than inventing experience. <b>"I haven't done that, here's how I'd
+  approach it"</b> is a complete, respectable answer; a vague claim that
+  collapses under a follow-up is not.
+</p>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>22 · The 25 core questions</h2>
+
+<p>
+  Each has a <b>30-second</b> answer for the first pass and a <b>2-minute</b>
+  answer for when they dig. Lead with the short one; let them pull the long one.
+</p>
+
+<p class="q">1. What did you build?</p>
+<p><b>30s:</b> A system that checks whether products deserve their popularity. It scrapes Amazon best-sellers for the hype signal, pulls real ingredients from FDA drug filings, runs RAG over PubMed research and 212,000 Reddit comments, scores each product on evidence, then compares that against its Amazon rank. The gap is the finding.</p>
+<p><b>2min:</b> Add: 154 products live. The pipeline is LangGraph — orchestrator, router, a dermatology research agent with a bounded reflection loop, a universal openFDA safety veto, then deterministic scoring. Six SQLite databases and two Chroma collections. The architectural rule is that the weekly job writes and the website only reads, so pages load instantly despite each verdict taking about 90 seconds to produce. 45/45 on agent eval, 0.96 RAG faithfulness.</p>
+
+<p class="q">2. Why did you build it?</p>
+<p><b>30s:</b> Marketing makes people buy things; nobody checks whether the product works. A #1 Amazon ranking tells you it sold well, not that it does what the label says. That gap is the whole product.</p>
+<p><b>2min:</b> Add the three questions it answers — does it do what it claims, are the ingredients as good as implied, what do real users say — and the rule that Amazon rank is only ever an input to the gap, never a positive score. Then the counter-rule that keeps it honest: no research ≠ bad. If nothing has been studied, it says "not studied". Manufacturing doubt is just hype pointed backwards.</p>
+
+<p class="q">3. What's the architecture?</p>
+<p><b>30s:</b> Two halves that never touch. A slow weekly batch job does all the research and writes one SQLite table. The website only reads that table. No API route scrapes, calls a model, or runs the graph.</p>
+<p><b>2min:</b> Walk the graph: orchestrator → router → dermatology → safety → rank → confidence. Then the storage split and why six databases. Then the enforcement — the production API has almost no project imports, SQLite is opened <code>mode=ro</code>, and Vercel's filesystem is read-only. Three independent mechanisms, so the rule can't erode.</p>
+
+<p class="q">4. Why is it agentic?</p>
+<p><b>30s:</b> One node is genuinely agentic — the dermatology researcher. It chooses which tools to call and in what order, because the research path varies per product. Everything else is deterministic on purpose.</p>
+<p><b>2min:</b> A mineral sunscreen with nothing flagged needs one ingredient call and one efficacy search. One with oxybenzone and fragrance needs fear-checks and absorption research. I can't know in advance. Then the honest correction: my docs say "14 agents", but most are structured-output classifiers that make a judgement and return a Pydantic object without choosing tools. One tool-calling agent in a graph of LLM-backed nodes is the accurate description.</p>
+
+<p class="q">5. Why LangGraph?</p>
+<p><b>30s:</b> The control flow has a cycle. The dermatology node loops — an auditor checks the analysis and re-runs the researcher when claims lack citations. A chain can't express that.</p>
+<p><b>2min:</b> Three structures: the cycle, conditional routing, and a veto that skips downstream nodes. Plus the property I'd defend hardest — because the graph is a data structure, I can assert on its shape. My eval introspects the compiled edge set to prove no path reaches scoring without passing safety. In a chain that would be an <code>if</code> somebody could forget.</p>
+
+<p class="q">6. Explain StateGraph.</p>
+<p><b>30s:</b> A graph of functions sharing one typed dictionary. Each node reads what it needs and returns only the keys it changed; LangGraph merges that back. Edges are fixed or computed by a routing function.</p>
+<p><b>2min:</b> Show the state, then the reducer: <code>Annotated[list[Evidence], operator.add]</code>. By default a node writing a key overwrites it — the annotation says concatenate instead, so evidence accumulates across dermatology and safety rather than the second clobbering the first. That's LangGraph's reducer mechanism and it's the detail most people miss.</p>
+
+<p class="q">7. Walk me through one query end to end.</p>
+<p><b>30s:</b> Pick the pipeline, not the website — it's the interesting half. Scrape → resolve brand → resolve ingredients from the FDA → analyse the label deterministically → retrieve research → agent writes → auditor checks citations → safety veto → score → confidence → write one row.</p>
+<p><b>2min:</b> Use the trace in §17.3, naming actual functions: <code>analyse_ingredients_raw</code> establishes facts, <code>retrieve</code> pulls 5 re-ranked abstract sections, the agent gets them as <code>ESTABLISHED FACTS … treat as given</code>, <code>_reflect</code> audits, <code>check_recalls_raw</code> vetoes, <code>ranking_node</code> renormalises over available dimensions.</p>
+
+<p class="q">8. Explain the RAG pipeline.</p>
+<p><b>30s:</b> Two stores. PubMed abstracts chunked by section, embedded, retrieved by meaning then re-ranked by study design. And 212,000 Reddit comments, retrieved as candidates only.</p>
+<p><b>2min:</b> Section chunking and why — "does it absorb into blood" is answered by RESULTS specifically. Deterministic chunk IDs so re-ingest upserts. Metadata travels with the chunk, which is what makes citations enforceable. Then the re-rank, with the live example: a strength-5 meta-analysis at 0.734 similarity outranking a strength-2 review at 0.772.</p>
+
+<p class="q">9. How does retrieval work?</p>
+<p><b>30s:</b> Text becomes a vector, Chroma finds the nearest by cosine distance, I re-rank by study quality. For Reddit, seven queries instead of one, because a single query only finds comments phrased like that query.</p>
+<p><b>2min:</b> The three query shapes — product, brand alone, and concern-led. The concern query is the clever one: it finds "leaves a grey cast and pills under my foundation", which names no brand and no product, and is what most of Reddit actually looks like.</p>
+
+<p class="q">10. How did you prevent hallucination?</p>
+<p><b>30s:</b> Four layers: retrieval with citations attached to each chunk, an auditor agent that rejects uncited claims, deterministic regex guardrails on the output, and measurement — 0.96 faithfulness over 30 questions.</p>
+<p><b>2min:</b> Detail the structural guardrail, which is the one worth defending: if a verdict uses a factual verb like "contains" or "absorbs" and the evidence list is empty, it's flagged regardless of wording. That generalises past any blocklist. And it surfaces the problem rather than rewriting, because auto-rewriting hides the failure and you never learn your prompt is broken.</p>
+
+<p class="q">11. How did you evaluate it?</p>
+<p><b>30s:</b> Two suites, split by what's knowable. 45 deterministic assertions where ground truth exists, and 30 LLM-judged questions where it requires judgement.</p>
+<p><b>2min:</b> Add: the gold set deliberately contains questions whose honest answer is "no" — parabens and cancer, SLS as a carcinogen, aluminium and breast cancer. And the eval reports that planning is unscorable rather than inventing a number, because with one live expert branch there's too little for a plan to get wrong.</p>
+
+<p class="q">12. How did you evaluate agent behaviour specifically?</p>
+<p><b>30s:</b> Three dimensions. Outcome — known-correct answers, no model judges. Tool use — correct tool, correct arguments, error handling. Trajectory — I introspect the compiled graph and assert on its edge set.</p>
+<p><b>2min:</b> The trajectory check is the interesting one: <code>not any(t in ("rank","confidence") for src,t in edges if src != "safety" …)</code> — a structural invariant proving the safety veto can't be bypassed by a refactor. And two tool cases encode real production bugs: openFDA's 404-means-empty, and <code>!</code> in "Supergoop!" breaking Lucene syntax.</p>
+
+<p class="q">13. What databases, and why?</p>
+<p><b>30s:</b> Six SQLite files and Chroma for vectors. No Postgres — single writer, many readers, and the database ships as a deployment artifact.</p>
+<p><b>2min:</b> Each file has one job and separate files make corruption structurally impossible — a stale scrape cache cannot damage the serving table. Then where Postgres would earn its place: parallel workers writing concurrently, which is exactly where SQLite's single-writer model breaks.</p>
+
+<p class="q">14. Why both a vector DB and a relational one?</p>
+<p><b>30s:</b> They answer different questions. SQL finds every sunscreen under $20. It can't find comments that are <i>about</i> a product when the writer said "the elta clear one".</p>
+<p><b>2min:</b> And the inverse — Chroma can't efficiently do "price &lt; 20 AND category = sunscreen ORDER BY score". So the vector store runs during the batch job to find evidence, and the result is written to SQLite as plain columns the site filters with ordinary SQL. Vectors for discovery, rows for serving.</p>
+
+<p class="q">15. How does caching work?</p>
+<p><b>30s:</b> Tiered by volatility. Ingredients 90 days, Reddit 14, product detail 7. Best-seller rank is never cached because it's the hype signal and it moves weekly. Recalls are never cached at all.</p>
+<p><b>2min:</b> Then the ingredient cache, which is the better story: keyed by ingredient rather than product, because products change weekly and ingredients don't. Ten entries, 980 reuses. The cost saving is obvious; the subtle part is consistency — researching zinc oxide 154 times produces 154 slightly different write-ups and would give identical formulas different scores.</p>
+
+<p class="q">16. What did PostgreSQL do?</p>
+<p><b>30s:</b> Nothing — I didn't use it. SQLite was the right call for a single-writer batch pipeline.</p>
+<p><b>2min:</b> Explain what would change my mind: concurrent writers, or needing pgvector so vectors and rows live in one place with transactional consistency. Neither applied. <b>This question is a trap only if you bluff.</b></p>
+
+<p class="q">17. How did you improve latency or cost?</p>
+<p><b>30s:</b> Caching at the ingredient level — 980 reuses off 10 entries. Batching the comment judges so they rate 60 comments per call instead of one each. And precomputing everything so the site never pays for inference.</p>
+<p><b>2min:</b> Then the honest caveat: I have 22 LLM call sites and I reduced per-product calls by batching, but I never instrumented the before and after, so I won't quote a precise number. Instrumenting cost and latency per node is the first thing I'd add.</p>
+
+<p class="q">18. What did observability give you?</p>
+<p><b>30s:</b> LangSmith tracing with per-run metadata. Without it every trace is called "LangGraph" and you can't find the run behind a specific bad verdict. Tagging by brand and ASIN means I can filter and open the exact one.</p>
+<p><b>2min:</b> Then distinguish: logging is "what happened", metrics are "how much and how often", tracing is "what happened inside <i>this one</i> request". I have logging and tracing. I don't have metrics, which is the gap — no p95 latency, no cost trend, no alert on anomalies. An aggregate alert on router rejection rate would have caught my worst bug weeks earlier.</p>
+
+<p class="q">19. What was the hardest bug?</p>
+<p><b>30s:</b> One where every component worked correctly and the output was completely wrong — the missing thread title.</p>
+<p><b>2min:</b> Full story from §11, then the generalisation: it was invisible because "zero relevant comments" is a <i>valid</i> state. Niche products genuinely have none. The fix for that class is monitoring the distribution, not the instance.</p>
+
+<p class="q">20. What happens when retrieval fails?</p>
+<p><b>30s:</b> It says so. "Not studied" is a valid answer here, not a failure — and my faithfulness judge scores "the context doesn't answer this" as perfectly faithful.</p>
+<p><b>2min:</b> Three layers of graceful degradation: an empty corpus returns <code>[]</code> rather than raising; the agent is told insufficient evidence is a complete answer; the confidence node tags it <code>insufficient</code>. And it's visible in the metrics — that's exactly why relevancy is 0.747 while faithfulness is 0.96.</p>
+
+<p class="q">21. How would you scale it?</p>
+<p><b>30s:</b> Users and catalogue are separate problems. User load touches only a SQLite read, so it scales trivially. Catalogue growth is bound by LLM rate limits, and that's already the binding constraint.</p>
+<p><b>2min:</b> The ordered bottleneck list from §18, and name the honest weakness first: <code>/api/ask</code> does a full-table scan per request. Fine at 154 rows, first thing to break, and the fix is pushing predicates into SQL against the index I already have.</p>
+
+<p class="q">22. How would you productionise it further?</p>
+<p><b>30s:</b> A real test suite, CI, cost and latency instrumentation, and a queue with backpressure instead of <code>sleep(20)</code> between products.</p>
+<p><b>2min:</b> Priority order with reasons — golden-file test first because it covers the whole pipeline; instrumentation second because I'm currently optimising from intuition; CI third because all the pieces exist and nothing wires them together.</p>
+
+<p class="q">23. What would you change today?</p>
+<p><b>30s:</b> Widen the research corpus — that's the clear cause of 0.317 context recall — and add a deterministic citation check alongside the LLM auditor.</p>
+<p><b>2min:</b> Five items from §13, plus one that shows design maturity: pin the embedding model version in Chroma metadata. Right now changing the embedding model would silently invalidate 212,000 vectors with nothing detecting the mismatch.</p>
+
+<p class="q">24. What part did you personally own?</p>
+<p><b>30s:</b> All of it — solo project. Which cuts both ways: the design decisions are mine, and so are the gaps.</p>
+<p><b>2min:</b> Name what you'd most want reviewed: the scoring weights are judgement rather than derived from data, and the decision to admit Amazon reviews as a labelled 0.4× fallback is one I went back and forth on. Saying which of your own decisions is weakest is a strong signal.</p>
+
+<p class="q">25. Why should we care about a skincare site?</p>
+<p><b>30s:</b> The domain is incidental. The problem is "a language model will confidently tell you something is good because the marketing says so", and everything here is machinery for refusing to do that.</p>
+<p><b>2min:</b> Then the generalisable parts: separating retrieval from judgement so semantic search can't bias an aggregate; making a safety gate a graph property rather than a prompt instruction; deciding which steps should be a model and which a lookup table; and evaluating the system where ground truth exists rather than only where it's easy. Those transfer to any domain where being confidently wrong has a cost.</p>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>23 · Retrieval evaluation — and the bug it found</h2>
+
+<div class="box good">
+  <b>If you tell one story in this interview, tell this one.</b> It is the only
+  part of the project where you built a measurement, the measurement
+  contradicted a design decision you were proud of, and you changed the code
+  rather than the story.
+</div>
+
+<h3>24.1 The gap this closed</h3>
+<p>
+  <code>ragas_eval.py</code> measures the research RAG <i>end to end</i> —
+  question in, grounded answer out. It says nothing about retrieval in
+  isolation, and <b>nothing at all about the Reddit store</b>.
+</p>
+<p>That second gap is the serious one, because the two retrievers do different jobs:</p>
+<table>
+  <tr><th></th><th>Research RAG</th><th>Reddit RAG</th></tr>
+  <tr><td>Feeds</td><td>the agent's prose</td><td><b>the score</b></td></tr>
+  <tr><td>Specifically</td><td>citations in the verdict</td><td><code>subscores["sentiment"]</code> = <b>35%</b>, themes, skin types</td></tr>
+  <tr><td>If retrieval is wrong</td><td>a weak citation</td><td><b>the product's number is wrong</b></td></tr>
+  <tr><td>Previously evaluated?</td><td>indirectly</td><td><b>not at all</b></td></tr>
+</table>
+<div class="say">
+  "My RAG eval measured answers, not retrieval. That's a real gap, and it was
+  worse than it looks — the Reddit retriever doesn't feed prose, it feeds 35% of
+  the score plus every theme on the card. If it pulls comments about the wrong
+  product, the number is wrong and nothing downstream can detect it. A bad
+  citation is embarrassing; a bad score is the product being wrong about its one
+  job."
+</div>
+
+<h3>24.2 Building the labelled set with an LLM — and why that isn't circular</h3>
+<p>
+  The obvious objection: the retriever grades its own homework. It doesn't,
+  because the two tasks are different problems.
+</p>
+<table>
+  <tr><th></th><th>Retrieval</th><th>Labelling</th></tr>
+  <tr><td>Asks</td><td>"of 212,000 comments, which 30 might be about this?"</td><td>"is <i>this one</i> comment about this product?"</td></tr>
+  <tr><td>Input size</td><td>a corpus no model can read</td><td>400 characters</td></tr>
+  <tr><td>Problem type</td><td>search</td><td>reading comprehension</td></tr>
+  <tr><td>Sees similarity scores?</td><td>produces them</td><td><b>never</b></td></tr>
+</table>
+<div class="say">
+  "The labeller is strictly easier and more reliable than the retriever, and —
+  this is the part that matters — it never sees similarity or rank. It
+  <i>cannot</i> prefer what the retriever preferred, because it doesn't know
+  what the retriever preferred. Labels are cached to disk so the benchmark is
+  stable; a metric that moves because the labels moved measures nothing."
+</div>
+
+<h3>24.3 The metrics, defined</h3>
+<table>
+  <tr><th>Metric</th><th>Definition</th><th>What it rewards</th></tr>
+  <tr><td><b>Precision@k</b></td><td>relevant in top k ÷ k</td><td>not wasting slots</td></tr>
+  <tr><td><b>Recall@k</b></td><td>relevant in top k ÷ all relevant</td><td>not missing things</td></tr>
+  <tr><td><b>MRR</b></td><td>mean of 1 ÷ rank of first relevant hit</td><td>getting it right <i>first</i></td></tr>
+  <tr><td><b>nDCG@k</b></td><td>gain discounted by log₂(rank+1), normalised</td><td>ranking the best highest</td></tr>
+</table>
+<p>
+  <b>Why k=12 is the number that matters:</b> <code>_score_sentiment</code>
+  shows the scoring model <code>weighted[:12]</code>. So Precision@12 is
+  literally "what fraction of what the scorer reads is about the right product".
+</p>
+<div class="say">
+  "nDCG is the one worth explaining. Precision@12 treats position 1 and position
+  12 identically — but my scorer weights earlier comments more heavily, so a
+  relevant comment at rank 1 is worth more than the same comment at rank 12.
+  nDCG discounts by log of the rank, which matches how the list is actually
+  consumed."
+</div>
+
+<h3>24.4 What the measurement found</h3>
+<p>
+  The eval includes an <b>ablation</b>: four ranking strategies over identical
+  retrieved candidates, so the comparison isolates ranking rather than fetch.
+</p>
+<pre><code>strategy               MRR     P@5   nDCG@5    R@12
+pure_similarity      0.925   0.660    0.812   0.852
+lexicographic        0.161   0.140    0.132   0.143   &lt;- what I shipped
+blended (0.04)       0.641   0.480    0.513   0.530
+production (now)     0.925   0.660    0.812   0.852</code></pre>
+
+<div class="box warn" style="background:#fff4f0">
+  <b>The line I was proud of was the worst-performing strategy in the ablation.</b>
+  <br><br>
+  <code>hits.sort(key=lambda h: (h["evidence_strength"], h["similarity"]), reverse=True)</code>
+  <br><br>
+  MRR <b>0.161</b> versus <b>0.925</b> for doing nothing at all.
+</div>
+
+<h4>Why it failed — two compounding causes</h4>
+<p><b>(1) The sort is lexicographic.</b> Python compares tuples element by element, so <i>any</i> strength-5 chunk outranks <i>every</i> strength-4 chunk regardless of topical match. The intent was "prefer stronger evidence when relevance is comparable". The behaviour was "prefer stronger evidence, full stop".</p>
+
+<p><b>(2) Section chunking multiplies the damage.</b> One paper contributes up to 5 chunks, so a single strength-5 paper fills every slot. Measured across the gold set:</p>
+<pre><code>Does oxybenzone absorb into the bloodstream?    7 unique /12 hits  worst: 5x same paper
+Does niacinamide improve skin barrier function? 4 unique /12 hits  worst: 5x same paper
+Do AHAs increase photosensitivity?              5 unique /12 hits  worst: 5x same paper
+
+TOTAL: 48/120 hits are repeat sections of a paper already retrieved (40%)</code></pre>
+<div class="say">
+  "40% of what I retrieve is another section of a paper I already have. The
+  model then 'reads five sources' that are all one study — which looks like
+  corroboration and isn't. That's a subtler failure than a wrong citation,
+  because nothing about the output looks wrong."
+</div>
+
+<h4>The parameter sweep that settled it</h4>
+<pre><code>bonus   MRR     P@5     nDCG@5   R@12
+0.000   0.925   0.660   0.812    0.852   &lt;- best on every metric
+0.005   0.925   0.640   0.799    0.800
+0.010   0.875   0.640   0.786    0.791
+0.020   0.743   0.540   0.611    0.783
+0.040   0.641   0.480   0.513    0.530</code></pre>
+<p>
+  Monotonic. <b>Every non-zero bonus is worse.</b> Not just the lexicographic
+  version — the whole idea.
+</p>
+
+<h3>24.5 What I changed, and what I kept</h3>
+<pre><code># STRENGTH_BONUS = 0.0  -- and that is a measured result, not an oversight.
+#
+# Retrieval's job is to find passages ABOUT the question. Study quality is a
+# property of the paper, not of its relevance, and mixing the two corrupts
+# the ranking.
+#
+# Study design still matters -- it is just applied where it belongs:
+#   - `sources` is sorted by strength before display, so the strongest paper
+#     is cited first (dermatology.py:_resolve_citations)
+#   - the agent is told each passage's design and weighs conflicts accordingly</code></pre>
+<div class="say">
+  "I didn't delete the idea, I moved it. Study design is the right signal for
+  <i>which citation to show first</i> and for <i>how the agent weighs
+  conflicting findings</i>. It is the wrong signal for <i>which passages to
+  retrieve</i>. Those are different questions and I'd conflated them."
+</div>
+
+<p>Two further bugs surfaced on the way:</p>
+<ul>
+  <li><b><code>evidence_strength</code> was a string.</b> Chroma metadata is scalar-typed, so it round-trips as <code>"4"</code>. A string sort orders <code>"10"</code> before <code>"2"</code>. Now normalised to <code>int</code> on read, with an eval case asserting it.</li>
+  <li><b>A diversity cap looked good and wasn't.</b> Capping at 2 sections per paper improved nDCG@5 (0.812 → 0.833) but cost 20 points of Recall@12 (0.852 → 0.654) — with only 268 chunks, dropping a relevant section usually means returning an irrelevant one instead. <b>Left off, with the measurement recorded.</b> The real fix is more papers, not fewer sections.</li>
+</ul>
+
+<h3>24.6 The results now</h3>
+<table>
+  <tr><th>Research retrieval</th><th>Before</th><th>After</th></tr>
+  <tr><td>MRR</td><td>0.493</td><td><b>0.925</b></td></tr>
+  <tr><td>Precision@5</td><td>0.360</td><td><b>0.660</b></td></tr>
+  <tr><td>nDCG@5</td><td>0.371</td><td><b>0.812</b></td></tr>
+  <tr><td>Recall@12</td><td>0.371</td><td><b>0.852</b></td></tr>
+</table>
+
+<p><b>Reddit retrieval — unchanged by this fix, and weaker:</b></p>
+<pre><code>MRR            0.531
+@5    P=0.333  R=0.153  nDCG=0.345
+@12   P=0.259  R=0.285  nDCG=0.357
+@25   P=0.324  R=0.771  nDCG=0.635</code></pre>
+<div class="say">
+  "Precision@12 of 0.26 means roughly a quarter of what the sentiment scorer
+  reads is actually about the product. That sounds alarming until you remember
+  retrieval only <i>proposes</i> — the router and matcher filter it before
+  anything counts. But it's a real inefficiency: three quarters of my relevance-
+  agent calls are spent rejecting things. And MRR 0.53 with Recall@25 of 0.77
+  tells me the comments <i>are</i> in the pool, just ranked too low. That points
+  at the embedding, not the corpus."
+</div>
+
+<h3>24.7 The result that surprised me most</h3>
+<table>
+  <tr><th></th><th>Before fix</th><th>After fix</th></tr>
+  <tr><td>Retrieval MRR</td><td>0.493</td><td><b>0.925</b></td></tr>
+  <tr><td>Retrieval P@5</td><td>0.360</td><td><b>0.660</b></td></tr>
+  <tr><td>End-to-end faithfulness</td><td>0.96</td><td>0.947</td></tr>
+  <tr><td>End-to-end relevancy</td><td>0.747</td><td>0.747</td></tr>
+  <tr><td>End-to-end precision</td><td>0.507</td><td>0.527</td></tr>
+</table>
+<p><b>Retrieval nearly doubled. End-to-end barely moved.</b> Three reasons, and they're worth saying out loud:</p>
+<ol>
+  <li><b>Faithfulness was already near ceiling.</b> It measures whether the answer sticks to the context, not whether the context was good. Better retrieval can't improve a metric that was already 0.96 — the model was being faithful to mediocre context, and is now faithful to better context.</li>
+  <li><b>The duplicate sections were from the <i>right</i> papers.</b> Five sections of the correct azelaic-acid meta-analysis still let the model answer correctly. Retrieval was inefficient, not wrong.</li>
+  <li><b>The real bottleneck is corpus coverage.</b> Recall is 0.320 end-to-end because several gold questions have little or no corresponding content — no ranking change can retrieve a paper that isn't there.</li>
+</ol>
+<div class="say">
+  "That's the most useful thing the eval taught me, and it's a lesson about
+  evaluation rather than about retrieval: <b>component metrics and end-to-end
+  metrics measure different things, and improving one doesn't guarantee moving
+  the other.</b> If I'd only had the end-to-end eval I'd have concluded
+  retrieval was fine. If I'd only had the component eval I'd have claimed a win
+  that users wouldn't feel. You need both to know which is true."
+</div>
+
+<h3>24.8 Guarded against regression</h3>
+<pre><code>{"name": "retrieval does not rank by study design over relevance",
+ "run": lambda: rag.store.STRENGTH_BONUS,
+ "expect": 0.0}
+
+{"name": "retrieval normalises evidence_strength to int",
+ "run": lambda: _strength_is_int(),
+ "expect": True}</code></pre>
+<div class="say">
+  "Someone will have the same reasonable-sounding idea again — I did. So the
+  constant stays named, with the measurement in a comment above it, and an eval
+  case fails if it's reintroduced. A finding nothing enforces is just a story
+  somebody will overwrite."
+</div>
+
+<h3>24.9 Honest limitations of this benchmark</h3>
+<ul>
+  <li><b>Recall is pool-relative, not corpus-relative.</b> Measured against 40 labelled candidates per product, not all 211,991 comments. It answers "of what we could plausibly surface, how much do we rank highly?" — the operational question, not true corpus recall. Labelling 212k items per product isn't affordable.</li>
+  <li><b>Single-labeller ground truth.</b> One model, one pass, no human adjudication and no inter-annotator agreement. I'd want a human-labelled subset to validate against.</li>
+  <li><b>Ten products, ten questions.</b> Enough to catch a catastrophic bug — and it did — not enough for confident small deltas.</li>
+  <li><b>The labeller shares a model family with the pipeline.</b> Mitigated by the task being much easier, but not eliminated.</li>
+</ul>
+
+<h3>INTERVIEW CHECK</h3>
+<ol>
+  <li>"How do you know your LLM-generated labels are trustworthy?"</li>
+  <li>"Your retrieval metrics doubled but end-to-end didn't move. Was the work worth it?"</li>
+  <li>"Why is Reddit Precision@12 only 0.26? Isn't that broken?"</li>
+  <li>"Explain nDCG and why you report it alongside Precision@k."</li>
+  <li>"You removed a feature you'd designed. How did you decide?"</li>
+</ol>
+
+<!-- ================================================================= -->
+<div class="page-break"></div>
+<h2>24 · One-page cheat sheet</h2>
+
+<h3>The 30-second version</h3>
+<div class="say" style="font-size:11pt">
+  "Skin Sayer checks whether products deserve their popularity. It scrapes
+  Amazon best-sellers for the hype signal, pulls real ingredients from FDA drug
+  filings, and runs RAG over two corpora — 268 PubMed abstract chunks and 212,000
+  Reddit comments — inside a LangGraph pipeline where an auditor agent rejects
+  any claim without a citation. Then it compares evidence score against Amazon
+  rank. A top-5 bestseller scoring 54 on evidence is the finding. 154 products
+  ranked, 47 of 47 on agent eval, 0.925 retrieval MRR, 0.947 RAG faithfulness."
+</div>
+
+<h3>Numbers to have cold</h3>
+<table>
+  <tr><td>154</td><td>products</td><td>211,991</td><td>Reddit comments</td></tr>
+  <tr><td>268</td><td>PubMed chunks</td><td>10,481</td><td>threads harvested</td></tr>
+  <tr><td>980</td><td>cache reuses (10 entries)</td><td>1,468</td><td>products found free</td></tr>
+  <tr><td>47/47</td><td>agent eval</td><td>0.947</td><td>faithfulness</td></tr>
+  <tr><td>0.925</td><td>retrieval MRR (was 0.49)</td><td>0.747</td><td>relevancy (deliberate)</td></tr>
+  <tr><td>6+2</td><td>SQLite DBs + Chroma collections</td><td>0</td><td>Postgres, Docker, CI</td></tr>
+</table>
+
+<h3>Six sentences that carry the whole project</h3>
+<ol>
+  <li><b>"Semantic search decides what to look at; it never decides what is true."</b> — the Reddit RAG design in one line.</li>
+  <li><b>"Models for judgement, lookup tables for facts."</b> — why the router and safety gate have no LLM.</li>
+  <li><b>"A guardrail a model can argue past is not a guardrail."</b> — why they're all deterministic.</li>
+  <li><b>"Products change weekly; ingredients don't."</b> — why the cache is keyed by ingredient. 980 reuses.</li>
+  <li><b>"The weekly job writes; the website only reads."</b> — the architectural rule, enforced three ways.</li>
+  <li><b>"Absence of evidence is not evidence of absence."</b> — why "not studied" is a valid answer and scores 1.0 on faithfulness.</li>
+</ol>
+
+<h3>Traps — the four things not to say</h3>
+<table>
+  <tr><th>Don't say</th><th>Say instead</th></tr>
+  <tr><td>"I used Postgres"</td><td>"SQLite — single-writer batch pipeline, ships with the deployment"</td></tr>
+  <tr><td>"I cut 47 LLM calls to 25"</td><td>"22 call sites; I batched the comment judges. Not precisely instrumented."</td></tr>
+  <tr><td>"I used RAGAS"</td><td>"RAGAS-style metrics, hand-implemented — the library imports a dead LangChain module"</td></tr>
+  <tr><td>"I have tests"</td><td>"45 eval assertions over deterministic components. No pytest, no CI — real gap."</td></tr>
+</table>
+
+<h3>If you only remember one thing</h3>
+<div class="box good" style="font-size:11pt">
+  The project's entire thesis is <b>refusing to overstate</b>. Marketing
+  overstates; this system is the correction. So the interview behaviour that
+  matches the work is to state precisely what you measured, name what you
+  didn't, and be the first to point at your own gaps — exactly like the system
+  says <i>"not studied"</i> instead of guessing.
+</div>
