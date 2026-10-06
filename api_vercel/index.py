@@ -131,7 +131,9 @@ def ask(q: str = "", limit: int = 12):
     The logic lives in serving/, which both API entry points import, so there
     is one definition of what "mineral" means rather than two that can drift.
     """
-    return answer_question(q, _rows("SELECT * FROM rankings"), limit)
+    # `_rows` is passed so the RAG path can reach the qa_chunks index in the
+    # same database. It stays a SELECT -- the read-only rule is intact.
+    return answer_question(q, _rows("SELECT * FROM rankings"), limit, rows_fn=_rows)
 
 
 @app.get("/api/recalls")

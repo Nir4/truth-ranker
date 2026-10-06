@@ -80,7 +80,21 @@ def ask(q: str = "", limit: int = 12) -> dict:
     """
     from serving import answer_question
 
-    return answer_question(q, get_rankings(category="skincare", limit=1000), limit)
+    def _rows(sql: str, params: tuple = ()) -> list[dict]:
+        """Read the qa_chunks index for the RAG path."""
+        import sqlite3
+        from data.db import DB_PATH
+
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        try:
+            return [dict(r) for r in conn.execute(sql, params).fetchall()]
+        finally:
+            conn.close()
+
+    return answer_question(
+        q, get_rankings(category="skincare", limit=1000), limit, rows_fn=_rows
+    )
 
 
 @app.get("/api/recalls")

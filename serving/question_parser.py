@@ -261,3 +261,75 @@ def on_domain(question: str, parsed: dict) -> bool:
         return True
     words = set(re.findall(r"[a-z]+", (question or "").lower()))
     return bool(words & ON_DOMAIN_TERMS)
+
+
+# Question shapes that ask for a REASON or an EXPLANATION rather than a
+# filtered list. These are the ones a WHERE clause cannot answer.
+#
+#   "best sunscreen under $25"      -> filters. price <= 25. SQL.
+#   "why does it pill under makeup" -> no column holds a why. RAG.
+#
+# Matching is deliberately conservative: when a question could go either way,
+# the filter path is preferred because it is free, instant and deterministic.
+OPEN_QUESTION_PATTERNS = [
+    r"\bwhy\b",
+    r"\bhow (does|do|come|can)\b",
+    r"\bwhat (makes|is|are|does|do)\b",
+    r"\bis (it|this|that)\b.*\?",
+    r"\bshould i\b",
+    r"\bwhat'?s? (good|bad|special|different)\b",
+    r"\btell me about\b",
+    r"\bexplain\b",
+    r"\bworth (it|buying)\b",
+    r"\bany good\b",
+    r"\bproblem\b",
+    r"\bsafe\b",
+    r"\bcompare[ds]? to\b",
+    r"\bdifference between\b",
+]
+
+
+def is_open_question(question: str, parsed: dict) -> bool:
+    """Does this question want an explanation rather than a filtered list?
+
+    WHY THIS ROUTES AT ALL
+    -----------------------
+    Two answering paths exist, and each is clearly better at one kind of
+    question:
+
+        filters -> "best mineral sunscreen under $25"
+                   A WHERE clause. Instant, free, deterministic, and exactly
+                   right. Running a language model over it would be slower and
+                   less correct than a comparison operator.
+
+        RAG     -> "why does it pill under makeup"
+                   No column holds a reason. The answer is in the dermatology
+                   findings and the community comments, which is prose.
+
+    Routing by shape means neither path is asked to do the other's job.
+
+    The bias is toward filters. A question with concrete constraints -- a price
+    cap, a formulation, a concern to avoid -- is treated as a filter query even
+    if it is phrased as a question, because those constraints are precisely
+    what SQL is good at and semantic retrieval is bad at.
+    """
+    text = (question or "").lower()
+
+    # "why" and "how come" ask for a mechanism and nothing else does. These
+    # win outright, because a concern word in the sentence ("why does it pill")
+    # would otherwise look like a filter constraint and route the question to
+    # a WHERE clause that cannot express "why".
+    if re.search(r"\bwhy\b|\bhow come\b|\bexplain\b", text):
+        return True
+
+    # Otherwise hard constraints mean the shopper wants a LIST, however they
+    # phrased it: "what's a good sunscreen under $20 for oily skin" is a
+    # filter query wearing a question mark.
+    if parsed.get("max_price") or parsed.get("filter_type") or parsed.get("avoid"):
+        return False
+
+    # "best/top/recommend" asks for a ranking, which the filter path produces.
+    if _any(COMPARATIVE_PATTERNS, text):
+        return False
+
+    return _any(OPEN_QUESTION_PATTERNS, text)

@@ -338,7 +338,8 @@ def _comparative_headline(parsed: dict, count: int) -> str:
     return f"{count} {what}{'s' if count != 1 else ''} matching: {', '.join(bits)}"
 
 
-def answer_question(question: str, products: list[dict], limit: int = 12) -> dict:
+def answer_question(question: str, products: list[dict], limit: int = 12,
+                    rows_fn=None) -> dict:
     """The whole serving path: a question and the catalogue in, an answer out.
 
     This is the single entry point both API layers call, so the local dev
@@ -346,6 +347,20 @@ def answer_question(question: str, products: list[dict], limit: int = 12) -> dic
     means. It takes `products` as an argument rather than reading the database
     itself -- each API already knows how to open its own connection, and
     keeping I/O out of here is what makes the logic testable without one.
+
+    TWO ANSWERING PATHS, ROUTED BY QUESTION SHAPE
+    ----------------------------------------------
+        filters  "best mineral sunscreen under $25"
+                 -> a WHERE clause. Instant, free, deterministic.
+
+        RAG      "why does it pill under makeup"
+                 -> retrieval over the per-product index, then generation.
+                    No column holds a reason.
+
+    `rows_fn` is how the RAG path reaches the index -- a callable(sql, params)
+    supplied by whichever API is calling. When it is None the RAG path is
+    unavailable and everything falls back to filters, so a deployment without
+    the index still works rather than erroring.
     """
     from serving.question_parser import parse, on_domain
 
@@ -383,6 +398,15 @@ def answer_question(question: str, products: list[dict], limit: int = 12) -> dic
             }],
             "products": [], "matched": [],
         }
+
+    # OPEN QUESTIONS go to RAG. "Why does it pill" has no column to filter on;
+    # the answer is in the dermatology findings and the community comments.
+    from serving.question_parser import is_open_question
+
+    if rows_fn is not None and is_open_question(question, parsed):
+        rag_result = _answer_by_rag(question, products, parsed, rows_fn)
+        if rag_result is not None:
+            return rag_result
 
     if parsed["intent"] == "specific" and parsed["brand"]:
         specific = _answer_about_brand(question, products, parsed)
@@ -460,3 +484,72 @@ def _answer_about_brand(question: str, products: list[dict], parsed: dict) -> di
     result["matched"] = parsed.get("matched", [])
     result["products"] = [matches[0]]
     return result
+
+
+def _answer_by_rag(question: str, products: list[dict], parsed: dict,
+                   rows_fn) -> dict | None:
+    """Retrieve from the per-product index and generate a grounded answer.
+
+    Returns None when RAG cannot help -- no index, no matching chunks, or an
+    error -- so the caller falls through to the filter path rather than
+    showing nothing. A degraded answer beats a broken page.
+
+    SCOPING IS THE IMPORTANT PART. When the question names a product we can
+    resolve, retrieval is restricted to that product's chunks. A comment
+    saying "it pills badly" from a DIFFERENT product is not a worse match, it
+    is a wrong answer -- scoping makes that impossible rather than unlikely.
+    """
+    try:
+        from serving.rag import ask as rag_ask
+    except Exception:  # noqa: BLE001
+        return None
+
+    # Narrow to the named brand, and to the named category within it.
+    scoped = products
+    if parsed.get("brand"):
+        brand = parsed["brand"].lower()
+        scoped = [p for p in products if (p.get("brand") or "").lower() == brand]
+        if parsed.get("category"):
+            in_cat = [p for p in scoped
+                      if (p.get("product_category") or p.get("category")) == parsed["category"]]
+            if in_cat:
+                scoped = in_cat
+
+    # No brand named means the question is about the category in general
+    # ("is fragrance a problem"). Leave the scope open rather than guessing
+    # which product they meant.
+    asins = [p["asin"] for p in scoped if p.get("asin")] if parsed.get("brand") else None
+
+    try:
+        result = rag_ask(question, rows_fn, asins=asins)
+    except Exception as exc:  # noqa: BLE001 - fall back, never 500
+        print(f"  [rag] failed: {str(exc)[:80]}")
+        return None
+
+    if not result.get("n_chunks"):
+        return None  # nothing retrieved; the filter path may still do better
+
+    headline = (
+        _display_name(scoped[0])[:90]
+        if parsed.get("brand") and scoped
+        else "What the evidence says"
+    )
+
+    # One bullet per retrieved passage, each naming where it came from --
+    # the same traceability rule the rest of the site follows.
+    bullets = [{"text": result["answer"], "from": "answered from the evidence below"}]
+    for source in result["sources"][:4]:
+        bullets.append({
+            "text": source["text"][:230] + ("..." if len(source["text"]) > 230 else ""),
+            "from": source["source"],
+        })
+
+    return {
+        "type": "rag",
+        "headline": headline,
+        "answer": result["answer"],
+        "bullets": bullets,
+        "products": scoped[:3] if parsed.get("brand") else [],
+        "matched": parsed.get("matched", []),
+        "n_chunks": result["n_chunks"],
+    }

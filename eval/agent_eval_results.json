@@ -1,7 +1,7 @@
 {
   "outcome": {
-    "passed": 33,
-    "total": 33,
+    "passed": 39,
+    "total": 39,
     "rate": 1.0,
     "cases": [
       {
@@ -168,6 +168,36 @@
         "name": "retrieval normalises evidence_strength to int",
         "passed": true,
         "got": "True"
+      },
+      {
+        "name": "'why' routes to RAG even with a concern word present",
+        "passed": true,
+        "got": "rag"
+      },
+      {
+        "name": "a price cap routes to filters, however it is phrased",
+        "passed": true,
+        "got": "filters"
+      },
+      {
+        "name": "'best X' routes to filters",
+        "passed": true,
+        "got": "filters"
+      },
+      {
+        "name": "'what makes X great' routes to RAG",
+        "passed": true,
+        "got": "rag"
+      },
+      {
+        "name": "the Q&A index ships inside truth.db",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "every indexed chunk records its embedding model",
+        "passed": true,
+        "got": "['text-embedding-3-small']"
       }
     ]
   },

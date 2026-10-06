@@ -264,7 +264,86 @@ OUTCOME_CASES = [
         "run": lambda: _strength_is_int(),
         "expect": True,
     },
+    # --- hybrid routing: filters vs RAG ---------------------------------
+    {
+        "name": "'why' routes to RAG even with a concern word present",
+        # "why does it pill under makeup" sets avoid=[pilling,greasy], which
+        # looks like a filter constraint. A reason cannot be a WHERE clause,
+        # so "why" has to win outright.
+        "run": lambda: _routes("why does it pill under makeup"),
+        "expect": "rag",
+    },
+    {
+        "name": "a price cap routes to filters, however it is phrased",
+        "run": lambda: _routes("what's a good sunscreen under $20 for oily skin"),
+        "expect": "filters",
+    },
+    {
+        "name": "'best X' routes to filters",
+        "run": lambda: _routes("best mineral sunscreen for sensitive skin"),
+        "expect": "filters",
+    },
+    {
+        "name": "'what makes X great' routes to RAG",
+        "run": lambda: _routes("what makes CeraVe great?"),
+        "expect": "rag",
+    },
+    {
+        # The index lives in truth.db, not Chroma, because the 1.8GB vector
+        # store cannot ship to a 250MB Vercel function.
+        "name": "the Q&A index ships inside truth.db",
+        "run": lambda: _qa_index_rows() > 0,
+        "expect": True,
+    },
+    {
+        # Every chunk must record which model embedded it. A model change
+        # would otherwise silently invalidate every stored vector.
+        "name": "every indexed chunk records its embedding model",
+        "run": lambda: _qa_models(),
+        "expect": ["text-embedding-3-small"],
+    },
 ]
+
+
+def _routes(question: str) -> str:
+    """Which answering path does this question take?"""
+    from serving.question_parser import parse, is_open_question
+
+    brands = ["CeraVe", "Neutrogena", "Blue Lizard", "Supergoop"]
+    parsed = parse(question, brands)
+    return "rag" if is_open_question(question, parsed) else "filters"
+
+
+def _qa_index_rows() -> int:
+    import sqlite3
+    from pathlib import Path
+
+    db = Path(__file__).parent.parent / "data" / "truth.db"
+    try:
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        try:
+            return conn.execute("SELECT COUNT(*) FROM qa_chunks").fetchone()[0]
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001 - table absent means not built
+        return 0
+
+
+def _qa_models() -> list[str]:
+    import sqlite3
+    from pathlib import Path
+
+    db = Path(__file__).parent.parent / "data" / "truth.db"
+    try:
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        try:
+            return sorted(
+                r[0] for r in conn.execute("SELECT DISTINCT model FROM qa_chunks")
+            )
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _strength_is_int() -> bool:

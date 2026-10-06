@@ -1281,7 +1281,9 @@ function renderAnswer(data) {
     `<li>${md(b.text)}<span class="src">from: ${md(b.from)}</span></li>`).join('');
 
   let sub = '';
-  if (data.type === 'specific') {
+  if (data.type === 'rag') {
+    sub = `Answered from ${data.n_chunks} evidence passages &middot; sources below`;
+  } else if (data.type === 'specific') {
     const bits = [];
     if (data.score != null) bits.push(`${Math.round(data.score)}/100 on evidence`);
     if (data.sentiment) bits.push(data.sentiment);
