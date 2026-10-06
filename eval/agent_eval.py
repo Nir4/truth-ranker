@@ -264,29 +264,16 @@ OUTCOME_CASES = [
         "run": lambda: _strength_is_int(),
         "expect": True,
     },
-    # --- hybrid routing: filters vs RAG ---------------------------------
+    # --- the RAG path ---------------------------------------------------
     {
-        "name": "'why' routes to RAG even with a concern word present",
-        # "why does it pill under makeup" sets avoid=[pilling,greasy], which
-        # looks like a filter constraint. A reason cannot be a WHERE clause,
-        # so "why" has to win outright.
-        "run": lambda: _routes("why does it pill under makeup"),
-        "expect": "rag",
-    },
-    {
-        "name": "a price cap routes to filters, however it is phrased",
-        "run": lambda: _routes("what's a good sunscreen under $20 for oily skin"),
-        "expect": "filters",
-    },
-    {
-        "name": "'best X' routes to filters",
-        "run": lambda: _routes("best mineral sunscreen for sensitive skin"),
-        "expect": "filters",
-    },
-    {
-        "name": "'what makes X great' routes to RAG",
-        "run": lambda: _routes("what makes CeraVe great?"),
-        "expect": "rag",
+        # Price is a number in a column; cosine similarity over prose cannot
+        # apply "<= 25". The fix was to write price INTO a facts chunk per
+        # product so the model can at least read it -- only 158 of 5,852
+        # chunks mentioned a price before, which is why it recommended
+        # products without knowing their cost.
+        "name": "every product has a facts chunk carrying its price",
+        "run": lambda: _facts_coverage(),
+        "expect": True,
     },
     {
         # The index lives in truth.db, not Chroma, because the 1.8GB vector
@@ -305,13 +292,37 @@ OUTCOME_CASES = [
 ]
 
 
-def _routes(question: str) -> str:
-    """Which answering path does this question take?"""
-    from serving.question_parser import parse, is_open_question
+def _facts_coverage() -> bool:
+    """Does every product with a price have a facts chunk stating it?
 
-    brands = ["CeraVe", "Neutrogena", "Blue Lizard", "Supergoop"]
-    parsed = parse(question, brands)
-    return "rag" if is_open_question(question, parsed) else "filters"
+    Guards the fix for the constraint bug: without price in the retrievable
+    text, "under $25" is unenforceable and the model recommends products it
+    has never seen the cost of.
+    """
+    import sqlite3
+    from pathlib import Path
+
+    db = Path(__file__).parent.parent / "data" / "truth.db"
+    try:
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    except Exception:  # noqa: BLE001
+        return False
+    try:
+        priced = {
+            r[0] for r in conn.execute(
+                "SELECT asin FROM rankings WHERE price IS NOT NULL AND price > 0"
+            )
+        }
+        with_facts = {
+            r[0] for r in conn.execute(
+                "SELECT DISTINCT asin FROM qa_chunks WHERE source = 'product facts'"
+            )
+        }
+        return bool(priced) and priced.issubset(with_facts)
+    except Exception:  # noqa: BLE001
+        return False
+    finally:
+        conn.close()
 
 
 def _qa_index_rows() -> int:

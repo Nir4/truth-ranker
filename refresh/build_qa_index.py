@@ -174,6 +174,45 @@ def _chunks_for(row: dict) -> list[tuple[str, str, str]]:
             # identically for every product that pills.
             chunks.append((kind, source, f"{name}: {text}"))
 
+    # 0. THE FACTS. Price, score, rank, category -- the things a shopper
+    # filters on.
+    #
+    # These were missing, and their absence is why retrieval could not honour
+    # "under $25": a price is a number in a column, and cosine similarity over
+    # text cannot apply a comparison it has never seen. Only 158 of 5,852
+    # chunks contained a dollar sign at all, so the model recommended products
+    # without knowing what they cost.
+    #
+    # Writing them INTO a chunk puts them in front of the model. It still
+    # cannot do arithmetic reliably, so this is not equivalent to a WHERE
+    # clause -- but it can read "$18.99" and notice that it is under $25,
+    # which it could not do when the number was nowhere in its context.
+    price = row.get("price")
+    facts = [
+        f"{name} is a {row.get('product_category') or 'skincare'} product by "
+        f"{row['brand']}."
+    ]
+    if price:
+        facts.append(f"It costs ${price:.2f}.")
+    if row.get("score") is not None:
+        facts.append(f"It scores {row['score']:.0f} out of 100 on our evidence rating.")
+    if row.get("bestseller_rank"):
+        facts.append(f"It is ranked #{row['bestseller_rank']} on Amazon.")
+    gap = row.get("hype_gap")
+    if gap is not None and gap >= 25:
+        facts.append("It is OVERHYPED: more popular than the evidence supports.")
+    elif gap is not None and gap <= -20:
+        facts.append("It is UNDERRATED: better than its sales rank suggests.")
+    marketed = _load(row.get("marketed_for"))
+    if marketed:
+        facts.append(f"The label markets it for {', '.join(marketed)} skin.")
+    else:
+        facts.append("The label states no skin type, so it is sold to everyone.")
+    if not row.get("is_safe", True):
+        facts.append(f"SAFETY: {row.get('safety_notes', 'FDA recall on record.')}")
+
+    add("product", "product facts", " ".join(facts))
+
     # 1. DERMATOLOGY -- the research answer, paragraph by paragraph.
     for para in (row.get("expert_findings") or "").split("\n\n"):
         para = para.strip().lstrip("#").strip()

@@ -1,7 +1,7 @@
 {
   "outcome": {
-    "passed": 39,
-    "total": 39,
+    "passed": 36,
+    "total": 36,
     "rate": 1.0,
     "cases": [
       {
@@ -170,24 +170,9 @@
         "got": "True"
       },
       {
-        "name": "'why' routes to RAG even with a concern word present",
+        "name": "every product has a facts chunk carrying its price",
         "passed": true,
-        "got": "rag"
-      },
-      {
-        "name": "a price cap routes to filters, however it is phrased",
-        "passed": true,
-        "got": "filters"
-      },
-      {
-        "name": "'best X' routes to filters",
-        "passed": true,
-        "got": "filters"
-      },
-      {
-        "name": "'what makes X great' routes to RAG",
-        "passed": true,
-        "got": "rag"
+        "got": "True"
       },
       {
         "name": "the Q&A index ships inside truth.db",

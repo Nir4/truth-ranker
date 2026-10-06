@@ -209,7 +209,35 @@ def retrieve(question: str, rows_fn, asins: list[str] | None = None,
         })
 
     scored.sort(key=lambda c: c["similarity"], reverse=True)
-    return scored[:k]
+    top = scored[:k]
+
+    # ALWAYS carry the facts chunk for every product already in the result.
+    #
+    # Without this, "best mineral sunscreen under $25" retrieves passages that
+    # TALK about mineral sunscreens and sensitive skin -- and none of them
+    # mention a price, because price lives in one short facts chunk per product
+    # that rarely wins a semantic match against prose. The model then
+    # recommended products without knowing what they cost.
+    #
+    # Pulling the facts for whatever products made the cut means the price,
+    # score and rank are in context whenever the answer names a product.
+    # Cheap: one extra short chunk per product mentioned, no extra embedding.
+    named = {c["asin"] for c in top}
+    have_facts = {c["asin"] for c in top if c["source"] == "product facts"}
+    missing = named - have_facts
+
+    if missing:
+        by_asin = {}
+        for chunk in chunks:
+            if chunk["asin"] in missing and chunk["source"] == "product facts":
+                by_asin[chunk["asin"]] = chunk
+        for asin, chunk in by_asin.items():
+            top.append({
+                "asin": asin, "kind": chunk["kind"], "source": chunk["source"],
+                "text": chunk["text"], "similarity": 0.0,  # carried, not matched
+            })
+
+    return top
 
 
 SYSTEM_PROMPT = """You answer shopper questions about skincare products for \
@@ -244,12 +272,23 @@ problem from a complaint or a low rating.
 - If a complaint is specific to one skin type, say so -- that is a mismatch \
 between product and buyer, not a fault in the product.
 
-STYLE: 2-4 short sentences. A shopper is reading this, not a journal. Say the \
-thing, then stop."""
+STYLE: a shopper is reading this, not a journal.
+
+- Lead with the direct answer in one sentence, and make it CONSISTENT with \
+what follows. "Yes, users report it does NOT leave a cast" is self-\
+contradictory -- if the finding is that it does not, the answer is "No".
+- Then one short paragraph of why, separated by a BLANK LINE.
+- Two paragraphs maximum. Say the thing, then stop."""
 
 
-def answer(question: str, hits: list[dict]) -> str:
-    """Generate an answer grounded in the retrieved passages."""
+def answer(question: str, hits: list[dict], constraints: dict | None = None) -> str:
+    """Generate an answer grounded in the retrieved passages.
+
+    `constraints` carries what the question asked for in structured form --
+    a price cap, a formulation, a skin type. Retrieval cannot enforce a number,
+    but naming the constraint in the prompt lets the model check a price it can
+    now see in the facts chunks and exclude what breaks it.
+    """
     if not hits:
         return (
             "We do not have evidence covering that. It may be a product we have "
@@ -260,6 +299,26 @@ def answer(question: str, hits: list[dict]) -> str:
         f"[{h['source']}] {h['text'][:700]}" for h in hits
     )
 
+    # State the hard constraints separately from the evidence, so they read as
+    # requirements rather than as more context to weigh.
+    requirements = ""
+    if constraints:
+        lines = []
+        if constraints.get("max_price"):
+            lines.append(
+                f"- MUST cost ${constraints['max_price']:.0f} or less. The price "
+                f"is in each product's facts passage. Do not recommend anything "
+                f"above it, and say so if nothing qualifies."
+            )
+        if constraints.get("filter_type"):
+            lines.append(f"- MUST use {constraints['filter_type']} UV filters.")
+        for skin in constraints.get("skin_types") or []:
+            lines.append(f"- The asker has {skin} skin.")
+        for concern in constraints.get("avoid") or []:
+            lines.append(f"- They want to avoid: {concern}.")
+        if lines:
+            requirements = "\n\nREQUIREMENTS:\n" + "\n".join(lines)
+
     result = _post(
         "https://api.openai.com/v1/chat/completions",
         {
@@ -268,7 +327,7 @@ def answer(question: str, hits: list[dict]) -> str:
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user",
-                 "content": f"QUESTION: {question}\n\nEVIDENCE:\n{context}"},
+                 "content": f"QUESTION: {question}{requirements}\n\nEVIDENCE:\n{context}"},
             ],
         },
         timeout=30,
@@ -276,15 +335,16 @@ def answer(question: str, hits: list[dict]) -> str:
     return result["choices"][0]["message"]["content"].strip()
 
 
-def ask(question: str, rows_fn, asins: list[str] | None = None) -> dict:
+def ask(question: str, rows_fn, asins: list[str] | None = None,
+        constraints: dict | None = None, k: int = TOP_K) -> dict:
     """Full RAG path: retrieve, then generate. Returns the answer and its sources.
 
     Sources are returned alongside the answer so the page can show WHICH
     passages it rests on. An answer whose evidence the reader cannot inspect is
     exactly what this project exists to be against.
     """
-    hits = retrieve(question, rows_fn, asins=_scope(asins))
-    text = answer(question, hits)
+    hits = retrieve(question, rows_fn, asins=_scope(asins), k=k)
+    text = answer(question, hits, constraints=constraints)
 
     return {
         "answer": text,

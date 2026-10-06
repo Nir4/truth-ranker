@@ -315,11 +315,26 @@ def is_open_question(question: str, parsed: dict) -> bool:
     """
     text = (question or "").lower()
 
-    # "why" and "how come" ask for a mechanism and nothing else does. These
-    # win outright, because a concern word in the sentence ("why does it pill")
-    # would otherwise look like a filter constraint and route the question to
-    # a WHERE clause that cannot express "why".
+    # Questions ABOUT a named product win outright, even when they mention a
+    # concern. These two shapes look identical to the filter parser and mean
+    # opposite things:
+    #
+    #   "sunscreen that doesn't leave a white cast"   -> filter the catalogue
+    #   "does Banana Boat leave a white cast?"        -> answer about ONE product
+    #
+    # Both set avoid=["white cast"]. The difference is that the second NAMES a
+    # product and asks a yes/no question about it, which a WHERE clause cannot
+    # answer -- filtering would silently drop the very product being asked
+    # about, or return it with bullets that never address the question.
     if re.search(r"\bwhy\b|\bhow come\b|\bexplain\b", text):
+        return True
+
+    asks_about_named_product = bool(parsed.get("brand")) and re.search(
+        r"\bdoes\b|\bdo(es)? it\b|\bis it\b|\bwill it\b|\bcan it\b|\bdid it\b"
+        r"|\bany good\b|\bworth\b|\bgood for\b|\?$",
+        text,
+    )
+    if asks_about_named_product:
         return True
 
     # Otherwise hard constraints mean the shopper wants a LIST, however they

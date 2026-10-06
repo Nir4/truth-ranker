@@ -399,11 +399,27 @@ def answer_question(question: str, products: list[dict], limit: int = 12,
             "products": [], "matched": [],
         }
 
-    # OPEN QUESTIONS go to RAG. "Why does it pill" has no column to filter on;
-    # the answer is in the dermatology findings and the community comments.
-    from serving.question_parser import is_open_question
-
-    if rows_fn is not None and is_open_question(question, parsed):
+    # EVERY question goes to RAG.
+    #
+    # The earlier version routed by question shape -- filters for "best X under
+    # $25", RAG for "why does it pill". That was faster and enforced price caps
+    # exactly, but the routing was a heuristic and it guessed wrong: "does
+    # Banana Boat leave a cast?" sets avoid=["white cast"], which looks like a
+    # filter constraint, so a direct question about one product was answered
+    # with a filtered list that never addressed it.
+    #
+    # A heuristic that silently answers the wrong question is worse than a
+    # slower path that answers the right one. So RAG runs for everything and
+    # the filter path becomes the FALLBACK -- used when RAG is unavailable (no
+    # API key, budget spent) or retrieves nothing.
+    #
+    # The cost of this choice, stated plainly: retrieval cannot enforce a hard
+    # constraint. "Under $25" is a number in a column, and cosine similarity
+    # over text has no way to apply it -- RAG will recommend a product without
+    # checking its price. The parsed constraints are passed into the prompt so
+    # the model at least knows they exist and can flag a product that breaks
+    # one, but that is guidance, not enforcement.
+    if rows_fn is not None:
         rag_result = _answer_by_rag(question, products, parsed, rows_fn)
         if rag_result is not None:
             return rag_result
@@ -520,8 +536,15 @@ def _answer_by_rag(question: str, products: list[dict], parsed: dict,
     # which product they meant.
     asins = [p["asin"] for p in scoped if p.get("asin")] if parsed.get("brand") else None
 
+    # A list question ("best mineral sunscreen under $25") needs to see many
+    # products to choose between; a question about one product needs depth on
+    # that product. Widen k when no brand was named.
+    k = 8 if parsed.get("brand") else 16
+
     try:
-        result = rag_ask(question, rows_fn, asins=asins)
+        result = rag_ask(
+            question, rows_fn, asins=asins, constraints=parsed, k=k
+        )
     except Exception as exc:  # noqa: BLE001 - fall back, never 500
         print(f"  [rag] failed: {str(exc)[:80]}")
         return None
@@ -549,6 +572,9 @@ def _answer_by_rag(question: str, products: list[dict], parsed: dict,
         "headline": headline,
         "answer": result["answer"],
         "bullets": bullets,
+        # The product the answer is ABOUT comes first, so the headline can
+        # link to it. Without this an answer about one product gave the reader
+        # no way to reach that product.
         "products": scoped[:3] if parsed.get("brand") else [],
         "matched": parsed.get("matched", []),
         "n_chunks": result["n_chunks"],
