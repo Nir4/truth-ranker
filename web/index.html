@@ -59,7 +59,37 @@
        -webkit-background-clip:text; background-clip:text; color:transparent; }
   .tagline { margin:0 auto; max-width:640px; font-size:19px; color:var(--muted); line-height:1.55; font-weight:500; }
 
-  /* ---- search ---- */
+  /* ---- the two boxes ----
+     Ask and Find are different jobs, so they get different boxes with
+     different labels. One box doing both, switched by whether you pressed
+     Enter, was invisible. */
+  .boxes { display:flex; gap:18px; justify-content:center; align-items:flex-start;
+           margin:30px auto 10px; max-width:860px; padding:0 16px; flex-wrap:wrap; }
+  .box-wrap { flex:1 1 330px; min-width:280px; }
+  .box-label { display:block; font-size:12px; font-weight:800; letter-spacing:.4px;
+               text-transform:uppercase; color:var(--accent); margin:0 0 7px 20px; }
+  .box-hint { font-size:11.5px; color:var(--muted); font-weight:500;
+              margin:7px 0 0 20px; }
+  .boxes input {
+    width:100%; padding:15px 22px; font-size:15px; font-family:inherit;
+    font-weight:600; border:2.5px solid transparent; border-radius:999px;
+    background:var(--surface); color:var(--text); outline:none;
+    box-shadow:0 5px 18px rgba(255,111,165,.11);
+    transition:border-color .2s, box-shadow .2s, transform .2s;
+  }
+  .boxes input::placeholder { color:var(--muted); font-weight:500; }
+  .boxes input:focus {
+    border-color:var(--accent);
+    box-shadow:0 9px 26px rgba(255,111,165,.22);
+    transform:translateY(-1px);
+  }
+  /* The ask box is the primary action, so it carries the stronger tint. */
+  #ask { background:linear-gradient(#fff,#fff) padding-box,
+                    linear-gradient(90deg,var(--accent-soft),var(--sky-soft)) border-box;
+         border:2.5px solid transparent; }
+  @media (max-width:700px) { .boxes { gap:14px; } }
+
+  /* ---- search (legacy, kept for the compare + routine inputs) ---- */
   .searchbar { display:flex; justify-content:center; margin:32px 0 18px; }
   .searchbar input {
     width:100%; max-width:540px; padding:17px 26px; font-size:16px; font-family:inherit;
@@ -78,7 +108,7 @@
   /* ---- example questions ----
      People do not know a search box takes questions until they see one. */
   .asks { display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
-          margin:-6px 0 20px; padding:0 16px; }
+          margin:4px auto 22px; padding:0 16px; max-width:860px; }
   .ask { font:inherit; font-size:12.5px; font-weight:600; color:var(--muted);
          background:var(--surface); border:1.5px solid var(--hair);
          border-radius:999px; padding:7px 15px; cursor:pointer;
@@ -610,14 +640,33 @@
   </header>
 
   <!-- ONE primary action. Everything else is secondary and hidden until asked. -->
-  <div class="searchbar">
-    <div style="position:relative;width:100%;max-width:560px">
-      <input id="q" type="search" placeholder="Ask anything — &ldquo;best sunscreen that doesn&rsquo;t pill under makeup&rdquo;" autocomplete="off">
-      <div id="ac" class="ac"></div>
+  <!-- TWO boxes, because they do different things.
+       Previously one box filtered while you typed and asked a question on
+       Enter -- two behaviours with no visible difference between them, which
+       nobody discovers. Separating them means the label tells you what each
+       one does. -->
+  <div class="boxes">
+    <div class="box-wrap">
+      <label class="box-label" for="ask">Ask a question</label>
+      <div style="position:relative">
+        <input id="ask" type="search" autocomplete="off"
+               placeholder="why does it pill under makeup?">
+      </div>
+      <div class="box-hint">We answer from the research and what users said.</div>
+    </div>
+
+    <div class="box-wrap">
+      <label class="box-label" for="q">Find a product</label>
+      <div style="position:relative">
+        <input id="q" type="search" autocomplete="off"
+               placeholder="CeraVe, sunscreen, niacinamide&hellip;">
+        <div id="ac" class="ac"></div>
+      </div>
+      <div class="box-hint">Filters the list below as you type.</div>
     </div>
   </div>
 
-  <!-- Example questions. People do not know they can ask until shown. -->
+  <!-- Example questions, under the ask box they belong to. -->
   <div class="asks">
     <button class="ask" data-q="what makes CeraVe great?">what makes CeraVe great?</button>
     <button class="ask" data-q="best sunscreen that doesn't pill under makeup">best sunscreen, no pilling under makeup</button>
@@ -1308,8 +1357,8 @@ function renderAnswer(data) {
 }
 
 async function askQuestion() {
-  const q = document.getElementById('q').value.trim();
-  if (!q) { clearAnswer(); apply(); return; }
+  const q = document.getElementById('ask').value.trim();
+  if (!q) { clearAnswer(); return; }
 
   answerBox.className = 'answer on';
   answerBox.innerHTML = `<div class="card"><h3>Looking&hellip;</h3></div>`;
@@ -1317,29 +1366,40 @@ async function askQuestion() {
   try {
     const data = await (await fetch(`/api/ask?q=${encodeURIComponent(q)}`)).json();
     renderAnswer(data);
-    // The answer names the products; the grid below shows their full cards.
-    render(data.products || []);
+    // Show the products the answer is about, when it named any. A general
+    // question ("is fragrance a problem") names none, so the grid keeps
+    // whatever the FIND box is currently filtering -- the two boxes do not
+    // overwrite each other.
+    if ((data.products || []).length) render(data.products);
   } catch (e) {
-    // A failed question must not clear the catalogue -- fall back to
-    // substring filtering so the page stays useful.
+    // A failed question must leave the catalogue alone. The find box owns
+    // the grid; a broken answer should not empty it.
     answerBox.className = 'answer';
-    apply();
   }
 }
 
-document.getElementById('q').addEventListener('keydown', e => {
+// The ASK box: Enter submits, and so does the search-input clear button.
+document.getElementById('ask').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); askQuestion(); }
 });
+document.getElementById('ask').addEventListener('search', e => {
+  if (!e.target.value.trim()) clearAnswer();   // the native clear (x)
+});
 
+// Example chips fill the ASK box and submit, so a first-time visitor sees
+// what a question looks like without having to guess.
 document.querySelectorAll('.ask').forEach(btn => {
   btn.onclick = () => {
-    document.getElementById('q').value = btn.dataset.q;
+    const box = document.getElementById('ask');
+    box.value = btn.dataset.q;
     askQuestion();
   };
 });
 
 document.getElementById('doCompare').onclick = runCompare;
-document.getElementById('q').addEventListener('input', () => { clearAnswer(); apply(); });
+// The FIND box filters the grid and nothing else. It used to clear the
+// answer too, back when both behaviours lived in one input.
+document.getElementById('q').addEventListener('input', apply);
 document.querySelectorAll('.f').forEach(cb => cb.onchange = apply);
 document.getElementById('price').addEventListener('input', e => {
   document.getElementById('priceLabel').textContent = e.target.value;

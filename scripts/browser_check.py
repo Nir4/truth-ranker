@@ -76,8 +76,8 @@ def main() -> int:
                 failures.append(f"expected >=3 example chips, found {chips}")
 
             for question, must_contain, kind in CASES:
-                page.fill("#q", question)
-                page.press("#q", "Enter")
+                page.fill("#ask", question)
+                page.press("#ask", "Enter")
 
                 try:
                     page.wait_for_function(
@@ -111,20 +111,29 @@ def main() -> int:
                 # autocomplete dropdown overlays the card once typing resumes,
                 # so a screenshot taken at the end shows the wrong thing.
                 if question == CASES[0][0]:
-                    page.locator("#q").blur()
+                    page.locator("#ask").blur()
                     page.wait_for_timeout(300)
                     page.screenshot(
                         path=str(ROOT / "interview_review" / "ask_screenshot.png")
                     )
 
-            # Typing (without Enter) must clear the answer and fall back to
-            # live filtering, so the two modes never show stale state together.
+            # The two boxes are INDEPENDENT. Typing in the find box filters
+            # the grid and must leave the answer alone -- they used to be one
+            # input where typing destroyed the answer you had just read.
+            before = page.locator("#answer").inner_text()
             page.fill("#q", "cera")
-            page.wait_for_timeout(400)
-            if "on" in (page.locator("#answer").get_attribute("class") or ""):
-                failures.append("typing did not clear the previous answer")
+            page.wait_for_timeout(500)
+            after = page.locator("#answer").inner_text()
+            if after != before:
+                failures.append("the find box disturbed the answer")
             else:
-                print("  [ok  ] typing clears the answer and filters live")
+                print("  [ok  ] find box filters without clearing the answer")
+
+            # And both boxes must exist, with labels saying what they do.
+            labels = page.locator(".box-label").all_inner_texts()
+            print(f"  [ok  ] two boxes: {labels}")
+            if len(labels) != 2:
+                failures.append(f"expected 2 labelled boxes, found {len(labels)}")
 
             print("screenshot -> interview_review/ask_screenshot.png")
 
