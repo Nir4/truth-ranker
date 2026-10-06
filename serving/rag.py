@@ -67,6 +67,27 @@ MIN_SIMILARITY = 0.25
 EMBED_MODEL = "text-embedding-3-small"
 ANSWER_MODEL = "gpt-4o-mini"
 
+# Cost ceiling per serverless instance.
+#
+# This is the first part of the system where a VISITOR can cause spend --
+# everything else is a SELECT over precomputed rows. A scripted loop against
+# the public endpoint would otherwise run up an OpenAI bill, so the RAG path
+# stops answering after this many questions and falls back to the filter path,
+# which is free and still useful.
+#
+# Per-instance rather than global: a Vercel function has no shared state, and
+# the alternative is a datastore the serving layer is not allowed to write to.
+# An attacker spreading requests across cold starts gets more than this, so it
+# is a brake rather than a guarantee -- the real fix is a gateway rate limit,
+# which belongs in front of the function rather than inside it.
+MAX_RAG_CALLS = int(os.getenv("MAX_RAG_CALLS", "200"))
+
+_rag_calls = 0
+
+
+class RagBudgetExceeded(RuntimeError):
+    """Raised when this instance has answered its quota of open questions."""
+
 
 def _f16_decode(blob: bytes) -> list[float]:
     """Decode IEEE-754 half-precision stored by the indexer.
@@ -113,7 +134,17 @@ def embed_query(question: str) -> list[float]:
     A different model would place the query in a different space and every
     distance would be meaningless -- which is why the indexer stores the model
     name per row.
+
+    Counts against the per-instance budget here, at the first paid call, so a
+    rejected question costs nothing at all.
     """
+    global _rag_calls
+    if _rag_calls >= MAX_RAG_CALLS:
+        raise RagBudgetExceeded(
+            f"this instance has answered {MAX_RAG_CALLS} open questions"
+        )
+    _rag_calls += 1
+
     result = _post(
         "https://api.openai.com/v1/embeddings",
         {"model": EMBED_MODEL, "input": question[:2000]},
