@@ -120,30 +120,127 @@ def ingest(query: str, max_results: int = 10) -> int:
     return len(ids)
 
 
+# How much a stronger study design is worth, in similarity points.
+#
+# ZERO -- and that is a measured result, not an oversight.
+#
+# This module originally sorted by `(evidence_strength, similarity)`: strength
+# first, similarity only as a tiebreak. The intention was sound -- a
+# meta-analysis should outrank a case report. The effect was not. Because the
+# sort is LEXICOGRAPHIC, any strength-5 chunk outranked EVERY strength-4 chunk
+# regardless of topical match, and since abstracts are chunked by section, one
+# paper's five sections could occupy every slot.
+#
+# eval/retrieval_eval.py measured it against a labelled set, sweeping the
+# bonus from 0 to 0.04 with and without a per-paper cap:
+#
+#     bonus   MRR     P@5     nDCG@5   R@12
+#     0.000   0.925   0.660   0.812    0.852   <- best on every metric
+#     0.010   0.875   0.640   0.786    0.791
+#     0.020   0.743   0.540   0.611    0.783
+#     0.040   0.641   0.480   0.513    0.530
+#     (lexicographic, the original)
+#             0.161   0.140   0.132    0.143   <- catastrophic
+#
+# Every non-zero bonus is worse. Retrieval's job is to find passages ABOUT the
+# question; study quality is a property of the paper, not of its relevance, and
+# mixing the two corrupts the ranking.
+#
+# Study design still matters -- it is just applied where it belongs:
+#   - `sources` is sorted by strength before display, so the strongest paper is
+#     cited first (graph/nodes/dermatology.py:_resolve_citations)
+#   - the agent is given each passage's design and told to weigh conflicting
+#     evidence accordingly
+#
+# Kept as a named constant so the ablation can sweep it and so this finding
+# does not get silently re-introduced by someone who has the same good idea.
+STRENGTH_BONUS = 0.0
+
+# How many sections of the SAME paper may appear in one result set.
+#
+# 0 disables the cap. Also a measured result: capping at 2 improved nDCG@5
+# slightly (0.812 -> 0.833) but cost 20 points of Recall@12 (0.852 -> 0.654),
+# because with only 268 chunks in the corpus, discarding a relevant section
+# often means returning an irrelevant one in its place.
+#
+# Worth revisiting as the corpus grows -- 40% of hits are currently repeat
+# sections of a paper already retrieved, which means the model sometimes
+# "reads five sources" that are all one study. That looks like corroboration
+# and is not. The right fix is more papers, not fewer sections.
+MAX_SECTIONS_PER_PAPER = 0
+
+
+def _paper_rank_score(hit: dict) -> float:
+    """Rank by topical similarity, plus an optional study-design bonus.
+
+    STRENGTH_BONUS is currently 0.0 -- see the note above for the measurement
+    that put it there.
+    """
+    if not STRENGTH_BONUS:
+        return hit["similarity"]
+
+    try:
+        strength = int(hit.get("evidence_strength", 0))
+    except (TypeError, ValueError):
+        strength = 0
+    return hit["similarity"] + STRENGTH_BONUS * strength
+
+
 def retrieve(question: str, n_results: int = 5) -> list[dict]:
     """Find the abstract sections most relevant to a question.
 
-    Returns dicts with the text AND its citation, sorted so stronger study
-    designs come first when relevance is comparable.
+    Returns dicts with the text AND its citation, ranked by topical relevance
+    blended with study-design strength, and capped so no single paper floods
+    the result set.
     """
     collection = get_collection()
     if collection.count() == 0:
         return []
 
-    results = collection.query(
-        query_texts=[question],
-        n_results=min(n_results, collection.count()),
-    )
+    # Over-fetch, because the diversity cap below discards chunks. Asking for
+    # exactly n_results and then dropping repeats returns fewer than requested.
+    fetch = min(n_results * 4, collection.count())
+
+    results = collection.query(query_texts=[question], n_results=fetch)
 
     hits = []
     for doc, meta, distance in zip(
         results["documents"][0], results["metadatas"][0], results["distances"][0]
     ):
-        hits.append({"text": doc, "similarity": 1 - distance, **meta})
+        # evidence_strength is stored as a STRING (Chroma metadata is scalar).
+        # Comparing it unconverted sorts "10" below "2", so normalise on read.
+        hit = {"text": doc, "similarity": 1 - distance, **meta}
+        try:
+            hit["evidence_strength"] = int(hit.get("evidence_strength", 0))
+        except (TypeError, ValueError):
+            hit["evidence_strength"] = 0
+        hits.append(hit)
 
-    # Prefer stronger evidence when two chunks are similarly relevant.
-    hits.sort(key=lambda h: (h["evidence_strength"], h["similarity"]), reverse=True)
-    return hits
+    hits.sort(key=_paper_rank_score, reverse=True)
+
+    if not MAX_SECTIONS_PER_PAPER:
+        return hits[:n_results]
+
+    # Cap sections per paper, preserving rank order.
+    seen: dict[str, int] = {}
+    diverse = []
+    for hit in hits:
+        pmid = str(hit.get("pmid", ""))
+        if seen.get(pmid, 0) >= MAX_SECTIONS_PER_PAPER:
+            continue
+        seen[pmid] = seen.get(pmid, 0) + 1
+        diverse.append(hit)
+        if len(diverse) >= n_results:
+            break
+
+    # If the cap left us short (a corpus with few distinct papers on this
+    # topic), top up from what was dropped rather than returning less than
+    # asked for.
+    if len(diverse) < n_results:
+        chosen = {id(h) for h in diverse}
+        diverse += [h for h in hits if id(h) not in chosen][: n_results - len(diverse)]
+
+    return diverse
 
 
 def format_hits(hits: list[dict]) -> str:

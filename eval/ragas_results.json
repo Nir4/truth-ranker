@@ -1,9 +1,9 @@
 {
   "n_questions": 30,
   "scores": {
-    "faithfulness": 0.96,
+    "faithfulness": 0.947,
     "answer_relevancy": 0.747,
-    "context_precision": 0.507,
-    "context_recall": 0.317
+    "context_precision": 0.527,
+    "context_recall": 0.32
   }
 }
