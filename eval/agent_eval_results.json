@@ -1,7 +1,7 @@
 {
   "outcome": {
-    "passed": 18,
-    "total": 18,
+    "passed": 33,
+    "total": 33,
     "rate": 1.0,
     "cases": [
       {
@@ -93,6 +93,81 @@
         "name": "output guardrail rejects an unsupportable safety claim",
         "passed": true,
         "got": "False"
+      },
+      {
+        "name": "names a brand -> answers about that product",
+        "passed": true,
+        "got": "specific"
+      },
+      {
+        "name": "asks for the best -> ranks the catalogue",
+        "passed": true,
+        "got": "comparative"
+      },
+      {
+        "name": "'best alternative to CeraVe' ranks, despite naming a brand",
+        "passed": true,
+        "got": "comparative"
+      },
+      {
+        "name": "'under makeup' implies pilling AND greasy",
+        "passed": true,
+        "got": "['greasy', 'pilling']"
+      },
+      {
+        "name": "reads a price ceiling",
+        "passed": true,
+        "got": "25.0"
+      },
+      {
+        "name": "reads mineral as a formulation filter",
+        "passed": true,
+        "got": "mineral"
+      },
+      {
+        "name": "reads a stated skin type",
+        "passed": true,
+        "got": "['oily']"
+      },
+      {
+        "name": "does NOT read a skin type from a texture complaint",
+        "passed": true,
+        "got": "[]"
+      },
+      {
+        "name": "matches the longest brand, not a substring of one",
+        "passed": true,
+        "got": "La Roche-Posay"
+      },
+      {
+        "name": "declines an off-domain question",
+        "passed": true,
+        "got": "False"
+      },
+      {
+        "name": "accepts a skincare question with no brand or category",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "serving package stays dependency-free (Vercel-deployable)",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "both API layers share one answer implementation",
+        "passed": true,
+        "got": "True"
+      },
+      {
+        "name": "retrieval does not rank by study design over relevance",
+        "passed": true,
+        "got": "0.0"
+      },
+      {
+        "name": "retrieval normalises evidence_strength to int",
+        "passed": true,
+        "got": "True"
       }
     ]
   },
