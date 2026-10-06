@@ -6,6 +6,8 @@ data/discovered.db
 data/memory.db
 .venv/
 __pycache__/
+# Heavy packages the SITE never touches -- they import LangChain, Chroma,
+# OpenAI and PRAW, and would blow the 250MB function limit.
 graph/
 tools/
 rag/
@@ -13,5 +15,9 @@ refresh/
 eval/
 scripts/
 pipeline/
+# NOTE: serving/ is deliberately NOT excluded. It is pure stdlib by contract
+# (see serving/__init__.py) and holds the question-answering logic both API
+# entry points share. Excluding it is what forced that logic to be
+# copy-pasted into api_vercel/index.py.
 *.log
 .env

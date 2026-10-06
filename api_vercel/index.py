@@ -23,6 +23,12 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
+# serving/ is pure stdlib by contract (see serving/__init__.py), so importing
+# it here does NOT pull LangChain or Chroma into the deployed function. It is
+# the one project package this file is allowed to depend on, and it exists so
+# the filter rules are not copy-pasted between the two API entry points.
+from serving import answer_question
+
 ROOT = Path(__file__).parent.parent
 DB_PATH = ROOT / "data" / "truth.db"
 WEB_DIR = ROOT / "web"
@@ -105,6 +111,27 @@ def product(asin: str):
     if not found:
         raise HTTPException(status_code=404, detail=f"No product with ASIN {asin}")
     return found[0]
+
+
+@app.get("/api/ask")
+def ask(q: str = "", limit: int = 12):
+    """Answer a shopper's question from stored rows. No LLM, no scrape.
+
+    WHY THIS ENDPOINT DOES NOT CALL A MODEL
+    ----------------------------------------
+    The rule the whole system rests on is that the weekly job writes and the
+    site reads. An LLM call here would break it, and worse, it would answer
+    from training data rather than from our evidence -- a model asked "is this
+    sunscreen good" will happily agree with the marketing, which is the exact
+    failure this site exists to expose.
+
+    So every sentence returned is assembled from a column the pipeline already
+    computed, and each one reports which column it came from.
+
+    The logic lives in serving/, which both API entry points import, so there
+    is one definition of what "mineral" means rather than two that can drift.
+    """
+    return answer_question(q, _rows("SELECT * FROM rankings"), limit)
 
 
 @app.get("/api/recalls")

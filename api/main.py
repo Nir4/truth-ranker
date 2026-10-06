@@ -68,6 +68,21 @@ def underrated(max_gap: float = -20.0, limit: int = 20) -> dict:
     return {"count": len(products), "products": products}
 
 
+@app.get("/api/ask")
+def ask(q: str = "", limit: int = 12) -> dict:
+    """Answer a shopper's question from stored rows. No LLM, no scrape.
+
+    Identical behaviour to the deployed endpoint, because both call the same
+    function in serving/. That package is pure stdlib by contract, so it can
+    ship to Vercel while the rest of the project cannot.
+
+    The read-only rule holds: this is a SELECT and some arithmetic.
+    """
+    from serving import answer_question
+
+    return answer_question(q, get_rankings(category="skincare", limit=1000), limit)
+
+
 @app.get("/api/recalls")
 def recalls(days: int = 1825, limit: int = 10) -> dict:
     """Recent sunscreen recalls, for the news panel.

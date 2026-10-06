@@ -75,6 +75,40 @@
     transform:translateY(-1px);
   }
 
+  /* ---- example questions ----
+     People do not know a search box takes questions until they see one. */
+  .asks { display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+          margin:-6px 0 20px; padding:0 16px; }
+  .ask { font:inherit; font-size:12.5px; font-weight:600; color:var(--muted);
+         background:var(--surface); border:1.5px solid var(--hair);
+         border-radius:999px; padding:7px 15px; cursor:pointer;
+         transition:color .18s, border-color .18s, transform .18s; }
+  .ask:hover { color:var(--accent); border-color:var(--accent);
+               transform:translateY(-1px); }
+
+  /* ---- the answer ---- */
+  .answer { max-width:640px; margin:0 auto 24px; padding:0 16px; display:none; }
+  .answer.on { display:block; }
+  .answer .card { background:var(--surface); border-radius:26px; padding:22px 26px;
+                  box-shadow:0 6px 24px rgba(255,111,165,.11); }
+  .answer h3 { font-size:17px; font-weight:800; margin:0 0 4px; line-height:1.35; }
+  .answer .sub { font-size:12.5px; color:var(--muted); font-weight:600;
+                 margin-bottom:14px; }
+  .answer ul { list-style:none; padding:0; margin:0; }
+  .answer li { padding:11px 0; border-top:1px solid var(--hair); font-size:14px;
+               line-height:1.5; }
+  .answer li:first-child { border-top:none; }
+  /* Every sentence names the column it came from. A claim whose source the
+     reader cannot see is exactly what this project exists to be against. */
+  .answer .src { display:block; font-size:11px; color:var(--muted);
+                 font-weight:600; margin-top:4px; letter-spacing:.2px; }
+  .answer .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .answer .chip { font-size:11px; font-weight:700; padding:4px 11px;
+                  border-radius:999px; background:var(--accent-soft);
+                  color:var(--accent); }
+  .answer .blocker { font-size:13px; color:var(--warn); font-weight:600;
+                     margin-top:10px; }
+
   /* ---- autocomplete ---- */
   .ac { position:absolute; top:calc(100% + 8px); left:0; right:0; z-index:40;
         background:var(--surface); border:none; border-radius:22px;
@@ -578,10 +612,21 @@
   <!-- ONE primary action. Everything else is secondary and hidden until asked. -->
   <div class="searchbar">
     <div style="position:relative;width:100%;max-width:560px">
-      <input id="q" type="search" placeholder="Search any skincare product" autocomplete="off">
+      <input id="q" type="search" placeholder="Ask anything — &ldquo;best sunscreen that doesn&rsquo;t pill under makeup&rdquo;" autocomplete="off">
       <div id="ac" class="ac"></div>
     </div>
   </div>
+
+  <!-- Example questions. People do not know they can ask until shown. -->
+  <div class="asks">
+    <button class="ask" data-q="what makes CeraVe great?">what makes CeraVe great?</button>
+    <button class="ask" data-q="best sunscreen that doesn't pill under makeup">best sunscreen, no pilling under makeup</button>
+    <button class="ask" data-q="is CeraVe moisturizer good for oily skin">CeraVe moisturiser for oily skin?</button>
+    <button class="ask" data-q="best mineral sunscreen for sensitive skin under $25">mineral SPF, sensitive skin, under $25</button>
+  </div>
+
+  <!-- The answer. Hidden until a question is asked. -->
+  <div id="answer" class="answer"></div>
 
   <!-- Three discovery paths, not seven mixed-purpose buttons. -->
   <div class="paths">
@@ -688,13 +733,20 @@ let ALL = [], VIEW = '', CAT = '', BRAND = '';
 const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const colour = s => s >= 65 ? 'var(--good)' : s >= 45 ? 'var(--warn)' : 'var(--bad)';
-const bigImage = u => u.replace(/\._[A-Z0-9_,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
+/* Ask Amazon for a larger render of the same image.
+
+   Some stored image_urls are a whole SRCSET that the scraper flattened into
+   one field -- "https://...jpg 1x, https://...jpg 2x". Putting that in a src
+   attribute makes the browser request a URL containing a space and a comma,
+   which Amazon answers with 400. Take the first URL before resizing. */
+const firstUrl = u => (u || '').split(/%20|\s|,\s*https/)[0].replace(/,$/, '');
+const bigImage = u => firstUrl(u).replace(/\._[A-Z0-9_,]+_\.(jpg|png|webp)/i, '._SL800_.$1');
 
 function shot(p) {
   const initials = esc((p.brand || '?').slice(0, 2).toUpperCase());
   return p.image_url
     ? `<img class="shot" src="${esc(bigImage(p.image_url))}" alt="${esc(p.name)}"
-         loading="lazy" onerror="this.onerror=null;this.src='${esc(p.image_url)}'">`
+         loading="lazy" onerror="this.onerror=null;this.src='${esc(firstUrl(p.image_url))}'">`
     : `<div class="shot blank">${initials}</div>`;
 }
 
@@ -1200,8 +1252,92 @@ document.getElementById('cmpToggle').onclick = () => {
   document.getElementById('cmpToggle').classList.toggle('on', opening);
 };
 
+/* ---- question answering ----
+   Typing filters the catalogue live (apply). Pressing Enter ASKS -- the
+   server reads the question into filters and answers from stored rows.
+   Two modes on one box, because a shopper should not have to decide which
+   kind of thing they are typing before they type it. */
+
+const answerBox = document.getElementById('answer');
+
+function clearAnswer() { answerBox.className = 'answer'; answerBox.innerHTML = ''; }
+
+function md(text) {
+  /* Minimal: **bold** and *italic*. Escaped first -- the strings come from
+     Reddit via our own DB, and rendering them as raw HTML would be an
+     injection path straight from user-generated content. */
+  const safe = (text || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return safe
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\*([^*]+)\*/g, '<i>$1</i>');
+}
+
+function renderAnswer(data) {
+  const chips = (data.matched || [])
+    .map(m => `<span class="chip">${md(m)}</span>`).join('');
+
+  const bullets = (data.bullets || []).map(b =>
+    `<li>${md(b.text)}<span class="src">from: ${md(b.from)}</span></li>`).join('');
+
+  let sub = '';
+  if (data.type === 'specific') {
+    const bits = [];
+    if (data.score != null) bits.push(`${Math.round(data.score)}/100 on evidence`);
+    if (data.sentiment) bits.push(data.sentiment);
+    if (data.confidence) bits.push(`${data.confidence} confidence`);
+    sub = bits.join(' &middot; ');
+  } else if (data.type === 'comparative' && data.count) {
+    sub = 'Ranked by evidence, best first. Shown below.';
+  }
+
+  const blocker = data.blocker
+    ? `<div class="blocker">Nothing left after: ${md(data.blocker)}. Try relaxing that one.</div>`
+    : '';
+
+  answerBox.innerHTML = `<div class="card">
+      <h3>${md(data.headline)}</h3>
+      ${sub ? `<div class="sub">${sub}</div>` : ''}
+      ${chips ? `<div class="chips">${chips}</div>` : ''}
+      ${bullets ? `<ul>${bullets}</ul>` : ''}
+      ${blocker}
+    </div>`;
+  answerBox.className = 'answer on';
+}
+
+async function askQuestion() {
+  const q = document.getElementById('q').value.trim();
+  if (!q) { clearAnswer(); apply(); return; }
+
+  answerBox.className = 'answer on';
+  answerBox.innerHTML = `<div class="card"><h3>Looking&hellip;</h3></div>`;
+
+  try {
+    const data = await (await fetch(`/api/ask?q=${encodeURIComponent(q)}`)).json();
+    renderAnswer(data);
+    // The answer names the products; the grid below shows their full cards.
+    render(data.products || []);
+  } catch (e) {
+    // A failed question must not clear the catalogue -- fall back to
+    // substring filtering so the page stays useful.
+    answerBox.className = 'answer';
+    apply();
+  }
+}
+
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); askQuestion(); }
+});
+
+document.querySelectorAll('.ask').forEach(btn => {
+  btn.onclick = () => {
+    document.getElementById('q').value = btn.dataset.q;
+    askQuestion();
+  };
+});
+
 document.getElementById('doCompare').onclick = runCompare;
-document.getElementById('q').addEventListener('input', apply);
+document.getElementById('q').addEventListener('input', () => { clearAnswer(); apply(); });
 document.querySelectorAll('.f').forEach(cb => cb.onchange = apply);
 document.getElementById('price').addEventListener('input', e => {
   document.getElementById('priceLabel').textContent = e.target.value;
