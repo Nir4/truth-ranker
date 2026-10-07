@@ -29,7 +29,7 @@ corrective loop.
 That is a decision, not a default. The research store originally had a
 reranking stage and eval/retrieval_eval.py measured it as actively harmful --
 MRR 0.16 against 0.93 for plain similarity. Sophistication has to earn its
-place against a measurement, and here the corpus is small (5,852 chunks) and
+place against a measurement, and here the corpus is small (10,392 chunks) and
 pre-filtered by product, so plain retrieval already has a narrow haystack.
 
 THE ONE NON-STANDARD PIECE

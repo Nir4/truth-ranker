@@ -16,13 +16,13 @@ can run it yourself the morning of the interview.
 
 | Claim | Verified value | How it was checked |
 |---|---|---|
-| Products ranked | **154** | `SELECT COUNT(*) FROM rankings` |
-| Reddit comments embedded | **211,991** | Chroma `reddit_comments.count()` |
+| Products ranked | **277** | `SELECT COUNT(*) FROM rankings` |
+| Reddit comments embedded | **213,397** | Chroma `reddit_comments.count()` |
 | PubMed chunks embedded | **268** | Chroma `pubmed_abstracts.count()` |
 | Threads harvested | **10,481** | `harvested_threads.db → seen` |
 | Products discovered via router | **1,468 mentions** | `discovered.db → mentions` |
 | Ingredient memory entries | **10** | `memory.db → ingredient_memory` |
-| Ingredient memory **reuses** | **980** | `SUM(hits)` |
+| Ingredient memory **reuses** | **1,019** | `SUM(hits)` |
 | Scrape cache entries | **601** | `scrape_cache.db` |
 | Chroma on-disk size | **1.8 GB** | `du -sh data/chroma` |
 | Agent eval | **47/47** (33 outcome + 7 tool + 7 trajectory) | `eval/agent_eval_results.json` |

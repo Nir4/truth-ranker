@@ -82,6 +82,9 @@ CATEGORY_PATTERNS = {
     "cleanser": [r"\bcleansers?\b", r"\bface wash\b", r"\bfacewash\b"],
     "serum": [r"\bserums?\b"],
     "toner": [r"\btoners?\b"],
+    "lip care": [r"\blip balms?\b", r"\blip cares?\b", r"\bchapsticks?\b",
+                 r"\blip masks?\b", r"\blip scrubs?\b", r"\blip treatments?\b",
+                 r"\bchapped lips\b", r"\blips?\b"],
 }
 
 # --- intent ----------------------------------------------------------------
@@ -236,6 +239,7 @@ ON_DOMAIN_TERMS = {
     "facewash", "wash", "ingredient", "ingredients", "inci", "zinc", "titanium",
     "oxybenzone", "avobenzone", "niacinamide", "retinol", "ceramide", "ceramides",
     "hyaluronic", "mineral", "chemical", "filter", "product", "products", "brand",
+    "lip", "lips", "balm", "chapstick", "chapped",
     "sensitive", "acne", "oily", "dry", "combination", "mature", "reef", "cast",
     "greasy", "pilling", "pills", "breakout", "breakouts", "sting", "stings",
     "pores", "wrinkles", "hydrating", "face", "spf50", "sun",

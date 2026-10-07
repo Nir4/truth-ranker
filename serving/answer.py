@@ -308,6 +308,18 @@ def answer_comparative(products: list[dict], parsed: dict) -> dict:
     # Never recommend something with an FDA recall, whatever else matches.
     _narrow("no FDA recall", lambda p: p.get("is_safe", True))
 
+    # Drop products we could not actually measure.
+    #
+    # A row with no ingredient list AND no community themes was scored on
+    # nothing -- the arithmetic still produced a number, usually the neutral
+    # 50, and that number looks identical to one earned from real evidence.
+    # Recommending it would be exactly the unearned confidence this project
+    # exists to expose.
+    #
+    # It stays in the catalogue and on its own card, tagged "insufficient", so
+    # someone searching for it still finds it and sees why we cannot say much.
+    _narrow("enough evidence to judge", _has_any_evidence)
+
     out.sort(key=lambda p: p.get("score") or 0, reverse=True)
 
     # Which requirement emptied the list? The LAST filter that removed
@@ -587,3 +599,19 @@ def _answer_by_rag(question: str, products: list[dict], parsed: dict,
         "matched": parsed.get("matched", []),
         "n_chunks": result["n_chunks"],
     }
+
+
+def _has_any_evidence(product: dict) -> bool:
+    """Did we measure anything at all about this product?
+
+    Ingredients come from the FDA drug-label filing; themes come from the
+    community. A product with neither was scored on arithmetic alone, and its
+    confidence tier already says "insufficient" -- this keeps it out of
+    recommendations rather than letting a default 50 pass for a finding.
+    """
+    if product.get("ingredients"):
+        return True
+    if product.get("themes"):
+        return True
+    # An expert mention is evidence too, even without the other two.
+    return bool((product.get("experts") or {}).get("unique_experts"))
