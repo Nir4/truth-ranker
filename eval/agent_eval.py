@@ -295,9 +295,18 @@ OUTCOME_CASES = [
 def _facts_coverage() -> bool:
     """Does every product with a price have a facts chunk stating it?
 
-    Guards the fix for the constraint bug: without price in the retrievable
-    text, "under $25" is unenforceable and the model recommends products it
-    has never seen the cost of.
+    Two things at once:
+
+      1. Guards the constraint fix -- without price in the retrievable text,
+         "under $25" is unenforceable and the model recommends products it has
+         never seen the cost of.
+
+      2. Detects a STALE INDEX. The pipeline writes rankings rows; the index is
+         built separately. A product scored after the last index build exists
+         in the catalogue and cannot be answered about, which looks like the
+         product being missing rather than the index being behind.
+
+    Prints the gap, because "False" does not tell you to run the indexer.
     """
     import sqlite3
     from pathlib import Path
@@ -318,7 +327,13 @@ def _facts_coverage() -> bool:
                 "SELECT DISTINCT asin FROM qa_chunks WHERE source = 'product facts'"
             )
         }
-        return bool(priced) and priced.issubset(with_facts)
+        missing = priced - with_facts
+        if missing:
+            print(
+                f"      {len(missing)} product(s) scored since the last index "
+                f"build -- run: uv run python -m refresh.build_qa_index"
+            )
+        return bool(priced) and not missing
     except Exception:  # noqa: BLE001
         return False
     finally:
