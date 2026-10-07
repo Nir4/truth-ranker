@@ -1343,7 +1343,8 @@ function renderAnswer(data) {
     .map(m => `<span class="chip">${md(m)}</span>`).join('');
 
   const bullets = (data.bullets || []).map(b =>
-    `<li>${md(b.text)}<span class="src">from: ${md(b.from)}</span></li>`).join('');
+    `<li>${md(b.text)}${b.from ? `<span class="src">from: ${md(b.from)}</span>` : ''}</li>`
+  ).join('');
 
   /* The headline links to the product it is about. An answer about one
      product with no way to reach that product makes the reader search for
@@ -1357,7 +1358,10 @@ function renderAnswer(data) {
 
   let sub = '';
   if (data.type === 'rag') {
-    sub = `Answered from ${data.n_chunks} evidence passages &middot; sources below`;
+    /* No subtitle. "Answered from 26 evidence passages" is the machinery
+       talking about itself -- the reader wants the answer, not a receipt for
+       how it was produced. */
+    sub = '';
   } else if (data.type === 'specific') {
     const bits = [];
     if (data.score != null) bits.push(`${Math.round(data.score)}/100 on evidence`);
@@ -1373,7 +1377,7 @@ function renderAnswer(data) {
     : '';
 
   answerBox.innerHTML = `<div class="card">
-      <h3>${headline}</h3>
+      ${data.headline ? `<h3>${headline}</h3>` : ''}
       ${sub ? `<div class="sub">${sub}</div>` : ''}
       ${chips ? `<div class="chips">${chips}</div>` : ''}
       ${bullets ? `<ul>${bullets}</ul>` : ''}

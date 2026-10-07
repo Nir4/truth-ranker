@@ -555,7 +555,7 @@ def _answer_by_rag(question: str, products: list[dict], parsed: dict,
     headline = (
         _display_name(scoped[0])[:90]
         if parsed.get("brand") and scoped
-        else "What the evidence says"
+        else ""   # no headline for a general question; the answer IS the content
     )
 
     # JUST THE ANSWER.
@@ -570,10 +570,10 @@ def _answer_by_rag(question: str, products: list[dict], parsed: dict,
     # it rests on ("3 people said", a PMID), and the product card below carries
     # the full themes, claims and sources. A wall of raw passages is not
     # transparency, it is a transcript.
-    bullets = [{
-        "text": result["answer"],
-        "from": f"{result['n_chunks']} passages from our research and Reddit",
-    }]
+    # No "from:" line either. The answer already says what it rests on
+    # ("3 people said", a PMID), and a provenance footer under a single
+    # paragraph is chrome.
+    bullets = [{"text": result["answer"], "from": ""}]
 
     return {
         "type": "rag",
