@@ -558,12 +558,19 @@ def _answer_by_rag(question: str, products: list[dict], parsed: dict,
         else "What the evidence says"
     )
 
-    # One bullet per retrieved passage, each naming where it came from --
-    # the same traceability rule the rest of the site follows.
-    bullets = [{"text": result["answer"], "from": "answered from the evidence below"}]
-    for source in result["sources"][:4]:
+    # The ANSWER is the product; the sources are the receipt. Three, trimmed
+    # short -- five long passages buried the answer they were supporting, and
+    # a reader who wants more can open the product card.
+    #
+    # Each passage is prefixed with its product name by the indexer, which is
+    # redundant once the headline already says it, so strip it back off.
+    bullets = [{"text": result["answer"], "from": "our research and what users said"}]
+    for source in result["sources"][:3]:
+        text = source["text"]
+        if ": " in text[:160]:
+            text = text.split(": ", 1)[1]
         bullets.append({
-            "text": source["text"][:230] + ("..." if len(source["text"]) > 230 else ""),
+            "text": text[:150] + ("..." if len(text) > 150 else ""),
             "from": source["source"],
         })
 

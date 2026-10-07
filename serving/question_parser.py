@@ -259,8 +259,22 @@ def on_domain(question: str, parsed: dict) -> bool:
     if (parsed.get("brand") or parsed.get("category") or parsed.get("skin_types")
             or parsed.get("avoid") or parsed.get("filter_type")):
         return True
+
     words = set(re.findall(r"[a-z]+", (question or "").lower()))
-    return bool(words & ON_DOMAIN_TERMS)
+    if words & ON_DOMAIN_TERMS:
+        return True
+
+    # Shoppers typo. "best moistorier??" was being refused as off-domain
+    # because no exact token matched, which reads as the site not working
+    # rather than as a spelling problem.
+    #
+    # A prefix match on the first five characters catches the common case --
+    # misspellings nearly always keep the opening, since that is the part
+    # people are sure of: moistorier/moisturiser, suncreen/sunscreen,
+    # niacinimide/niacinamide. Five is long enough that short words like
+    # "best" or "skin" cannot accidentally match an unrelated term.
+    stems = {term[:5] for term in ON_DOMAIN_TERMS if len(term) >= 6}
+    return any(len(w) >= 6 and w[:5] in stems for w in words)
 
 
 # Question shapes that ask for a REASON or an EXPLANATION rather than a
