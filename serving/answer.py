@@ -558,21 +558,22 @@ def _answer_by_rag(question: str, products: list[dict], parsed: dict,
         else "What the evidence says"
     )
 
-    # The ANSWER is the product; the sources are the receipt. Three, trimmed
-    # short -- five long passages buried the answer they were supporting, and
-    # a reader who wants more can open the product card.
+    # JUST THE ANSWER.
     #
-    # Each passage is prefixed with its product name by the indexer, which is
-    # redundant once the headline already says it, so strip it back off.
-    bullets = [{"text": result["answer"], "from": "our research and what users said"}]
-    for source in result["sources"][:3]:
-        text = source["text"]
-        if ": " in text[:160]:
-            text = text.split(": ", 1)[1]
-        bullets.append({
-            "text": text[:150] + ("..." if len(text) > 150 else ""),
-            "from": source["source"],
-        })
+    # This used to render the retrieved passages underneath, on the reasoning
+    # that showing your sources is the whole point of the project. In practice
+    # they were four near-duplicates of each other, each prefixed with a long
+    # Amazon title, all restating the sentence above them -- the answer was
+    # good and everything under it was noise.
+    #
+    # Traceability survives in two better places: the answer itself cites what
+    # it rests on ("3 people said", a PMID), and the product card below carries
+    # the full themes, claims and sources. A wall of raw passages is not
+    # transparency, it is a transcript.
+    bullets = [{
+        "text": result["answer"],
+        "from": f"{result['n_chunks']} passages from our research and Reddit",
+    }]
 
     return {
         "type": "rag",

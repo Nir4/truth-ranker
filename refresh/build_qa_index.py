@@ -223,6 +223,13 @@ def _chunks_for(row: dict) -> list[tuple[str, str, str]]:
     # themes compress away. A theme says "pills under makeup, 3 mentions"; a
     # comment says it pills after four hours over a specific moisturiser.
     for comment in row.get("_comments") or []:
+        # Skip comments that are QUESTIONS rather than reports. "How does it
+        # feel on skin?" retrieves well against "what feels good on skin" and
+        # then supports nothing -- it is someone else asking the same thing.
+        # A passage that cannot be evidence should not be indexed as evidence.
+        stripped = comment.strip()
+        if stripped.endswith("?") and len(stripped) < 220:
+            continue
         add("community", "Reddit comment", comment)
 
     add("community", "community summary", row.get("community_summary") or "")
